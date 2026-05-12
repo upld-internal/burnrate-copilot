@@ -1,117 +1,106 @@
 'use strict';
-// compositor.js — Phase 1 minimal compositor for copilot-hud.
+// compositor.js — full widget compositor for copilot-hud.
 //
-// Responsibilities:
-//   1. Load session data from the session file
-//   2. Write last_known_tokens back to the session file every turn
-//      (used for cost computation in Phase 6 and orphan recovery)
-//   3. Render a simple statusline
+// render(stdinData, dataDir, scriptDir) → string
 //
-// Phase 2 replaces this with the full widget-based compositor (config.json
-// driven, powerline support, all widgets). Phase 1 renders inline.
+// Loads config from ~/.copilot/hud-costs/config.json (falls back to
+// DEFAULT_CONFIG when absent or malformed). Loads session data once and
+// passes it to all widgets. Renders in plain or powerline mode.
 //
-// Default output:
-//   Sonnet 4.6 3x·high │ Ctx: 35% │ 5m │  main
+// Every turn: writes last_known_tokens back to the session file so that
+// cost can be computed retroactively when Phase 6 implements pricing.
 
-const fs          = require('fs');
-const path        = require('path');
-const { execSync } = require('child_process');
-const { R, B, D, YL, RD } = require('./themes');
+const fs   = require('fs');
+const path = require('path');
+
+const { getTheme, setBg, setFg, PL_RIGHT, R } = require('./themes');
+
+const WIDGETS = {
+  ...require('./widgets/cost'),
+  ...require('./widgets/context'),
+  ...require('./widgets/session'),
+  ...require('./widgets/git'),
+  ...require('./widgets/system'),
+  ...require('./widgets/custom'),
+  ...require('./widgets/tools'),
+};
+
+// Default config — rendered when config.json is absent or malformed.
+// Cost widgets are omitted until Phase 6 resolves pricing.
+const DEFAULT_CONFIG = {
+  powerline: false,
+  theme: 'default',
+  separator: '│',
+  segments: [
+    { widget: 'model_name', short: true },
+    { widget: 'separator' },
+    { widget: 'context_window' },
+    { widget: 'separator' },
+    { widget: 'session_duration' },
+    { widget: 'separator' },
+    { widget: 'git_branch' },
+    { widget: 'git_status' },
+  ],
+};
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Config loading
 // ---------------------------------------------------------------------------
 
-function pctColor(pct) {
-  if (pct >= 70) return RD;
-  if (pct >= 50) return YL;
-  return '';
-}
-
-function fmtDuration(startedAt) {
-  if (!startedAt) return null;
+function loadConfig(dataDir) {
+  const configPath = path.join(dataDir, 'config.json');
   try {
-    const ms = Date.now() - new Date(startedAt).getTime();
-    if (ms < 0) return null;
-    const totalMin = Math.floor(ms / 60000);
-    const hours    = Math.floor(totalMin / 60);
-    const mins     = totalMin % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  } catch (_) {
-    return null;
-  }
-}
-
-// Parse short model name and optional effort/multiplier from display_name.
-// "claude-sonnet-4.6 (3x) (high)" → "Sonnet 4.6 3x·high"
-function parseModelDisplay(displayName, modelId) {
-  const raw = displayName || modelId || '';
-  if (!raw) return null;
-
-  let name = raw;
-  let multiplier;
-  let effort;
-
-  const mxMatch = name.match(/\((\d+x)\)/);
-  if (mxMatch) { multiplier = mxMatch[1]; name = name.replace(mxMatch[0], '').trim(); }
-
-  const effortMatch = name.match(/\((low|medium|high|default)\)/i);
-  if (effortMatch) { effort = effortMatch[1]; name = name.replace(effortMatch[0], '').trim(); }
-
-  // Shorten: "claude-sonnet-4.6" → "Sonnet 4.6"
-  const shortName = name
-    .replace(/^claude-/i, '')
-    .replace(/^(opus|sonnet|haiku)/i, m => m.charAt(0).toUpperCase() + m.slice(1))
-    .replace(/-/g, ' ')
-    .trim();
-
-  let label = shortName;
-  if (multiplier || effort) {
-    const extras = [multiplier, effort].filter(Boolean).join('·');
-    label += ` ${extras}`;
-  }
-  return label || null;
-}
-
-function gitBranch(cwd) {
-  if (!cwd) return null;
-  try {
-    return execSync('git branch --show-current', {
-      cwd,
-      timeout: 500,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim() || null;
-  } catch (_) {
-    return null;
-  }
+    if (fs.existsSync(configPath)) {
+      const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      if (parsed && Array.isArray(parsed.segments)) return parsed;
+    }
+  } catch (_) {}
+  return null;
 }
 
 // ---------------------------------------------------------------------------
 // Session data loading + write-back
 // ---------------------------------------------------------------------------
 
-function loadSessionData(stdinData, dataDir) {
+// Loads all session-related data once. Widgets read from this object rather
+// than doing their own file I/O or cost calculations.
+function loadSessionData(stdinData, dataDir, scriptDir) {
   const sessionId = (stdinData.session_id || '').trim();
   const model     = stdinData.model || {};
   const ctx       = stdinData.context_window || {};
+  const now       = new Date();
 
   const sd = {
     sessionId,
-    modelId:   model.id || '',
-    modelName: model.display_name || model.id || '',
-    startedAt: null,
-    project:   '',
-    projectId: '',
+    modelId:          model.id || '',
+    modelDisplayName: model.display_name || '',
+    snapshot:         null,
+    startedAt:        null,
+    hasSnapshot:      false,
+    hasPricing:       false,  // Phase 6 sets this true when pricing.json is loaded
+    sessionCost:      0,      // Phase 6 computes this
+    mtd:              0,      // Phase 6
+    projected:        null,   // Phase 6
+    mtdError:         false,
+    monthKey:         now.toISOString().slice(0, 7),
+    dataDir,
+    scriptDir,
+    project:          '',
+    projectId:        '',
+    recentTools:      [],     // Phase 3 populates via state.js
+    agents:           [],     // Phase 3 populates via state.js
+    lastPrompt:       null,
   };
 
-  // Load session snapshot for startedAt and project info
+  // Load session snapshot
   if (sessionId) {
     try {
       const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
       if (fs.existsSync(sessionPath)) {
-        const session = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
-        sd.startedAt = session.started_at || null;
+        const session  = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+        sd.snapshot    = session.snapshot || null;
+        sd.startedAt   = session.started_at || null;
+        sd.hasSnapshot = !!sd.snapshot;
         if (!sd.modelId) sd.modelId = session.last_known_model || session.model_id || '';
         sd.project   = session.last_known_project    || session.project    || '';
         sd.projectId = session.last_known_project_id || session.project_id || '';
@@ -120,7 +109,7 @@ function loadSessionData(stdinData, dataDir) {
   }
 
   // Write last_known_tokens back to the session file on every turn.
-  // This is the core data capture for Phase 6 cost computation and orphan recovery.
+  // Critical for Phase 6 retroactive cost computation and orphan recovery.
   if (sessionId) {
     try {
       const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
@@ -134,7 +123,7 @@ function loadSessionData(stdinData, dataDir) {
           total_cache_read_tokens:  ctx.total_cache_read_tokens  || 0,
         };
         sessionRaw.last_known_model = sd.modelId || undefined;
-        sessionRaw.last_known_at    = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+        sessionRaw.last_known_at    = now.toISOString().replace(/\.\d{3}Z$/, 'Z');
 
         const cwd = (stdinData.cwd || '').trim();
         if (cwd) {
@@ -147,47 +136,134 @@ function loadSessionData(stdinData, dataDir) {
     } catch (_) {} // never crash the statusline
   }
 
+  // Load tool/agent state (Phase 1/2 stub returns empty defaults)
+  try {
+    const { readState } = require('./state');
+    const state = readState();
+    if (state.sessionId === sessionId) {
+      sd.recentTools = state.recentTools || [];
+      sd.agents      = state.agents      || [];
+      sd.lastPrompt  = state.lastPrompt  || null;
+    }
+  } catch (_) {}
+
   return sd;
 }
 
 // ---------------------------------------------------------------------------
-// Render
+// Rendering — plain mode
+// ---------------------------------------------------------------------------
+
+function renderPlain(renderedSegments) {
+  const SPACER_WIDGETS = new Set(['separator', 'newline']);
+  let out = '';
+  for (let i = 0; i < renderedSegments.length; i++) {
+    const seg  = renderedSegments[i];
+    const prev = renderedSegments[i - 1];
+    if (i > 0 && !SPACER_WIDGETS.has(prev.widget) && !SPACER_WIDGETS.has(seg.widget)) {
+      out += ' ';
+    }
+    out += seg.text;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Rendering — powerline mode
+// ---------------------------------------------------------------------------
+
+function renderPowerline(contentSegments, theme) {
+  const colors = theme.segmentColors;
+
+  if (!colors.length) {
+    return contentSegments.map(s => s.text).join(' ');
+  }
+
+  let out = '';
+  for (let i = 0; i < contentSegments.length; i++) {
+    const bg     = colors[i % colors.length];
+    const nextBg = i < contentSegments.length - 1 ? colors[(i + 1) % colors.length] : null;
+
+    out += setBg(bg) + setFg(theme.fg) + ' ' + contentSegments[i].text + ' ';
+
+    if (nextBg !== null) {
+      out += R + setFg(bg) + setBg(nextBg) + PL_RIGHT;
+    } else {
+      out += R + setFg(bg) + PL_RIGHT;
+    }
+  }
+
+  out += R;
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Main entry point
 // ---------------------------------------------------------------------------
 
 function render(stdinData, dataDir, scriptDir) {
-  const sd  = loadSessionData(stdinData, dataDir);
-  const ctx = stdinData.context_window || {};
-  const SEP = ` ${D}│${R} `;
+  const config      = loadConfig(dataDir) || DEFAULT_CONFIG;
+  const sessionData = loadSessionData(stdinData, dataDir, scriptDir);
+  const powerline   = config.powerline || false;
+  const separator   = config.separator || '│';
+  const theme       = getTheme(config.theme);
 
-  const parts = [];
+  const rendered = [];
 
-  // Model name with effort/multiplier
-  const modelLabel = parseModelDisplay(sd.modelName, sd.modelId);
-  if (modelLabel) {
-    parts.push(`${B}${modelLabel}${R}`);
+  for (const seg of (config.segments || DEFAULT_CONFIG.segments)) {
+    const handler = WIDGETS[seg.widget];
+    if (!handler) continue;
+
+    const opts = Object.assign({}, seg, {
+      _powerline:       powerline,
+      _globalSeparator: separator,
+    });
+
+    let text;
+    try {
+      text = handler(stdinData, sessionData, opts);
+    } catch (_) {
+      text = null; // widget error → omit segment, never crash compositor
+    }
+
+    if (text !== null && text !== undefined) {
+      rendered.push({ text, widget: seg.widget });
+    }
   }
 
-  // Context window usage %
-  const pct = ctx.used_percentage;
-  if (pct != null) {
-    const c = pctColor(pct);
-    parts.push(`${D}Ctx:${R} ${c}${B}${pct}%${R}`);
+  // Collapse consecutive separators; strip leading/trailing separators
+  const collapsed = [];
+  for (const seg of rendered) {
+    const prevIsSep = collapsed.length > 0 && collapsed[collapsed.length - 1].widget === 'separator';
+    if (seg.widget === 'separator' && prevIsSep) continue;
+    collapsed.push(seg);
+  }
+  while (collapsed.length > 0 && collapsed[0].widget === 'separator')                  collapsed.shift();
+  while (collapsed.length > 0 && collapsed[collapsed.length - 1].widget === 'separator') collapsed.pop();
+
+  if (powerline) {
+    const contentSegments = collapsed.filter(s => s.widget !== 'separator');
+    if (!contentSegments.length) return '';
+
+    const rows = [];
+    let current = [];
+    for (const seg of contentSegments) {
+      if (seg.widget === 'newline') {
+        rows.push(current);
+        current = [];
+      } else {
+        current.push(seg);
+      }
+    }
+    if (current.length) rows.push(current);
+
+    return rows
+      .filter(row => row.length > 0)
+      .map(row => renderPowerline(row, theme))
+      .join('\n');
   }
 
-  // Session duration
-  const dur = fmtDuration(sd.startedAt);
-  if (dur) {
-    parts.push(`${B}${dur}${R}`);
-  }
-
-  // Git branch
-  const branch = gitBranch(stdinData.cwd);
-  if (branch) {
-    parts.push(` ${B}${branch}${R}`);
-  }
-
-  if (!parts.length) return '';
-  return parts.join(SEP);
+  return renderPlain(collapsed);
 }
 
-module.exports = { render };
+module.exports = { render, loadConfig, loadSessionData, DEFAULT_CONFIG };
