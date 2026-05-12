@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
-# user-prompt.sh — UserPromptSubmitted hook wrapper (stub, Phase 3 implementation).
-node "${PLUGIN_ROOT}/scripts/user-prompt.js"
+# user-prompt.sh — UserPromptSubmitted hook wrapper.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+node "${SCRIPT_DIR}/user-prompt.js"

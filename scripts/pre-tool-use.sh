@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
-# pre-tool-use.sh — PreToolUse hook wrapper (stub, Phase 3 implementation).
-node "${PLUGIN_ROOT}/scripts/pre-tool-use.js"
+# pre-tool-use.sh — PreToolUse hook wrapper.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+node "${SCRIPT_DIR}/pre-tool-use.js"

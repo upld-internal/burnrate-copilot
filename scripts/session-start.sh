@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 # session-start.sh — SessionStart hook wrapper.
-# Copilot sets PLUGIN_ROOT to the installed plugin directory.
-node "${PLUGIN_ROOT}/scripts/session-start.js"
+# PLUGIN_ROOT is set by Copilot for plugin installs; fall back to script's own dir.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+node "${SCRIPT_DIR}/session-start.js"
