@@ -1,0 +1,17 @@
+{
+  "name": "copilot-hud",
+  "version": "0.1.0",
+  "description": "Real-time cost and context display for GitHub Copilot CLI",
+  "license": "MIT",
+  "keywords": ["copilot-cli", "statusline", "hud", "cost", "tokens", "github-copilot"],
+  "author": "bripley",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "scripts/",
+    "commands/",
+    "hooks.json",
+    "plugin.json"
+  ]
+}
