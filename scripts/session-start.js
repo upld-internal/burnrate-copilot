@@ -149,6 +149,28 @@ process.stdin.on('end', () => {
 
     recoverOrphanedSessions(sessionId);
 
+    // Initialize hud-state.json for this session.
+    // Clear recentTools; preserve agents if this is the same session resuming
+    // (e.g. Copilot restarted mid-session without a SessionEnd firing).
+    try {
+      const { readState, writeState, STATE_FILE } = require('./state');
+      const prevState  = readState(STATE_FILE);
+      const prevAgents = (prevState.sessionId === sessionId && Array.isArray(prevState.agents))
+        ? prevState.agents : [];
+
+      const ts = data.timestamp || Date.now();
+      writeState({
+        sessionId:      sessionId,
+        sessionStart:   ts,
+        cwd:            cwd || null,
+        lastPrompt:     null,
+        lastPromptTime: null,
+        recentTools:    [],
+        agents:         prevAgents,
+        sessionActive:  true,
+      }, STATE_FILE);
+    } catch (_) {}
+
   } catch (_) {
     // Never crash Copilot startup
   }

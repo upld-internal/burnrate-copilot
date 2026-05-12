@@ -66,6 +66,12 @@ process.stdin.on('end', () => {
     // Clean up session snapshot only after the JSONL record is written
     try { fs.unlinkSync(sessionPath); } catch (_) {}
 
+    // Mark session inactive in hud-state.json
+    try {
+      const { withStateLock, STATE_FILE } = require('./state');
+      withStateLock(state => ({ ...state, sessionActive: false }), STATE_FILE);
+    } catch (_) {}
+
   } catch (_) {
     // Never crash Copilot shutdown
   }
