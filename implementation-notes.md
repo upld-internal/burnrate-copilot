@@ -798,6 +798,62 @@ experimental and unstable by GitHub.
 
 ---
 
+## 11. GitHub Copilot Billing
+
+**Source:** https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing
+
+### Credit system
+
+GitHub Copilot is transitioning to a **token-based, credit-metered billing system** effective **June 1, 2026**. All Copilot plans (Free, Pro, Pro+, Business, Enterprise) include a monthly AI credit allowance; usage beyond the allowance is billed at per-token rates.
+
+**1 AI credit = $0.01 USD.** Token costs are denominated in credits and converted to USD at that rate.
+
+### Per-token rates for Anthropic models (per 1 million tokens)
+
+Anthropic models include a separate cache write charge in addition to the cached input (read) rate.
+
+| Model | Input | Cached input (read) | Cache write | Output |
+|---|---|---|---|---|
+| Claude Haiku 4.5 | $1.00 | $0.10 | $1.25 | $5.00 |
+| Claude Sonnet 4 | $3.00 | $0.30 | $3.75 | $15.00 |
+| Claude Sonnet 4.5 | $3.00 | $0.30 | $3.75 | $15.00 |
+| Claude Sonnet 4.6 | $3.00 | $0.30 | $3.75 | $15.00 |
+| Claude Opus 4.5 | $5.00 | $0.50 | $6.25 | $25.00 |
+| Claude Opus 4.6 | $5.00 | $0.50 | $6.25 | $25.00 |
+| Claude Opus 4.7 | $5.00 | $0.50 | $6.25 | $15.00 |
+
+### Mapping stdin token fields to rate table columns
+
+The four token fields in `stdinData.context_window` map to the rate columns as follows:
+
+| stdin field | Rate column | Sonnet 4.6 rate |
+|---|---|---|
+| `total_input_tokens` | Input | $3.00 / MTok |
+| `total_cache_read_tokens` | Cached input (read) | $0.30 / MTok |
+| `total_cache_write_tokens` | Cache write | $3.75 / MTok |
+| `total_output_tokens` | Output | $15.00 / MTok |
+
+### Cost formula
+
+```
+cost_usd = (
+  total_input_tokens       * 3.00 +
+  total_cache_read_tokens  * 0.30 +
+  total_cache_write_tokens * 3.75 +
+  total_output_tokens      * 15.00
+) / 1_000_000
+```
+
+All values are cumulative session totals. To get the session cost delta, subtract the zero-baseline snapshot captured at SessionStart before applying the formula.
+
+### Notes
+
+- GitHub's published per-token rates for Claude models match Anthropic's direct API rates exactly (as of May 2026).
+- Code completions and Next Edit Suggestions are **not** metered in AI credits — they remain unlimited on all paid plans.
+- The `total_premium_requests` field in `stdinData.cost` reflects the pre-June 2026 request-based billing model and will become less significant once token billing is active.
+
+---
+
 ## Appendix: Relevant source symbols (v1.0.46 app.js)
 
 | Symbol | Description |
