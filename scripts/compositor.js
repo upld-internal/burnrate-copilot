@@ -26,7 +26,8 @@ const WIDGETS = {
 };
 
 // Default config — rendered when config.json is absent or malformed.
-// Cost widgets are omitted until Phase 6 resolves pricing.
+// Shows model, context fill, token totals, inference speed, premium requests,
+// and session duration. Cost widgets are omitted until Phase 6 resolves pricing.
 const DEFAULT_CONFIG = {
   powerline: false,
   theme: 'default',
@@ -36,10 +37,13 @@ const DEFAULT_CONFIG = {
     { widget: 'separator' },
     { widget: 'context_window' },
     { widget: 'separator' },
-    { widget: 'session_duration' },
+    { widget: 'token_breakdown', show_cache: false },
     { widget: 'separator' },
-    { widget: 'git_branch' },
-    { widget: 'git_status' },
+    { widget: 'output_speed' },
+    { widget: 'separator' },
+    { widget: 'premium_requests' },
+    { widget: 'separator' },
+    { widget: 'session_duration' },
   ],
 };
 

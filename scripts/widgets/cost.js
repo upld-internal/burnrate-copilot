@@ -17,16 +17,12 @@ const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 
 // session_cost — current session cost.
 // Phase 6: compute from token delta × pricing.
-// Until then: returns "?" placeholder.
+// Until then: returns null (hidden until pricing is available).
 // opts.show_label: boolean (default true)
 function session_cost(stdinData, sessionData, opts) {
+  if (!sessionData.hasPricing) return null;
+
   const showLabel = opts.show_label !== false;
-
-  if (!sessionData.hasPricing) {
-    const fallback = opts._powerline ? '?' : `${D}?${R}`;
-    return withLabel('Session', fallback, showLabel, opts._powerline);
-  }
-
   const cost  = sessionData.sessionCost || 0;
   const c     = cost < 1 ? '' : cost < 5 ? YL : RD;
   const value = opts._powerline
@@ -37,16 +33,12 @@ function session_cost(stdinData, sessionData, opts) {
 
 // mtd_cost — month-to-date cost with optional projection.
 // Phase 6: reads from monthly JSONL + current session.
-// Until then: returns "?" placeholder.
+// Until then: returns null (hidden until pricing is available).
 // opts.show_projected: boolean (default true)
 function mtd_cost(stdinData, sessionData, opts) {
+  if (!sessionData.hasPricing) return null;
+
   const name = MONTH_NAMES[new Date().getUTCMonth()];
-
-  if (!sessionData.hasPricing) {
-    const fallback = opts._powerline ? `${name} ?` : `${D}${name}${R} ${D}?${R}`;
-    return fallback;
-  }
-
   const showProjected = opts.show_projected !== false;
   const mtd  = sessionData.mtd || 0;
   const amt  = mtd.toFixed(2);

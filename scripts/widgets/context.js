@@ -91,6 +91,7 @@ function premium_requests(stdinData, sessionData, opts) {
 // Source: stdinData.context_window (total_input/output/cache_read/cache_write tokens)
 // Returns null if no token counts are present.
 // opts.show_label: boolean (default false)
+// opts.show_cache: boolean (default true) — include combined cache token count
 function token_breakdown(stdinData, sessionData, opts) {
   const ctx  = stdinData.context_window || {};
   const tin  = ctx.total_input_tokens;
@@ -99,12 +100,14 @@ function token_breakdown(stdinData, sessionData, opts) {
   const tcw  = ctx.total_cache_write_tokens;
 
   if (tin == null && tout == null) return null;
+  if ((tin === 0 || tin == null) && (tout === 0 || tout == null)) return null;
 
+  const showCache = opts.show_cache !== false; // default: show cache
   const parts = [];
   if (tin  != null) parts.push(`in:${fmtTokens(tin)}`);
   if (tout != null) parts.push(`out:${fmtTokens(tout)}`);
   const cacheTotal = (tcr || 0) + (tcw || 0);
-  if (cacheTotal > 0) parts.push(`cache:${fmtTokens(cacheTotal)}`);
+  if (showCache && cacheTotal > 0) parts.push(`cache:${fmtTokens(cacheTotal)}`);
 
   const showLabel = opts.show_label === true;
   const raw       = parts.join(' ');
