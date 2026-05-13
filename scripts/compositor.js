@@ -141,10 +141,15 @@ function loadSessionData(stdinData, dataDir, scriptDir) {
   if (pricing && sd.hasSnapshot) {
     sd.hasPricing  = true;
     sd.sessionCost = computeSessionCost(ctx, sd.snapshot, pricing);
-    const { mtd, projected, error } = getMtdAndProjected(sd.monthKey, dataDir);
-    sd.mtd       = (mtd || 0) + sd.sessionCost; // include current session in MTD
-    sd.projected  = projected != null ? projected + sd.sessionCost : null;
-    sd.mtdError   = error;
+    const { mtd, error } = getMtdAndProjected(sd.monthKey, dataDir);
+    sd.mtd      = (mtd || 0) + sd.sessionCost; // completed sessions + current session
+    sd.mtdError = error;
+    // Project from total MTD — works from day 1, no completed sessions required
+    if (sd.mtd > 0) {
+      const dayOfMonth  = now.getUTCDate();
+      const daysInMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0)).getDate();
+      sd.projected = (sd.mtd / Math.max(1, dayOfMonth)) * daysInMonth;
+    }
   }
 
   // Write last_known_tokens (and cost) back to the session file on every turn.
