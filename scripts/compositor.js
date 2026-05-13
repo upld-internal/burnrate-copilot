@@ -3,7 +3,7 @@
 //
 // render(stdinData, dataDir, scriptDir) → string
 //
-// Loads config from ~/.copilot/hud-costs/config.json (falls back to
+// Loads config from ~/.copilot/copilot-hud/config.json (falls back to
 // DEFAULT_CONFIG when absent or malformed). Loads session data once and
 // passes it to all widgets. Renders in plain or powerline mode.
 //

@@ -9,7 +9,7 @@ Interactively configure the copilot-hud widget layout. Writes to the hud config 
 Determine the Copilot config directory:
 - If `COPILOT_HOME` is set, use its value. Otherwise use `~/.copilot`.
 
-The hud config file is at: `$COPILOT_DIR/hud-costs/config.json`
+The hud config file is at: `$COPILOT_DIR/copilot-hud/config.json`
 
 ### 2. Read the current config
 
@@ -192,14 +192,14 @@ If no: discard changes and exit without writing.
 
 ### 6. Write the config file
 
-Create `$COPILOT_DIR/hud-costs/` directory if it does not exist.
+Create `$COPILOT_DIR/copilot-hud/` directory if it does not exist.
 
-Write the config object to `$COPILOT_DIR/hud-costs/config.json` with 2-space
+Write the config object to `$COPILOT_DIR/copilot-hud/config.json` with 2-space
 indentation.
 
 Print a confirmation:
 ```
-✓ Config saved: ~/.copilot/hud-costs/config.json
+✓ Config saved: ~/.copilot/copilot-hud/config.json
   <N> widget(s) configured.
 
 Changes take effect on the next Copilot CLI turn (no restart needed).
