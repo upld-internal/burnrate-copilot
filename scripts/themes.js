@@ -68,24 +68,6 @@ function getTheme(name) {
   return THEMES[name] || THEMES.default;
 }
 
-// --- Gradient palettes (ANSI-256 fg color sequences, per-character cycling) ---
-// Used by the cwd widget's `gradient: true` option in plain mode.
-const GRADIENT_PALETTES = {
-  // Full-spectrum rainbow: red → orange → yellow → green → cyan → blue → purple → pink
-  default:    [196, 202, 208, 214, 226, 118, 46, 51, 33, 57, 201],
-  minimal:    [196, 202, 208, 214, 226, 118, 46, 51, 33, 57, 201],
-  // Nord: cool blues, teals, sky
-  nord:       [153, 117, 75, 67, 31, 37, 43, 80, 117],
-  // Dracula: purples, pinks, lavender
-  dracula:    [141, 183, 207, 201, 213, 219, 183],
-  // Catppuccin: soft pastels cycling warm→cool
-  catppuccin: [147, 183, 152, 116, 111, 141, 183, 219],
-};
-
-function getGradientPalette(themeName) {
-  return GRADIENT_PALETTES[themeName] || GRADIENT_PALETTES.default;
-}
-
 // withLabel — prepend a dim "Label: " prefix to a widget value.
 // label:     short label string (e.g. "Ctx", "Model")
 // value:     the already-formatted widget output (may contain ANSI codes)
@@ -97,4 +79,4 @@ function withLabel(label, value, show, powerline) {
   return `${D}${label}:${R} ${value}`;
 }
 
-module.exports = { getTheme, getGradientPalette, setBg, setFg, PL_RIGHT, R, B, D, GR, YL, RD, withLabel };
+module.exports = { getTheme, setBg, setFg, PL_RIGHT, R, B, D, GR, YL, RD, withLabel };
