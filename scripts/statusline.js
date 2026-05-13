@@ -4,8 +4,10 @@
 // Called on every turn. Reads session JSON from stdin, delegates all rendering
 // to compositor.js, and writes one line to stdout.
 //
-// Configure in ~/.copilot/config.json:
-//   "statusLine": { "type": "command", "command": "node /path/to/scripts/statusline.js" }
+// Configure in ~/.copilot/settings.json:
+//   "statusLine": { "type": "command", "command": "/path/to/scripts/statusline.js" }
+// (The command must be an executable path — not "node /path/..." — and this file
+// must be chmod +x. Run /copilot-hud:setup to configure automatically.)
 //
 // Fallback on stdin parse failure: [copilot-hud error]
 

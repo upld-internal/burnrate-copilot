@@ -48,18 +48,41 @@ const DEFAULT_CONFIG = {
 };
 
 // ---------------------------------------------------------------------------
-// Config loading
+// Config loading and deep-merge
 // ---------------------------------------------------------------------------
 
+// Known valid theme names (mirrors themes.js THEMES keys).
+const KNOWN_THEMES = new Set(['default', 'minimal', 'nord', 'dracula', 'catppuccin']);
+
+// loadConfig returns any valid JSON object from config.json, or null.
+// Deliberately permissive — partial configs (e.g. { "powerline": true }) are
+// valid. mergeConfig below applies type-checked defaults for any missing keys.
 function loadConfig(dataDir) {
   const configPath = path.join(dataDir, 'config.json');
   try {
     if (fs.existsSync(configPath)) {
       const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      if (parsed && Array.isArray(parsed.segments)) return parsed;
+      if (parsed && typeof parsed === 'object') return parsed;
     }
   } catch (_) {}
   return null;
+}
+
+// mergeConfig applies user overrides on top of defaults.
+// Each key is type-checked; invalid user values fall back to the default.
+//   powerline  — must be boolean
+//   theme      — must be one of KNOWN_THEMES
+//   separator  — must be a non-empty string
+//   segments   — must be an array; overrides entire default list (order matters)
+function mergeConfig(user, defaults) {
+  if (!user) return defaults;
+  return {
+    powerline: typeof user.powerline === 'boolean' ? user.powerline : defaults.powerline,
+    theme:     KNOWN_THEMES.has(user.theme)        ? user.theme     : defaults.theme,
+    separator: (typeof user.separator === 'string' && user.separator.length > 0)
+               ? user.separator : defaults.separator,
+    segments:  Array.isArray(user.segments)        ? user.segments  : defaults.segments,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -206,7 +229,7 @@ function renderPowerline(contentSegments, theme) {
 // ---------------------------------------------------------------------------
 
 function render(stdinData, dataDir, scriptDir) {
-  const config      = loadConfig(dataDir) || DEFAULT_CONFIG;
+  const config      = mergeConfig(loadConfig(dataDir), DEFAULT_CONFIG);
   const sessionData = loadSessionData(stdinData, dataDir, scriptDir);
   const powerline   = config.powerline || false;
   const separator   = config.separator || '│';
@@ -270,4 +293,4 @@ function render(stdinData, dataDir, scriptDir) {
   return renderPlain(collapsed);
 }
 
-module.exports = { render, loadConfig, loadSessionData, DEFAULT_CONFIG };
+module.exports = { render, loadConfig, mergeConfig, loadSessionData, DEFAULT_CONFIG, KNOWN_THEMES };
