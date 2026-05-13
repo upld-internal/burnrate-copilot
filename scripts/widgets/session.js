@@ -46,7 +46,9 @@ function parseModelName(displayName, modelId) {
     shortName = name.replace(/-/g, ' ').trim();
   }
 
-  const badge = [multiplier, effort].filter(Boolean).join('·') || null;
+  const badge = multiplier
+    ? (effort ? `${multiplier}·${effort}` : multiplier)
+    : (effort ? `·${effort}` : null);
   return { name: shortName, badge };
 }
 
