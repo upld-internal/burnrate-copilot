@@ -12,10 +12,23 @@
 const fs   = require('fs');
 const path = require('path');
 const { getDataDir } = require('./paths');
+const { loadPricing, computeSessionCost } = require('./pricing');
 
 const dataDir = getDataDir();
 
 const DEBUG = process.env.COPILOT_HUD_DEBUG === '1';
+
+// Compute final cost from last_known_tokens and pricing.
+// Falls back to last_known_cost (written by compositor each turn) if pricing unavailable.
+function computeFinalCost(session, modelId, dataDir) {
+  const tokens  = session.last_known_tokens;
+  const snap    = session.snapshot;
+  if (tokens && snap) {
+    const pricing = loadPricing(modelId, dataDir, __dirname);
+    if (pricing) return computeSessionCost(tokens, snap, pricing);
+  }
+  return session.last_known_cost || 0;
+}
 
 let raw = '';
 process.stdin.setEncoding('utf8');
@@ -52,12 +65,12 @@ process.stdin.on('end', () => {
       id:           sessionId,
       date:         new Date().toISOString().slice(0, 10),
       start_month:  startMonth,
-      cost_usd:     session.last_known_cost || 0, // 0 until Phase 6 computes cost
-      cost_pending: !session.last_known_cost,      // true = cost not yet computed
+      cost_usd:     computeFinalCost(session, modelId, dataDir),
+      cost_pending: false,
       model:        modelId,
       project:      session.last_known_project    || session.project    || undefined,
       project_id:   session.last_known_project_id || session.project_id || undefined,
-      final_tokens: session.last_known_tokens     || undefined, // for retroactive cost computation
+      final_tokens: session.last_known_tokens     || undefined,
     };
 
     // appendFileSync is safe for concurrent sessions on local disk

@@ -1,0 +1,49 @@
+{
+  "_meta": {
+    "source": "https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing",
+    "last_verified": "2026-05-12",
+    "note": "GitHub Copilot per-token rates (per 1M tokens, USD). Effective June 1 2026 under credit-based billing (1 AI credit = $0.01). Rates match Anthropic direct API rates as of verification date."
+  },
+  "claude-sonnet-4.6": {
+    "input": 3.00,
+    "output": 15.00,
+    "cache_write": 3.75,
+    "cache_read": 0.30
+  },
+  "claude-sonnet-4.5": {
+    "input": 3.00,
+    "output": 15.00,
+    "cache_write": 3.75,
+    "cache_read": 0.30
+  },
+  "claude-sonnet-4": {
+    "input": 3.00,
+    "output": 15.00,
+    "cache_write": 3.75,
+    "cache_read": 0.30
+  },
+  "claude-haiku-4.5": {
+    "input": 1.00,
+    "output": 5.00,
+    "cache_write": 1.25,
+    "cache_read": 0.10
+  },
+  "claude-opus-4.5": {
+    "input": 5.00,
+    "output": 25.00,
+    "cache_write": 6.25,
+    "cache_read": 0.50
+  },
+  "claude-opus-4.6": {
+    "input": 5.00,
+    "output": 25.00,
+    "cache_write": 6.25,
+    "cache_read": 0.50
+  },
+  "claude-opus-4.7": {
+    "input": 5.00,
+    "output": 25.00,
+    "cache_write": 6.25,
+    "cache_read": 0.50
+  }
+}

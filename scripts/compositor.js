@@ -14,6 +14,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const { getTheme, setBg, setFg, PL_RIGHT, R } = require('./themes');
+const { loadPricing, computeSessionCost, getMtdAndProjected } = require('./pricing');
 
 const WIDGETS = {
   ...require('./widgets/cost'),
@@ -135,8 +136,19 @@ function loadSessionData(stdinData, dataDir, scriptDir) {
     } catch (_) {}
   }
 
-  // Write last_known_tokens back to the session file on every turn.
-  // Critical for Phase 6 retroactive cost computation and orphan recovery.
+  // Compute session cost and load MTD once pricing is available.
+  const pricing = loadPricing(sd.modelId, dataDir, scriptDir);
+  if (pricing && sd.hasSnapshot) {
+    sd.hasPricing  = true;
+    sd.sessionCost = computeSessionCost(ctx, sd.snapshot, pricing);
+    const { mtd, projected, error } = getMtdAndProjected(sd.monthKey, dataDir);
+    sd.mtd       = (mtd || 0) + sd.sessionCost; // include current session in MTD
+    sd.projected  = projected != null ? projected + sd.sessionCost : null;
+    sd.mtdError   = error;
+  }
+
+  // Write last_known_tokens (and cost) back to the session file on every turn.
+  // Used by session-end.js and orphan recovery.
   if (sessionId) {
     try {
       const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
@@ -151,6 +163,9 @@ function loadSessionData(stdinData, dataDir, scriptDir) {
         };
         sessionRaw.last_known_model = sd.modelId || undefined;
         sessionRaw.last_known_at    = now.toISOString().replace(/\.\d{3}Z$/, 'Z');
+        if (sd.hasPricing) {
+          sessionRaw.last_known_cost = sd.sessionCost;
+        }
 
         const cwd = (stdinData.cwd || '').trim();
         if (cwd) {

@@ -246,7 +246,9 @@ console.log('\nTest 6: sessionEnd');
   const records     = readLines(monthlyFile);
   const rec         = records.find(r => r && r.id === SESSION_ID);
   check('JSONL record written', !!rec, `records: ${JSON.stringify(records)}`);
-  check('record has cost_pending flag', rec && rec.cost_pending === true);
+  check('cost_pending is false', rec && rec.cost_pending === false);
+  check('cost_usd is computed', rec && typeof rec.cost_usd === 'number' && rec.cost_usd > 0,
+    `cost_usd=${rec && rec.cost_usd}`);
   check('final_tokens preserved',
     rec && rec.final_tokens && rec.final_tokens.total_input_tokens === 24100
   );
