@@ -124,7 +124,7 @@ process.stdin.on('end', () => {
 
     // project_id uses the same slugify convention as Claude Code project dirs
     const project   = cwd ? path.basename(cwd) : '';
-    const projectId = cwd ? cwd.replace(/\//g, '-') : '';
+    const projectId = cwd ? cwd.replace(/[/\\]/g, '-') : '';
 
     // Write session file with zero-baseline snapshot.
     // The snapshot is subtracted from cumulative token counts each turn to get

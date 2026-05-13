@@ -1,40 +1,10 @@
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [
-      {
-        "type": "command",
-        "bash": "${PLUGIN_ROOT}/scripts/session-start.sh",
-        "timeoutSec": 5
-      }
-    ],
-    "userPromptSubmitted": [
-      {
-        "type": "command",
-        "bash": "${PLUGIN_ROOT}/scripts/user-prompt.sh",
-        "timeoutSec": 5
-      }
-    ],
-    "preToolUse": [
-      {
-        "type": "command",
-        "bash": "${PLUGIN_ROOT}/scripts/pre-tool-use.sh",
-        "timeoutSec": 5
-      }
-    ],
-    "postToolUse": [
-      {
-        "type": "command",
-        "bash": "${PLUGIN_ROOT}/scripts/post-tool-use.sh",
-        "timeoutSec": 5
-      }
-    ],
-    "sessionEnd": [
-      {
-        "type": "command",
-        "bash": "${PLUGIN_ROOT}/scripts/session-end.sh",
-        "timeoutSec": 5
-      }
-    ]
+    "sessionStart":       [{ "type": "command", "bash": "${PLUGIN_ROOT}/scripts/session-start.js",  "timeoutSec": 5 }],
+    "userPromptSubmitted":[{ "type": "command", "bash": "${PLUGIN_ROOT}/scripts/user-prompt.js",    "timeoutSec": 5 }],
+    "preToolUse":         [{ "type": "command", "bash": "${PLUGIN_ROOT}/scripts/pre-tool-use.js",   "timeoutSec": 5 }],
+    "postToolUse":        [{ "type": "command", "bash": "${PLUGIN_ROOT}/scripts/post-tool-use.js",  "timeoutSec": 5 }],
+    "sessionEnd":         [{ "type": "command", "bash": "${PLUGIN_ROOT}/scripts/session-end.js",    "timeoutSec": 5 }]
   }
 }

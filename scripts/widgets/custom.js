@@ -58,6 +58,7 @@ function custom_command(stdinData, sessionData, opts) {
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'ignore'],
       env: process.env,
+      shell: true,
     });
     const output = result.replace(/\n$/, '').trimEnd();
     return output || null;

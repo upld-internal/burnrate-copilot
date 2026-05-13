@@ -155,7 +155,7 @@ function loadSessionData(stdinData, dataDir, scriptDir) {
         const cwd = (stdinData.cwd || '').trim();
         if (cwd) {
           sessionRaw.last_known_project    = path.basename(cwd);
-          sessionRaw.last_known_project_id = cwd.replace(/\//g, '-');
+          sessionRaw.last_known_project_id = cwd.replace(/[/\\]/g, '-');
         }
 
         fs.writeFileSync(sessionPath, JSON.stringify(sessionRaw, null, 2));

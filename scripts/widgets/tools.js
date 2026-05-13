@@ -108,7 +108,7 @@ function tool_activity(stdinData, sessionData, opts) {
     if (opts._powerline) {
       part = `${sI} ${tI} ${name}`;
       if (info.lastTarget) {
-        const short = info.lastTarget.startsWith('/')
+        const short = path.isAbsolute(info.lastTarget)
           ? path.basename(info.lastTarget)
           : info.lastTarget.slice(0, 30);
         part += `: ${short}`;
@@ -117,7 +117,7 @@ function tool_activity(stdinData, sessionData, opts) {
     } else {
       part = `${c}${sI} ${tI}${R} ${B}${name}${R}`;
       if (info.lastTarget) {
-        const short = info.lastTarget.startsWith('/')
+        const short = path.isAbsolute(info.lastTarget)
           ? path.basename(info.lastTarget)
           : info.lastTarget.slice(0, 30);
         part += `${D}: ${short}${R}`;
