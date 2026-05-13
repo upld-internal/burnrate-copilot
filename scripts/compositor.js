@@ -244,6 +244,7 @@ function render(stdinData, dataDir, scriptDir) {
     const opts = Object.assign({}, seg, {
       _powerline:       powerline,
       _globalSeparator: separator,
+      _theme:           config.theme,
     });
 
     let text;
