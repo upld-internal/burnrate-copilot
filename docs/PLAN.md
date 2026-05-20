@@ -207,7 +207,7 @@ cat ~/.copilot/copilot-hud/monthly/$(date +%Y-%m).jsonl | tail -1 | node -e \
 
 ---
 
-## Phase 3a — `burnrate-cost-summary` Skill
+## ✅ Phase 3a — `burnrate-cost-summary` Skill
 
 **Goal:** Port the cost summary skill from `burnrate-claude`. Shows session cost grouped by project and Jira ticket for a given month, with by-model breakdown and a `% of total` column.
 
@@ -249,7 +249,7 @@ node skills/burnrate-cost-summary/scripts/summarize-costs.js 2026-05 --by-projec
 
 ---
 
-## Phase 3b — `burnrate-report` Skill
+## ✅ Phase 3b — `burnrate-report` Skill
 
 **Goal:** Package user data into a self-contained zip file for bug reports. Includes monthly cost records, session files, config, and `package.json`.
 
@@ -288,7 +288,7 @@ unzip -l /tmp/test-report.zip
 
 ---
 
-## Phase 3c — `burnrate-optimize` Skill
+## ✅ Phase 3c — `burnrate-optimize` Skill
 
 **Goal:** Analyze session telemetry data and monthly JSONL records for cost and efficiency patterns. Produce a prioritized health report with actionable recommendations.
 
