@@ -14,6 +14,7 @@ const path = require('path');
 const { getDataDir } = require('./paths');
 const { loadPricing, computeSessionCost } = require('./pricing');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
+const { buildTelemetryFields } = require('./session-file');
 
 const dataDir = getDataDir();
 
@@ -91,6 +92,9 @@ process.stdin.on('end', () => {
       const seenKeys = Object.keys(jiraCosts).filter(k => k !== 'unattributed');
       if (seenKeys.length > 1) record.jira_keys_seen = seenKeys.sort();
     }
+
+    // Telemetry fields — turn counts, tool usage, file extensions, timing
+    Object.assign(record, buildTelemetryFields(session));
 
     // appendFileSync is safe for concurrent sessions on local disk
     fs.appendFileSync(monthlyFile, JSON.stringify(record) + '\n');

@@ -14,8 +14,10 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { getDataDir } = require('./paths');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
+const { buildTelemetryFields } = require('./session-file');
 
 const dataDir = getDataDir();
 
@@ -90,6 +92,9 @@ function recoverOrphanedSessions(currentSessionId) {
         const seenKeys = Object.keys(jiraCosts).filter(k => k !== 'unattributed');
         if (seenKeys.length > 1) record.jira_keys_seen = seenKeys.sort();
       }
+
+      // Include telemetry if it was tracked in this orphaned session.
+      Object.assign(record, buildTelemetryFields(session));
       fs.appendFileSync(monthlyFile, JSON.stringify(record) + '\n');
 
       // Delete regardless — even zero-activity orphans should not accumulate
@@ -140,6 +145,16 @@ process.stdin.on('end', () => {
     const project   = cwd ? path.basename(cwd) : '';
     const projectId = cwd ? cwd.replace(/[/\\]/g, '-') : '';
 
+    // Capture active git branch. Fails silently for non-git dirs and detached HEAD.
+    let gitBranch;
+    if (cwd) {
+      try {
+        gitBranch = execFileSync('git', ['-C', cwd, 'branch', '--show-current'], {
+          timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'],
+        }).toString().trim() || undefined;
+      } catch (_) {}
+    }
+
     // Write session file with zero-baseline snapshot.
     // The snapshot is subtracted from cumulative token counts each turn to get
     // the per-session delta. All fields are 0 since Copilot resets counts per session.
@@ -150,6 +165,7 @@ process.stdin.on('end', () => {
       model_id:    modelId,
       project:     project   || undefined,
       project_id:  projectId || undefined,
+      git_branch:  gitBranch || undefined,
       snapshot: {
         total_input_tokens:       0,
         total_output_tokens:      0,

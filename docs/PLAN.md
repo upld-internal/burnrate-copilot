@@ -22,7 +22,7 @@ This plan brings `burnrate-copilot` up to parity with `burnrate-claude`, which r
 
 ---
 
-## Phase 0 — Docs Folder
+## ✅ Phase 0 — Docs Folder
 
 Mirror the `burnrate-claude` docs structure so both projects have consistent reference material.
 

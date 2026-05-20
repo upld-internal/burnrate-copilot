@@ -10,7 +10,8 @@
 //   timestamp: number  — unix ms timestamp
 
 const path = require('path');
-const { withStateLock, STATE_FILE, MAX_RECENT_TOOLS } = require('./state');
+const { withStateLock, readState, STATE_FILE, MAX_RECENT_TOOLS } = require('./state');
+const { updateSession, logHookDebug } = require('./session-file');
 
 // Internal tools that should not appear in the tool activity display.
 // These are Copilot/GSD framework tools, not user-visible work.
@@ -83,6 +84,17 @@ process.stdin.on('end', () => {
         };
       }, STATE_FILE);
 
+      // Telemetry: record subagent spawn in session file
+      const taskState = readState(STATE_FILE);
+      if (taskState.sessionActive && taskState.sessionId) {
+        const sid = taskState.sessionId;
+        updateSession(sid, session => {
+          if (!Array.isArray(session.subagents)) session.subagents = [];
+          session.subagents.push({ type: subagentType || 'unknown', started_at: new Date().toISOString() });
+        }, { mustExist: true });
+        logHookDebug('preToolUse', data, sid);
+      }
+
       process.exit(0);
     }
 
@@ -102,6 +114,27 @@ process.stdin.on('end', () => {
         recentTools: [entry, ...tools].slice(0, MAX_RECENT_TOOLS),
       };
     }, STATE_FILE);
+
+    // Telemetry: increment tool_counts and track ext_counts for file edits.
+    // sessionId comes from state.json (not in the preToolUse payload).
+    const state = readState(STATE_FILE);
+    if (state.sessionActive && state.sessionId) {
+      const sid = state.sessionId;
+      updateSession(sid, session => {
+        if (!session.tool_counts) session.tool_counts = {};
+        session.tool_counts[toolName] = (session.tool_counts[toolName] || 0) + 1;
+
+        if (toolName === 'edit' || toolName === 'create') {
+          const filePath = (toolArgs.path || toolArgs.file_path || '').trim();
+          if (filePath) {
+            const ext = path.extname(filePath).toLowerCase() || '[no-ext]';
+            if (!session.ext_counts) session.ext_counts = {};
+            session.ext_counts[ext] = (session.ext_counts[ext] || 0) + 1;
+          }
+        }
+      }, { mustExist: true });
+      logHookDebug('preToolUse', data, sid);
+    }
 
   } catch (_) {
     // Never crash — hook failures are silent
