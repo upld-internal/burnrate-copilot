@@ -15,7 +15,7 @@ This plan brings `burnrate-copilot` up to parity with `burnrate-claude`, which r
 
 ### ✅ Phase 6 (cost calculation)
 - `scripts/pricing.js` — `computeCost`, `getMtdAndProjected`, `loadPricing`
-- `pricing.json` — Anthropic direct API rates for Copilot model IDs
+- `pricing.json` — GitHub Copilot AI Credits rates for all supported models (Claude, OpenAI, Google, GitHub fine-tuned)
 - `scripts/compositor.js` — token-delta cost computation (Copilot field names: `total_cache_write_tokens`, `total_cache_read_tokens`)
 - `scripts/session-end.js` — appends cost record to monthly JSONL
 - `scripts/session-start.js` — snapshot baseline, orphan recovery
@@ -410,6 +410,42 @@ node scripts/show-hook-debug.js
 # Verify hooks.jsonl exists and contains an entry with hook: "sessionStart"
 cat ~/.copilot/copilot-hud/debug/hooks.jsonl | \
   node -e "process.stdin.on('data',d=>console.log(JSON.parse(d.toString().split('\n')[0]).hook))"
+```
+
+---
+
+## Phase 7 — Pricing Maintenance Tooling
+
+**Goal:** Provide maintainer scripts to keep `pricing.json` accurate as GitHub changes model rates and adds new models. Also provide a model ID verification utility so that pricing.json keys can be confirmed against real Copilot session data without submitting full requests to each model.
+
+**Entry criteria:** None — can be done any time. Evaluate before each release when GitHub announces pricing changes.
+
+**Design decisions:**
+
+- **No network calls in production paths.** `statusline.js`, `session-start.js`, and all hook scripts must never make outbound HTTP requests. Pricing data is always read from the bundled `pricing.json` — the staleness warning in `pricing.js` (60-day threshold, stderr only) is sufficient runtime alerting.
+- **`scripts/update-pricing.js`** is a *maintainer tool* run locally before cutting a release. It fetches the GitHub docs pricing page, parses the HTML tables, and prints a diff against the current `pricing.json`. It does **not** write the file automatically — the maintainer reviews the diff and applies it. This avoids silent overwrites.
+- **`scripts/verify-model-ids.sh`** verifies pricing.json keys against the actual `model.id` values Copilot CLI sends. Strategy: start a `copilot` session with each `--model <id>` flag, immediately quit (no message needed), and read `model_id` from the session file written by the `sessionStart` hook. Compare against the pricing.json key. Any mismatch is flagged.
+- Pricing source URL is already in `pricing.json` `_meta.source` and `pricing.js` header comment.
+
+### New files
+
+| File | Purpose |
+|---|---|
+| `scripts/update-pricing.js` | Maintainer tool: fetch GitHub docs pricing page, parse HTML tables, print diff vs current `pricing.json`. Requires Node.js built-in `https`/`http` — no npm deps. Dry-run only; does not write files. |
+| `scripts/verify-model-ids.sh` | Maintainer tool: for each model key in `pricing.json`, start `copilot --model <key>`, exit immediately, read `model_id` from the session file, compare. Reports MATCH / MISMATCH / NOT_FOUND. Requires `jq`. |
+
+### Verification
+
+```bash
+# Run the pricing updater — review the diff output
+node scripts/update-pricing.js
+
+# Run the model ID verifier — all lines should show MATCH
+bash scripts/verify-model-ids.sh
+
+# Confirm no network calls are made during normal statusline operation
+node scripts/statusline.js <<< '{"session_id":"test","model":{"id":"claude-sonnet-4.6"},"cwd":"/tmp","context_window":{},"cost":{}}'
+# Should complete instantly (< 50ms) with no DNS lookups
 ```
 
 ---
