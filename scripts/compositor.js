@@ -15,11 +15,14 @@ const path = require('path');
 
 const { getTheme, setBg, setFg, PL_RIGHT, R } = require('./themes');
 const { loadPricing, computeSessionCost, getMtdAndProjected } = require('./pricing');
+const { detectJiraKey } = require('./jira-detector');
+const { applyJiraDelta, round6 } = require('./jira-attribution');
 
 const WIDGETS = {
   ...require('./widgets/cost'),
   ...require('./widgets/context'),
   ...require('./widgets/session'),
+  ...require('./widgets/jira'),
   ...require('./widgets/git'),
   ...require('./widgets/system'),
   ...require('./widgets/custom'),
@@ -83,6 +86,7 @@ function mergeConfig(user, defaults) {
     separator: (typeof user.separator === 'string' && user.separator.length > 0)
                ? user.separator : defaults.separator,
     segments:  Array.isArray(user.segments)        ? user.segments  : defaults.segments,
+    jira:      (user.jira && typeof user.jira === 'object') ? user.jira : null,
   };
 }
 
@@ -92,7 +96,7 @@ function mergeConfig(user, defaults) {
 
 // Loads all session-related data once. Widgets read from this object rather
 // than doing their own file I/O or cost calculations.
-function loadSessionData(stdinData, dataDir, scriptDir) {
+function loadSessionData(stdinData, dataDir, scriptDir, config) {
   const sessionId = (stdinData.session_id || '').trim();
   const model     = stdinData.model || {};
   const ctx       = stdinData.context_window || {};
@@ -100,24 +104,29 @@ function loadSessionData(stdinData, dataDir, scriptDir) {
 
   const sd = {
     sessionId,
-    modelId:          model.id || '',
-    modelDisplayName: model.display_name || '',
-    snapshot:         null,
-    startedAt:        null,
-    hasSnapshot:      false,
-    hasPricing:       false,  // Phase 6 sets this true when pricing.json is loaded
-    sessionCost:      0,      // Phase 6 computes this
-    mtd:              0,      // Phase 6
-    projected:        null,   // Phase 6
-    mtdError:         false,
-    monthKey:         now.toISOString().slice(0, 7),
+    modelId:              model.id || '',
+    modelDisplayName:     model.display_name || '',
+    snapshot:             null,
+    startedAt:            null,
+    hasSnapshot:          false,
+    hasPricing:           false,
+    sessionCost:          0,
+    mtd:                  0,
+    projected:            null,
+    mtdError:             false,
+    monthKey:             now.toISOString().slice(0, 7),
     dataDir,
     scriptDir,
-    project:          '',
-    projectId:        '',
-    recentTools:      [],     // Phase 3 populates via state.js
-    agents:           [],     // Phase 3 populates via state.js
-    lastPrompt:       null,
+    project:              '',
+    projectId:            '',
+    jiraKey:              '',
+    jiraSource:           '',
+    lastKnownJiraKey:     '',
+    lastKnownJiraSource:  '',
+    jiraBaseUrl:          ((config && config.jira && config.jira.base_url) || ''),
+    recentTools:          [],
+    agents:               [],
+    lastPrompt:           null,
   };
 
   // Load session snapshot
@@ -132,6 +141,25 @@ function loadSessionData(stdinData, dataDir, scriptDir) {
         if (!sd.modelId) sd.modelId = session.last_known_model || session.model_id || '';
         sd.project   = session.last_known_project    || session.project    || '';
         sd.projectId = session.last_known_project_id || session.project_id || '';
+        sd.jiraKey              = session.jira_key              || '';
+        sd.jiraSource           = session.jira_source           || '';
+        sd.lastKnownJiraKey     = session.last_known_jira_key   || '';
+        sd.lastKnownJiraSource  = session.last_known_jira_source || '';
+      }
+    } catch (_) {}
+  }
+
+  // Detect Jira key from git branch — runs independently of session file state
+  // so the widget appears immediately (no one-turn delay from read/write cycle).
+  if (sessionId && stdinData.cwd) {
+    try {
+      const jiraConfig  = config && typeof config === 'object' ? config.jira : null;
+      const projectKeys = jiraConfig && Array.isArray(jiraConfig.project_keys)
+        ? jiraConfig.project_keys : null;
+      const jira = detectJiraKey(stdinData.cwd, projectKeys);
+      if (jira) {
+        sd.lastKnownJiraKey    = jira.key;
+        sd.lastKnownJiraSource = 'branch';
       }
     } catch (_) {}
   }
@@ -171,6 +199,9 @@ function loadSessionData(stdinData, dataDir, scriptDir) {
         if (sd.hasPricing) {
           sessionRaw.last_known_cost = sd.sessionCost;
         }
+
+        // Attribute cost delta to active Jira key (or unattributed bucket).
+        applyJiraDelta(sessionRaw, sd.sessionCost, sd.lastKnownJiraKey || null);
 
         const cwd = (stdinData.cwd || '').trim();
         if (cwd) {
@@ -250,7 +281,7 @@ function renderPowerline(contentSegments, theme) {
 
 function render(stdinData, dataDir, scriptDir) {
   const config      = mergeConfig(loadConfig(dataDir), DEFAULT_CONFIG);
-  const sessionData = loadSessionData(stdinData, dataDir, scriptDir);
+  const sessionData = loadSessionData(stdinData, dataDir, scriptDir, config);
   const powerline   = config.powerline || false;
   const separator   = config.separator || '│';
   const theme       = getTheme(config.theme);

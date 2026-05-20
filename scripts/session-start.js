@@ -15,6 +15,7 @@
 const fs   = require('fs');
 const path = require('path');
 const { getDataDir } = require('./paths');
+const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 
 const dataDir = getDataDir();
 
@@ -76,6 +77,19 @@ function recoverOrphanedSessions(currentSessionId) {
         final_tokens: session.last_known_tokens     || undefined,
         recovered:    true,
       };
+
+      // Include Jira attribution if it was tracked in this orphaned session.
+      const jiraCosts = normalizeJiraCosts(session.jira_costs);
+      if (Object.keys(jiraCosts).length) {
+        record.jira_costs = jiraCosts;
+        const primary = selectPrimaryJiraKey(jiraCosts, session.last_known_jira_key);
+        if (primary) {
+          record.jira_key    = primary;
+          record.jira_source = 'branch';
+        }
+        const seenKeys = Object.keys(jiraCosts).filter(k => k !== 'unattributed');
+        if (seenKeys.length > 1) record.jira_keys_seen = seenKeys.sort();
+      }
       fs.appendFileSync(monthlyFile, JSON.stringify(record) + '\n');
 
       // Delete regardless — even zero-activity orphans should not accumulate

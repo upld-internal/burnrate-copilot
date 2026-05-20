@@ -13,6 +13,7 @@ const fs   = require('fs');
 const path = require('path');
 const { getDataDir } = require('./paths');
 const { loadPricing, computeSessionCost } = require('./pricing');
+const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 
 const dataDir = getDataDir();
 
@@ -72,6 +73,24 @@ process.stdin.on('end', () => {
       project_id:   session.last_known_project_id || session.project_id || undefined,
       final_tokens: session.last_known_tokens     || undefined,
     };
+
+    // Jira attribution — include per-ticket cost breakdown when tracked.
+    // Fall back to a single-key record when jira_costs map is absent but
+    // last_known_jira_key was set (e.g. only one ticket the whole session).
+    const jiraCosts = normalizeJiraCosts(session.jira_costs);
+    if (!Object.keys(jiraCosts).length && session.last_known_jira_key && record.cost_usd > 0) {
+      jiraCosts[session.last_known_jira_key] = Math.round(record.cost_usd * 1e6) / 1e6;
+    }
+    if (Object.keys(jiraCosts).length) {
+      record.jira_costs = jiraCosts;
+      const primary = selectPrimaryJiraKey(jiraCosts, session.last_known_jira_key);
+      if (primary) {
+        record.jira_key    = primary;
+        record.jira_source = 'branch';
+      }
+      const seenKeys = Object.keys(jiraCosts).filter(k => k !== 'unattributed');
+      if (seenKeys.length > 1) record.jira_keys_seen = seenKeys.sort();
+    }
 
     // appendFileSync is safe for concurrent sessions on local disk
     fs.appendFileSync(monthlyFile, JSON.stringify(record) + '\n');
