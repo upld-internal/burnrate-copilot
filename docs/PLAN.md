@@ -133,7 +133,7 @@ node tests/jira-widget.test.js
 
 ---
 
-## Phase 2 — Rich Session Telemetry
+## ✅ Phase 2 — Rich Session Telemetry
 
 **Goal:** Add per-session telemetry fields to monthly JSONL records: tool call counts, edited file extension counts, prompt/response timing, and basic subagent tracking. Refactor session file writes to use atomic temp-rename to prevent partial writes on concurrent hook execution.
 
