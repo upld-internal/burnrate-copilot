@@ -2,13 +2,15 @@
 /**
  * pricing.js — cost computation for copilot-hud.
  *
- * Adapted from cost-display/scripts/pricing.js. Key differences from the
- * Claude Code version:
+ * Uses GitHub Copilot AI Credits rates (effective June 1 2026, 1 credit = $0.01 USD).
+ * Rates are sourced from GitHub's official pricing table, not Anthropic/AWS direct rates.
+ *
+ * Key differences from the Claude Code version:
  *   - Uses getCopilotConfigDir / paths.js instead of getClaudeConfigDir
  *   - computeSessionCost uses Copilot's token field names:
  *       total_cache_write_tokens  (vs cache_creation_input_tokens in Claude Code)
  *       total_cache_read_tokens   (vs cache_read_input_tokens in Claude Code)
- *   - pricing.json uses GitHub Copilot published rates (per-token, USD per 1M)
+ *   - OpenAI/Google models have cache_write = 0 (only Anthropic charges for cache writes)
  *
  * Source for rates:
  *   https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing
