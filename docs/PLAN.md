@@ -414,7 +414,7 @@ cat ~/.copilot/copilot-hud/debug/hooks.jsonl | \
 
 ---
 
-## Phase 7 — Pricing Maintenance Tooling
+## ✅ Phase 7 — Pricing Maintenance Tooling
 
 **Goal:** Provide maintainer scripts to keep `pricing.json` accurate as GitHub changes model rates and adds new models. Also provide a model ID verification utility so that pricing.json keys can be confirmed against real Copilot session data without submitting full requests to each model.
 
