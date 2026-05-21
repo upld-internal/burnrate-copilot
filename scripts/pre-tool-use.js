@@ -61,6 +61,10 @@ process.stdin.on('end', () => {
 
     if (!toolName) process.exit(0);
 
+    // Log all preToolUse events to debug log (no-op unless COPILOT_HUD_DEBUG=1)
+    const currentState = readState(STATE_FILE);
+    logHookDebug('preToolUse', data, currentState.sessionId || null);
+
     // Skip internal framework tools
     if (INTERNAL_TOOLS.has(toolName)) process.exit(0);
 
@@ -92,7 +96,6 @@ process.stdin.on('end', () => {
           if (!Array.isArray(session.subagents)) session.subagents = [];
           session.subagents.push({ type: subagentType || 'unknown', started_at: new Date().toISOString() });
         }, { mustExist: true });
-        logHookDebug('preToolUse', data, sid);
       }
 
       process.exit(0);
@@ -133,7 +136,6 @@ process.stdin.on('end', () => {
           }
         }
       }, { mustExist: true });
-      logHookDebug('preToolUse', data, sid);
     }
 
   } catch (_) {

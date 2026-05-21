@@ -17,13 +17,10 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { getDataDir, getCopilotConfigDir } = require('./paths');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
-const { buildTelemetryFields } = require('./session-file');
+const { buildTelemetryFields, logHookDebug } = require('./session-file');
 const { ensureStatusLineConfig } = require('./statusline-config');
 
 const dataDir = getDataDir();
-
-// DEBUG: set COPILOT_HUD_DEBUG=1 to log full stdin to dataDir/session-start-debug.jsonl
-const DEBUG = process.env.COPILOT_HUD_DEBUG === '1';
 
 // ---------------------------------------------------------------------------
 // Orphan recovery
@@ -123,13 +120,6 @@ process.stdin.on('end', () => {
 
     const data = JSON.parse(raw);
 
-    if (DEBUG) {
-      try {
-        const logPath = path.join(dataDir, 'session-start-debug.jsonl');
-        fs.appendFileSync(logPath, JSON.stringify({ ts: new Date().toISOString(), data }) + '\n');
-      } catch (_) {}
-    }
-
     // SessionStart uses camelCase sessionId; statusLine uses snake_case session_id.
     // Handle both for robustness.
     const sessionId = (data.sessionId || data.session_id || '').trim()
@@ -177,6 +167,9 @@ process.stdin.on('end', () => {
 
     const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
     fs.writeFileSync(sessionPath, JSON.stringify(sessionFile, null, 2));
+
+    // Log to debug file after session file is written so session_after is captured
+    logHookDebug('sessionStart', data, sessionId);
 
     // Auto-configure statusLine in settings.json if not yet pointing to our script.
     // Returns a notification string when a change is made; null when already correct.

@@ -22,6 +22,10 @@ process.stdin.on('end', () => {
     const prompt = typeof data.prompt === 'string' ? data.prompt.trim() : null;
     const ts     = data.timestamp || Date.now();
 
+    // Log to debug file unconditionally (no-op unless COPILOT_HUD_DEBUG=1)
+    const promptState = readState(STATE_FILE);
+    logHookDebug('userPromptSubmitted', data, promptState.sessionId || null);
+
     if (!prompt) process.exit(0);
 
     withStateLock(state => ({
@@ -50,7 +54,6 @@ process.stdin.on('end', () => {
         session.turn_count   = (session.turn_count || 0) + 1;
         session.last_prompt_at = now;
       }, { mustExist: true });
-      logHookDebug('userPromptSubmitted', data, sid);
     }
 
   } catch (_) {}

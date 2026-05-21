@@ -372,7 +372,7 @@ node tests/statusline-config.test.js
 
 ---
 
-## Phase 5 — Debug Tooling
+## ✅ Phase 5 — Debug Tooling
 
 **Goal:** Add a debug mode that captures full hook payloads to a JSONL log. Provide a viewer script so it's easy to inspect what Copilot CLI sends for each hook type — essential for validating that field names and shapes match what the hook scripts expect.
 

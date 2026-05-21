@@ -14,11 +14,9 @@ const path = require('path');
 const { getDataDir } = require('./paths');
 const { loadPricing, computeSessionCost } = require('./pricing');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
-const { buildTelemetryFields } = require('./session-file');
+const { buildTelemetryFields, logHookDebug } = require('./session-file');
 
 const dataDir = getDataDir();
-
-const DEBUG = process.env.COPILOT_HUD_DEBUG === '1';
 
 // Compute final cost from last_known_tokens and pricing.
 // Falls back to last_known_cost (written by compositor each turn) if pricing unavailable.
@@ -42,15 +40,10 @@ process.stdin.on('end', () => {
 
     const data = JSON.parse(raw);
 
-    if (DEBUG) {
-      try {
-        const logPath = path.join(dataDir, 'session-end-debug.jsonl');
-        fs.appendFileSync(logPath, JSON.stringify({ ts: new Date().toISOString(), data }) + '\n');
-      } catch (_) {}
-    }
-
     const sessionId = (data.sessionId || data.session_id || '').trim();
     if (!sessionId) process.exit(0);
+
+    logHookDebug('sessionEnd', data, sessionId);
 
     const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
     if (!fs.existsSync(sessionPath)) process.exit(0);

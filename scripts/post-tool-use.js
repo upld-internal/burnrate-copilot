@@ -9,7 +9,8 @@
 //   toolResult: { resultType: "success" | "failure" | "denied" }
 //   timestamp:  number — unix ms timestamp
 
-const { withStateLock, STATE_FILE } = require('./state');
+const { withStateLock, readState, STATE_FILE } = require('./state');
+const { logHookDebug } = require('./session-file');
 
 // Internal tools to skip, with the exception of `read_agent`
 // (which signals agent completion — handled separately below).
@@ -41,6 +42,10 @@ process.stdin.on('end', () => {
     const status     = mapResultType(resultType);
 
     if (!toolName) process.exit(0);
+
+    // Log all postToolUse events to debug log (no-op unless COPILOT_HUD_DEBUG=1)
+    const postState = readState(STATE_FILE);
+    logHookDebug('postToolUse', data, postState.sessionId || null);
     if (SKIP_TOOLS.has(toolName)) process.exit(0);
 
     // `task` postToolUse fires when the task CALL completes (the agent is now
