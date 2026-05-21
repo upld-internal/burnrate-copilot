@@ -15,9 +15,10 @@
 const fs   = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { getDataDir } = require('./paths');
+const { getDataDir, getCopilotConfigDir } = require('./paths');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields } = require('./session-file');
+const { ensureStatusLineConfig } = require('./statusline-config');
 
 const dataDir = getDataDir();
 
@@ -176,6 +177,22 @@ process.stdin.on('end', () => {
 
     const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
     fs.writeFileSync(sessionPath, JSON.stringify(sessionFile, null, 2));
+
+    // Auto-configure statusLine in settings.json if not yet pointing to our script.
+    // Returns a notification string when a change is made; null when already correct.
+    // Written to a pending-notification file so the statusline compositor can display
+    // it once on the next render turn (hook stdout is discarded by Copilot).
+    try {
+      const notification = ensureStatusLineConfig(
+        process.env.PLUGIN_ROOT,
+        getCopilotConfigDir(),
+        dataDir
+      );
+      if (notification) {
+        const notifPath = path.join(dataDir, 'pending-notification.json');
+        fs.writeFileSync(notifPath, JSON.stringify({ message: notification, shown: false }));
+      }
+    } catch (_) {}
 
     recoverOrphanedSessions(sessionId);
 

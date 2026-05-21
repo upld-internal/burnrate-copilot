@@ -41,7 +41,7 @@ Mirror the `burnrate-claude` docs structure so both projects have consistent ref
 
 ---
 
-## Phase 1 — Jira Integration
+## ✅ Phase 1 — Jira Integration
 
 **Goal:** Detect the active Jira ticket from the git branch name on every statusline turn. Track cost attribution per ticket across context switches within a session. Expose a `jira_ticket` widget and include Jira fields in the monthly JSONL record.
 
@@ -328,7 +328,7 @@ node skills/burnrate-optimize/scripts/optimize.js --days 30
 
 ---
 
-## Phase 4 — Auto-configure statusLine
+## ✅ Phase 4 — Auto-configure statusLine
 
 **Goal:** On session start, check whether `~/.copilot/config.json` already points to this plugin's statusline script. If not, configure it automatically and notify the user once. Idempotent — safe to run every session.
 
