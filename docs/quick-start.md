@@ -4,9 +4,11 @@
 
 **burnrate-copilot** is a GitHub Copilot CLI plugin that tracks your session spend in real time. It shows per-session cost and a month-to-date total directly in the statusline footer — updated every turn — and stores everything locally with no external calls.
 
+![](images/Statusline.png)
+
 ## How it works
 
-On every turn, Copilot CLI pipes session data (including running token totals) to the statusline command configured in `~/.copilot/config.json`. The plugin computes cost from token deltas × pricing, writes it to a local session file, and rolls it into a monthly JSONL log at session end.
+On every turn, Copilot CLI pipes session data (including running token totals) to the statusline command configured in `~/.copilot/settings.json`. The plugin computes cost from token deltas × pricing, writes it to a local session file, and rolls it into a monthly JSONL log at session end.
 
 ---
 
@@ -30,17 +32,15 @@ If you have an ssh key configured for github, installation is simple. In the Cop
 
 ```
 
-Our Github organizations require that SAML SSO be authorized for the upld-internal org. As of now, this is preventing Copilot CLI plugin installs via HTTPS. We are investigating whether this can be resolved, but ssh is better anyways, so use that.
+Our Github organizations require that SAML SSO be authorized for the upld-internal org. As of now, this is preventing Copilot CLI plugin installs via HTTPS. We are investigating whether this can be resolved, but ssh is better anyways, so use that. :) 
 
 > [!INFO] Need a Git SSH key?
-[SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh) is the preferred (and easiest) way to interact with git. If you do not have an ssh key configured for use with GitHub, do so [here](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) now. It only takes 5 minutes and you will never need to provide a password or API token again. :) 
+[SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh) is the preferred (and easiest) way to interact with git. If you do not have an ssh key configured for use with GitHub, do so [here](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) now. It only takes 5 minutes and you will never need to provide a password or API token again. 
 
 
-**2. Configuring your statusline**
+**2. Customizing your StatusLine (optional)**
 
-The plugin will auto-configure this on first session start if not already set. See `commands/configure.md` for full configuration options.
-
-Add to `~/.copilot/settings.json`:
+The plugin will auto-configure this on first session start if not already set. See `/burnrate:configure` for full configuration options.
 
 ---
 

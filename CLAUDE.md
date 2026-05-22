@@ -1,27 +1,13 @@
 # burnrate-copilot — GitHub Copilot CLI cost display
 
-## Project goal
-
-Build a real-time cost display plugin for GitHub Copilot CLI, mirroring the functionality of the Claude Code cost display at `~/Projects/cost-display`. Display session spend, MTD total, context window usage, model, and git status in the Copilot CLI statusline footer.
-
-## Existing Claude Code implementation to adapt from
-
-`~/Projects/cost-display` — the working Claude Code version. **Do not modify this project** (cost accuracy validation in progress until 2026-05-18). Read it for patterns; build the Copilot version independently here.
-
-Key files to understand before starting:
-- `scripts/pricing.js` — `computeCost`, `getMtdAndProjected`, `loadPricing`
-- `scripts/compositor.js` — how session data is loaded and passed to widgets
-- `scripts/session-start.js` — how session files are written and orphans recovered
-- `scripts/session-end.js` — how completed sessions are appended to monthly JSONL
-- `scripts/themes.js` — ANSI color helpers (reuse directly)
-- `scripts/widgets/cost.js`, `context.js`, `git.js`, `session.js` — widget rendering (mostly reusable)
-
 ## Installation and uninstallation
 
 ### Installing
 
-```sh
-copilot plugin install git@github.com:upld-internal/burnrate-copilot.git
+In the Copilot CLI chat:
+
+```
+/plugin install git@github.com:upld-internal/burnrate-copilot.git
 ```
 
 The installer:
@@ -110,8 +96,11 @@ Configured in `hooks.json` at the plugin root.
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [{"type": "command", "command": "node ${PLUGIN_ROOT}/scripts/session-start.js", "timeoutSec": 5}],
-    "sessionEnd":   [{"type": "command", "command": "node ${PLUGIN_ROOT}/scripts/session-end.js",   "timeoutSec": 5}]
+    "sessionStart":        [{"type": "command", "command": "node ${PLUGIN_ROOT}/scripts/session-start.js",  "timeoutSec": 5}],
+    "userPromptSubmitted": [{"type": "command", "command": "node ${PLUGIN_ROOT}/scripts/user-prompt.js",    "timeoutSec": 5}],
+    "preToolUse":          [{"type": "command", "command": "node ${PLUGIN_ROOT}/scripts/pre-tool-use.js",   "timeoutSec": 5}],
+    "postToolUse":         [{"type": "command", "command": "node ${PLUGIN_ROOT}/scripts/post-tool-use.js",  "timeoutSec": 5}],
+    "sessionEnd":          [{"type": "command", "command": "node ${PLUGIN_ROOT}/scripts/session-end.js",    "timeoutSec": 5}]
   }
 }
 ```
@@ -169,28 +158,4 @@ All plugin data lives in `~/.copilot/burnrate-copilot/`:
 
 ## Pricing table
 
-`pricing.json` uses the same schema as burnrate-claude but with Copilot model IDs and Anthropic direct API rates (not Bedrock). Model IDs in Copilot stdin appear to use the format `claude-sonnet-4.6` (without the `us.anthropic.` Bedrock prefix).
-
-**Verify the exact model IDs from a real Copilot session before publishing the pricing table.** Log the first `model.id` value you see and confirm it matches the keys in pricing.json.
-
-## Recommended build order
-
-1. Understand plugin.json, hooks.json, and stdin schema
-2. Copy `~/Projects/cost-display/scripts/pricing.js` → `scripts/pricing.js`, replace `getClaudeConfigDir` with `getCopilotConfigDir` (defaults to `~/.copilot`)
-3. Copy `~/Projects/cost-display/scripts/themes.js` → `scripts/themes.js` (no changes needed)
-4. Copy widgets: `context.js`, `git.js`, `session.js`, `custom.js` → `scripts/widgets/` (no changes needed)
-5. Adapt `cost.js` — the widget reads `sessionData.sessionCost` which is compositor-computed; no changes needed if compositor is correct
-6. Write `scripts/compositor.js` — adapt from cost-display version; replace `nativeCost` logic with token-delta computation using Copilot field names
-7. Write `scripts/session-start.js` — same pattern as cost-display, model is already an object (no `typeof` check)
-8. Write `scripts/session-end.js` — same pattern as cost-display (use `last_known_cost` from session file)
-9. Write `scripts/statusline.js` — same entry point pattern as cost-display
-10. Write `plugin.json`, `hooks.json`, `pricing.json`
-11. Test with `COPILOT_CONFIG_DIR` pointing to a test directory
-
-## What's NOT needed for v1
-
-- The statusline conflict detection from burnrate-claude's session-start.js (no equivalent in Copilot)
-- The launcher file indirection (that's a Claude plugin marketplace workaround)
-- The `/cost-summary` skill install (can add later)
-- The `account` widget (Copilot-specific account detection is different)
-- The `block_timer` widget (Copilot doesn't have Claude's 5-hour rate limit)
+`pricing.json` uses the same schema as burnrate-claude but with Copilot model IDs and GitHub Copilot AI Credits rates. Model IDs in Copilot stdin use the format `claude-sonnet-4.6` (without the `us.anthropic.` Bedrock prefix).
