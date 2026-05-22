@@ -1,4 +1,4 @@
-# /copilot-hud:burnrate-cost-summary
+# /burnrate:burnrate-cost-summary
 
 Show session cost summary grouped by project for the current or a specified month.
 

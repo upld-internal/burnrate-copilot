@@ -2,7 +2,7 @@
 
 This document catalogs every data point captured by copilot-hud — what it is, where it comes from, what it enables, and whether it is useful input for the optimize skill.
 
-The **Optimize column** marks data points the `/copilot-hud:burnrate-optimize` skill can use to generate actionable cost or efficiency recommendations.
+The **Optimize column** marks data points the `/burnrate:burnrate-optimize` skill can use to generate actionable cost or efficiency recommendations.
 
 ---
 

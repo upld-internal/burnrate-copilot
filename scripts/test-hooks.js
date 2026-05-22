@@ -16,7 +16,7 @@ const { spawnSync } = require('child_process');
 
 const SCRIPTS_DIR = __dirname;
 const TEST_HOME   = path.join(os.tmpdir(), 'copilot-hud-test-' + process.pid);
-const TEST_DATA   = path.join(TEST_HOME, 'copilot-hud');
+const TEST_DATA   = path.join(TEST_HOME, 'burnrate-copilot');
 const STATE_FILE  = path.join(TEST_HOME, 'hud-state.json');
 const SESSION_ID  = 'test-session-001';
 

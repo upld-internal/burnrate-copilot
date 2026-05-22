@@ -1,4 +1,4 @@
-# /copilot-hud:setup
+# /burnrate:setup
 
 Configure GitHub Copilot CLI to use the copilot-hud statusline script.
 
@@ -88,6 +88,33 @@ If the user says yes, set `settings.footer.showCustom = true`.
 
 Write the updated object back to `$COPILOT_DIR/settings.json` with 2-space indentation.
 
+### 8b. Write default `config.json` if absent
+
+Check whether `$COPILOT_DIR/burnrate-copilot/config.json` already exists.
+
+- If it **does not exist**: create `$COPILOT_DIR/burnrate-copilot/` if needed, then write:
+```json
+{
+  "powerline": false,
+  "theme": "default",
+  "separator": "│",
+  "segments": [
+    { "widget": "model_name", "short": true, "show_label": true },
+    { "widget": "separator" },
+    { "widget": "context_window", "format": "full", "show_label": true },
+    { "widget": "separator" },
+    { "widget": "git_branch" },
+    { "widget": "git_status" },
+    { "widget": "newline" },
+    { "widget": "session_cost", "show_label": true },
+    { "widget": "session_duration" },
+    { "widget": "separator" },
+    { "widget": "mtd_cost" }
+  ]
+}
+```
+- If it **already exists**: leave it untouched (the user may have customised it).
+
 ### 9. Print a summary
 
 ```
@@ -99,7 +126,7 @@ Write the updated object back to `$COPILOT_DIR/settings.json` with 2-space inden
   experimental:  true
 
 Restart GitHub Copilot CLI for changes to take effect.
-Run /copilot-hud:configure to customise the widget layout.
+Run /burnrate:configure to customise the widget layout.
 ```
 
 If any existing value was replaced, show what changed.

@@ -143,7 +143,7 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
     }
 
     return (
-      `copilot-hud: statusLine updated (previous command preserved as custom_command widget)\n` +
+      `burnrate: statusLine updated (previous command preserved as custom_command widget)\n` +
       `  old: ${currentCmd}\n` +
       `  new: ${ourScript}`
     );
@@ -163,7 +163,7 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
     return null;
   }
 
-  return `copilot-hud: statusLine auto-configured → ${ourScript}`;
+  return `burnrate: statusLine auto-configured → ${ourScript}`;
 }
 
 module.exports = { ensureStatusLineConfig };

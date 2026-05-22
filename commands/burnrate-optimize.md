@@ -1,4 +1,4 @@
-# /copilot-hud:burnrate-optimize
+# /burnrate:burnrate-optimize
 
 Analyze your Copilot CLI session history for cost patterns and usage inefficiencies.
 Produces a prioritized health report with actionable recommendations to reduce spend.

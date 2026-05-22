@@ -7,7 +7,7 @@
 //   buildTelemetryFields(session)       — extract JSONL-ready telemetry summary.
 //   logHookDebug(event, data, sessionId)— debug logger, enabled by COPILOT_HUD_DEBUG=1.
 //
-// Data directory: ~/.copilot/copilot-hud/  (override via COPILOT_HOME env var)
+// Data directory: ~/.copilot/burnrate-copilot/  (override via COPILOT_HOME env var)
 
 const fs   = require('fs');
 const path = require('path');

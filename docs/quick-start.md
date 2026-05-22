@@ -47,48 +47,48 @@ The plugin will auto-configure this on first session start if not already set. S
 
 ## Included skills
 
-### `/copilot-hud:burnrate-cost-summary`
+### `/burnrate:burnrate-cost-summary`
 
 Shows a cost breakdown for the current month (or any month you specify), grouped by project and optionally by Jira ticket.
 
 **Example usage:**
-- `/copilot-hud:burnrate-cost-summary` — current month summary
-- `/copilot-hud:burnrate-cost-summary 2026-04` — April summary
-- `/copilot-hud:burnrate-cost-summary 2026-05 2026-05-01 2026-05-15` — date range
+- `/burnrate:burnrate-cost-summary` — current month summary
+- `/burnrate:burnrate-cost-summary 2026-04` — April summary
+- `/burnrate:burnrate-cost-summary 2026-05 2026-05-01 2026-05-15` — date range
 
 The output includes total cost, by-model breakdown, and by-project grouping. Use `--by-jira` for per-ticket attribution (requires Jira integration to be active).
 
 ---
 
-### `/copilot-hud:burnrate-optimize`
+### `/burnrate:burnrate-optimize`
 
 Analyzes the last 30 days of session records for cost and efficiency patterns. Produces a scored health report with actionable recommendations.
 
 **Example usage:**
-- `/copilot-hud:burnrate-optimize` — analyze last 30 days
-- `/copilot-hud:burnrate-optimize --days 7` — last 7 days only
+- `/burnrate:burnrate-optimize` — analyze last 30 days
+- `/burnrate:burnrate-optimize --days 7` — last 7 days only
 
 Checks include: high-cost session outliers, model mix efficiency, session length distribution, and tool usage patterns.
 
 ---
 
-### `/copilot-hud:burnrate-report`
+### `/burnrate:burnrate-report`
 
 Packages your session data and config into a zip file for bug reports or support requests.
 
 **Example usage:**
-- `/copilot-hud:burnrate-report` — writes `burnrate-report-YYYY-MM-DD.zip` to the current directory
-- `/copilot-hud:burnrate-report --output /tmp/my-report.zip` — custom output path
+- `/burnrate:burnrate-report` — writes `burnrate-report-YYYY-MM-DD.zip` to the current directory
+- `/burnrate:burnrate-report --output /tmp/my-report.zip` — custom output path
 
 ---
 
-### `/copilot-hud:configure`
+### `/burnrate:configure`
 
 Interactively configure the statusline widget layout. Choose from Minimal, Standard, Full, or Powerline presets, or build a custom layout widget by widget. Writes to `~/.copilot/burnrate-copilot/config.json`.
 
 ---
 
-### `/copilot-hud:setup`
+### `/burnrate:setup`
 
 Configure GitHub Copilot CLI to point its statusline at the copilot-hud script. Run this once after installation if auto-configure did not fire.
 

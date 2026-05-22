@@ -64,6 +64,20 @@ function context_window(stdinData, sessionData, opts) {
     return withLabel('Ctx', value, showLabel, opts._powerline);
   }
 
+  if (format === 'full') {
+    const max  = ctx.context_window_size || null;
+    const used = max != null ? Math.round(max * pct / 100) : null;
+    if (max != null && used != null) {
+      const value = opts._powerline
+        ? `${fmtTokens(used)} / ${fmtTokens(max)} (${pct}%)`
+        : `${c}${B}${fmtTokens(used)}${R}${D} / ${fmtTokens(max)}${R} ${c}${B}(${pct}%)${R}`;
+      return withLabel('Ctx', value, showLabel, opts._powerline);
+    }
+    // Fallback to percent when window size is unavailable
+    const value = opts._powerline ? `${pct}%` : `${c}${B}${pct}%${R}`;
+    return withLabel('Ctx', value, showLabel, opts._powerline);
+  }
+
   // percent (default)
   const value = opts._powerline ? `${pct}%` : `${c}${B}${pct}%${R}`;
   return withLabel('Ctx', value, showLabel, opts._powerline);

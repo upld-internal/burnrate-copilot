@@ -4,7 +4,7 @@
  *
  * Exports:
  *   getCopilotConfigDir() → string — respects COPILOT_HOME env var
- *   getDataDir()          → string — ~/.copilot/copilot-hud/
+ *   getDataDir()          → string — ~/.copilot/burnrate-copilot/
  */
 
 const os   = require('os');
@@ -21,10 +21,10 @@ function getCopilotConfigDir() {
 }
 
 /**
- * Return the copilot-hud data directory where all plugin data lives.
+ * Return the burnrate-copilot data directory where all plugin data lives.
  */
 function getDataDir() {
-  return path.join(getCopilotConfigDir(), 'copilot-hud');
+  return path.join(getCopilotConfigDir(), 'burnrate-copilot');
 }
 
 module.exports = { getCopilotConfigDir, getDataDir };

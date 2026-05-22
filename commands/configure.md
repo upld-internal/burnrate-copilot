@@ -1,4 +1,4 @@
-# /copilot-hud:configure
+# /burnrate:configure
 
 Interactively configure the copilot-hud widget layout. Writes to the hud config file.
 
@@ -9,7 +9,7 @@ Interactively configure the copilot-hud widget layout. Writes to the hud config 
 Determine the Copilot config directory:
 - If `COPILOT_HOME` is set, use its value. Otherwise use `~/.copilot`.
 
-The hud config file is at: `$COPILOT_DIR/copilot-hud/config.json`
+The hud config file is at: `$COPILOT_DIR/burnrate-copilot/config.json`
 
 ### 2. Read the current config
 
@@ -49,9 +49,10 @@ Config:
 }
 ```
 
-**b) Standard** (default) — balanced display of key metrics
+**b) Standard** (default) — two-line cost + context display
 ```
-[Model] │ [Ctx%] │ [in/out/cache] │ [tok/s] │ [premium] │ [Duration]
+Model: [Model] │ Ctx: [used/max %] │ [branch] [dirty]
+Session: [$cost] [duration] │ [Month $mtd (~$proj/mo)]
 ```
 Config:
 ```json
@@ -60,17 +61,17 @@ Config:
   "theme": "default",
   "separator": "│",
   "segments": [
-    { "widget": "model_name", "short": true },
+    { "widget": "model_name", "short": true, "show_label": true },
     { "widget": "separator" },
-    { "widget": "context_window" },
+    { "widget": "context_window", "format": "full", "show_label": true },
     { "widget": "separator" },
-    { "widget": "token_breakdown", "show_cache": false },
+    { "widget": "git_branch" },
+    { "widget": "git_status" },
+    { "widget": "newline" },
+    { "widget": "session_cost", "show_label": true },
+    { "widget": "session_duration" },
     { "widget": "separator" },
-    { "widget": "output_speed" },
-    { "widget": "separator" },
-    { "widget": "premium_requests" },
-    { "widget": "separator" },
-    { "widget": "session_duration" }
+    { "widget": "mtd_cost" }
   ]
 }
 ```
@@ -192,16 +193,16 @@ If no: discard changes and exit without writing.
 
 ### 6. Write the config file
 
-Create `$COPILOT_DIR/copilot-hud/` directory if it does not exist.
+Create `$COPILOT_DIR/burnrate-copilot/` directory if it does not exist.
 
-Write the config object to `$COPILOT_DIR/copilot-hud/config.json` with 2-space
+Write the config object to `$COPILOT_DIR/burnrate-copilot/config.json` with 2-space
 indentation.
 
 Print a confirmation:
 ```
-✓ Config saved: ~/.copilot/copilot-hud/config.json
+✓ Config saved: ~/.copilot/burnrate-copilot/config.json
   <N> widget(s) configured.
 
 Changes take effect on the next Copilot CLI turn (no restart needed).
-Run /copilot-hud:setup if the statusline is not yet configured.
+Run /burnrate:setup if the statusline is not yet configured.
 ```

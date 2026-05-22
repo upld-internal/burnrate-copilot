@@ -7,7 +7,7 @@
 // Configure in ~/.copilot/settings.json:
 //   "statusLine": { "type": "command", "command": "/path/to/scripts/statusline.js" }
 // (The command must be an executable path — not "node /path/..." — and this file
-// must be chmod +x. Run /copilot-hud:setup to configure automatically.)
+// must be chmod +x. Run /burnrate:setup to configure automatically.)
 //
 // Fallback on stdin parse failure: [copilot-hud error]
 

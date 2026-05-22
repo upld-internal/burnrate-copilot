@@ -106,7 +106,7 @@ SessionEnd stdin provides: `session_id`. (No cost or token data — same limitat
 
 ## Session file schema
 
-Write to `~/.copilot/copilot-hud/sessions/<session_id>.json`:
+Write to `~/.copilot/burnrate-copilot/sessions/<session_id>.json`:
 
 ```json
 {
@@ -129,7 +129,7 @@ The `snapshot` is a zero baseline (tokens start at 0 each session). On each stat
 
 ## Monthly JSONL schema (shared with claude-hud)
 
-Append to `~/.copilot/copilot-hud/monthly/YYYY-MM.jsonl`:
+Append to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`:
 
 ```json
 {"id":"session-abc123","date":"2026-05-13","start_month":"2026-05","cost_usd":0.082341,"model":"claude-sonnet-4.6","project":"my-app","project_id":"-Users-you-projects-my-app"}
@@ -139,10 +139,10 @@ This schema is identical to claude-hud's JSONL schema, enabling a future unified
 
 ## Data directory
 
-All plugin data lives in `~/.copilot/copilot-hud/`:
+All plugin data lives in `~/.copilot/burnrate-copilot/`:
 
 ```
-~/.copilot/copilot-hud/
+~/.copilot/burnrate-copilot/
   pricing.json              ← model pricing table (input/output/cache rates)
   sessions/<id>.json        ← per-session state (deleted at clean SessionEnd)
   monthly/YYYY-MM.jsonl     ← completed session records

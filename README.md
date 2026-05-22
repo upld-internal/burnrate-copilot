@@ -27,7 +27,7 @@ This plugin:
 | Cost source | Computed from `context_window` token breakdown | `cost.total_cost_usd` from stdin (native) |
 | Cache tokens | `total_cache_read_tokens` / `total_cache_write_tokens` | Handled automatically via native cost |
 | Pricing | Anthropic direct API rates (or GitHub Models rates) | AWS Bedrock cross-region rates |
-| Data dir | `~/.copilot/copilot-hud/` | `~/.claude/bedrock-costs/` |
+| Data dir | `~/.copilot/burnrate-copilot/` | `~/.claude/bedrock-costs/` |
 | Hook system | `sessionStart`, `sessionEnd`, `preToolUse`, `postToolUse` | `SessionStart`, `SessionEnd`, `PostToolUse` |
 
 Both plugins use the same JSONL schema for monthly cost records, enabling a future unified `cost-summary` command across both tools.
@@ -53,7 +53,7 @@ This plugin computes cost from these four token types using a pricing table. Thi
 
 1. **SessionStart hook** — writes a session file with model ID, project, start time, zero-baseline token snapshot
 2. **statusLine command** — computes cost from token delta vs baseline, writes `last_known_cost` back to session file, renders display
-3. **SessionEnd hook** — reads `last_known_cost`, appends record to `~/.copilot/copilot-hud/monthly/YYYY-MM.jsonl`
+3. **SessionEnd hook** — reads `last_known_cost`, appends record to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`
 4. **Orphan recovery** — on next SessionStart, recovers costs from sessions that exited without firing SessionEnd
 
 ## Reference implementation

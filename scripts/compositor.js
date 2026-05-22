@@ -3,7 +3,7 @@
 //
 // render(stdinData, dataDir, scriptDir) → string
 //
-// Loads config from ~/.copilot/copilot-hud/config.json (falls back to
+// Loads config from ~/.copilot/burnrate-copilot/config.json (falls back to
 // DEFAULT_CONFIG when absent or malformed). Loads session data once and
 // passes it to all widgets. Renders in plain or powerline mode.
 //
@@ -37,17 +37,17 @@ const DEFAULT_CONFIG = {
   theme: 'default',
   separator: '│',
   segments: [
-    { widget: 'model_name', short: true },
+    { widget: 'model_name', short: true, show_label: true },
     { widget: 'separator' },
-    { widget: 'context_window' },
+    { widget: 'context_window', format: 'full', show_label: true },
     { widget: 'separator' },
-    { widget: 'token_breakdown', show_cache: false },
-    { widget: 'separator' },
-    { widget: 'output_speed' },
-    { widget: 'separator' },
-    { widget: 'premium_requests' },
-    { widget: 'separator' },
+    { widget: 'git_branch' },
+    { widget: 'git_status' },
+    { widget: 'newline' },
+    { widget: 'session_cost', show_label: true },
     { widget: 'session_duration' },
+    { widget: 'separator' },
+    { widget: 'mtd_cost' },
   ],
 };
 

@@ -29,7 +29,7 @@ const path = require('path');
  * Load pricing for modelId.
  *
  * Search order:
- *   1. <dataDir>/pricing.json     — user override in ~/.copilot/copilot-hud/
+ *   1. <dataDir>/pricing.json     — user override in ~/.copilot/burnrate-copilot/
  *   2. <scriptDir>/../pricing.json — repo-bundled default (pricing.json at repo root)
  *
  * Returns the pricing object for the model, or null if not found.
@@ -53,7 +53,7 @@ function loadPricing(modelId, dataDir, scriptDir) {
           const ageDays = Math.floor((Date.now() - new Date(lastVerified).getTime()) / 86400000);
           if (ageDays > 60) {
             process.stderr.write(
-              `copilot-hud: pricing.json is ${ageDays} days old — ` +
+              `burnrate: pricing.json is ${ageDays} days old — ` +
               `update pricing.json to refresh rates\n`
             );
           }

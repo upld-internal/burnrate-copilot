@@ -47,8 +47,8 @@ function parseModelName(displayName, modelId) {
   }
 
   const badge = multiplier
-    ? (effort ? `${multiplier}·${effort}` : multiplier)
-    : (effort ? `·${effort}` : null);
+    ? (effort ? `${multiplier} (${effort})` : multiplier)
+    : (effort ? `(${effort})` : null);
   return { name: shortName, badge };
 }
 
@@ -100,7 +100,7 @@ function session_duration(stdinData, sessionData, opts) {
   const hours    = Math.floor(totalMin / 60);
   const mins     = totalMin % 60;
 
-  const text      = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  const text      = hours > 0 ? `(${hours}h ${mins}m)` : `(${mins}m)`;
   const showLabel = opts.show_label === true;
   const value     = opts._powerline ? text : `${B}${text}${R}`;
   return withLabel('Dur', value, showLabel, opts._powerline);
