@@ -147,7 +147,7 @@ All plugin data lives in `~/.copilot/burnrate-copilot/`:
 
 ## Recommended build order
 
-1. Study `griches/copilot-hud` source — understand plugin.json, hooks.json, and stdin schema
+1. Understand plugin.json, hooks.json, and stdin schema
 2. Copy `~/Projects/cost-display/scripts/pricing.js` → `scripts/pricing.js`, replace `getClaudeConfigDir` with `getCopilotConfigDir` (defaults to `~/.copilot`)
 3. Copy `~/Projects/cost-display/scripts/themes.js` → `scripts/themes.js` (no changes needed)
 4. Copy widgets: `context.js`, `git.js`, `session.js`, `custom.js` → `scripts/widgets/` (no changes needed)
