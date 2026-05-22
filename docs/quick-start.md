@@ -47,38 +47,50 @@ The plugin will auto-configure this on first session start if not already set. S
 
 ## Included skills
 
-### `/burnrate-cost-summary`
+### `/copilot-hud:burnrate-cost-summary`
 
 Shows a cost breakdown for the current month (or any month you specify), grouped by project and optionally by Jira ticket.
 
 **Example usage:**
-- `/burnrate-cost-summary` — current month summary
-- `/burnrate-cost-summary 2026-04` — April summary
-- `/burnrate-cost-summary 2026-05 2026-05-01 2026-05-15` — date range
+- `/copilot-hud:burnrate-cost-summary` — current month summary
+- `/copilot-hud:burnrate-cost-summary 2026-04` — April summary
+- `/copilot-hud:burnrate-cost-summary 2026-05 2026-05-01 2026-05-15` — date range
 
 The output includes total cost, by-model breakdown, and by-project grouping. Use `--by-jira` for per-ticket attribution (requires Jira integration to be active).
 
 ---
 
-### `/burnrate-optimize`
+### `/copilot-hud:burnrate-optimize`
 
 Analyzes the last 30 days of session records for cost and efficiency patterns. Produces a scored health report with actionable recommendations.
 
 **Example usage:**
-- `/burnrate-optimize` — analyze last 30 days
-- `/burnrate-optimize --days 7` — last 7 days only
+- `/copilot-hud:burnrate-optimize` — analyze last 30 days
+- `/copilot-hud:burnrate-optimize --days 7` — last 7 days only
 
-Checks include: high-cost session outliers, model mix efficiency, session length distribution, and tool usage patterns (once Phase 2 telemetry is active).
+Checks include: high-cost session outliers, model mix efficiency, session length distribution, and tool usage patterns.
 
 ---
 
-### `/burnrate-report`
+### `/copilot-hud:burnrate-report`
 
 Packages your session data and config into a zip file for bug reports or support requests.
 
 **Example usage:**
-- `/burnrate-report` — writes `burnrate-report-YYYY-MM-DD.zip` to the current directory
-- `/burnrate-report --output /tmp/my-report.zip` — custom output path
+- `/copilot-hud:burnrate-report` — writes `burnrate-report-YYYY-MM-DD.zip` to the current directory
+- `/copilot-hud:burnrate-report --output /tmp/my-report.zip` — custom output path
+
+---
+
+### `/copilot-hud:configure`
+
+Interactively configure the statusline widget layout. Choose from Minimal, Standard, Full, or Powerline presets, or build a custom layout widget by widget. Writes to `~/.copilot/burnrate-copilot/config.json`.
+
+---
+
+### `/copilot-hud:setup`
+
+Configure GitHub Copilot CLI to point its statusline at the copilot-hud script. Run this once after installation if auto-configure did not fire.
 
 ---
 
@@ -86,7 +98,7 @@ Packages your session data and config into a zip file for bug reports or support
 
 When you work on a branch named after a Jira ticket (e.g., `feature/PLAT-4821-new-auth`), copilot-hud automatically attributes session cost to that ticket.
 
-**Optional config** in `~/.copilot/copilot-hud/config.json`:
+**Optional config** in `~/.copilot/burnrate-copilot/config.json`:
 
 ```json
 {
@@ -112,10 +124,10 @@ The `jira_ticket` widget can be added to your statusline segments:
 
 ## Data directory
 
-All plugin data lives in `~/.copilot/copilot-hud/`:
+All plugin data lives in `~/.copilot/burnrate-copilot/`:
 
 ```
-~/.copilot/copilot-hud/
+~/.copilot/burnrate-copilot/
   pricing.json              ← model pricing table (override rates here)
   config.json               ← widget layout and theme configuration
   sessions/<id>.json        ← per-session state (deleted at clean SessionEnd)
@@ -134,7 +146,34 @@ COPILOT_HUD_DEBUG=1 gh copilot chat "hello"
 node scripts/show-hook-debug.js
 ```
 
-This is useful for verifying that hook field names match what the plugin expects.
+This captures payloads for all hook types (`sessionStart`, `sessionEnd`, `preToolUse`, `postToolUse`, `userPromptSubmitted`) and is useful for verifying that field names match what the plugin expects.
+
+---
+
+## Pricing maintenance
+
+Model pricing is stored locally in `~/.copilot/burnrate-copilot/pricing.json` and does not update automatically.
+
+**To check for pricing changes:**
+
+```bash
+node scripts/update-pricing.js
+```
+
+Fetches the [GitHub Copilot billing docs](https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing) and diffs against your local `pricing.json`. If prices have changed, run with `--apply` to write the update:
+
+```bash
+node scripts/update-pricing.js --apply
+```
+
+**To verify model IDs on your plan:**
+
+```bash
+bash scripts/verify-model-ids.sh          # historical scan only (no API calls)
+bash scripts/verify-model-ids.sh --test   # also tests each model with a live prompt
+```
+
+This reports which models are CONFIRMED (seen in interactive sessions), ACCESSIBLE (responded to a test prompt), or NO_SESSION (not available on your plan or invalid ID).
 
 ---
 

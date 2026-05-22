@@ -2,15 +2,11 @@
 
 This document catalogs every data point captured by copilot-hud — what it is, where it comes from, what it enables, and whether it is useful input for the optimize skill.
 
-Data points are grouped into two tiers:
-- **Tier 1 — Currently tracked**: in the JSONL record today
-- **Tier 2 — Planned (Phases 1–2)**: requires new hook registrations or script updates
-
-The **Optimize column** marks data points the `burnrate-optimize` skill can use to generate actionable cost or efficiency recommendations.
+The **Optimize column** marks data points the `/copilot-hud:burnrate-optimize` skill can use to generate actionable cost or efficiency recommendations.
 
 ---
 
-## Tier 1 — Currently tracked
+## Tracked fields (JSONL record)
 
 ### `cost_usd`
 | | |
@@ -26,8 +22,8 @@ The **Optimize column** marks data points the `burnrate-optimize` skill can use 
 ### `model`
 | | |
 |---|---|
-| **Source** | `model.id` from SessionStart stdin; `last_known_model` kept current by StatusLine |
-| **Hook** | SessionStart, StatusLine |
+| **Source** | `model.id` from StatusLine stdin; written to session file as `last_known_model` each turn by the compositor. **Note:** `model.id` is not available in sessionStart stdin — only StatusLine (interactive TUI sessions) populates it. `--prompt` sessions produce `"model": ""` in JSONL. |
+| **Hook** | StatusLine |
 | **What it captures** | The model ID in use (e.g., `claude-sonnet-4.6`, `gpt-4.1`). Stored in session file as `last_known_model`; written to JSONL as `model`. |
 | **Insights** | Model breakdown in cost summary (which models account for what % of spend). Basis for model mix analysis. |
 | **Optimize relevance** | ✅ If expensive models (Sonnet, Opus) are used for tasks that could be done with Haiku or GPT-4.1 mini, this is a major cost-reduction opportunity. |
@@ -67,20 +63,20 @@ The **Optimize column** marks data points the `burnrate-optimize` skill can use 
 
 ---
 
-## Tier 2 — Planned (Phase 1: Jira Integration)
+## Jira attribution fields
 
-### `jira_key` / `jira_costs` / `jira_keys_seen`
+### `jira_key` / `jira_costs` / `jira_keys_seen` / `jira_source`
 | | |
 |---|---|
 | **Source** | `git branch --show-current` parsed by `jira-detector.js`; optional `config.jira.project_keys` filter |
 | **Hook** | StatusLine (detects and tracks per-turn); SessionEnd (finalizes attribution) |
-| **What it captures** | The Jira ticket(s) worked on during the session. `jira_costs` is a map of `{ KEY → cost_usd }` when cost is split across multiple tickets in one session. Attribution is per-turn cost delta, so switching branches mid-session correctly splits the cost. |
+| **What it captures** | The Jira ticket(s) worked on during the session. `jira_costs` is a map of `{ KEY → cost_usd }` when cost is split across multiple tickets in one session. Attribution is per-turn cost delta, so switching branches mid-session correctly splits the cost. `jira_source` is always `"branch"`. When multiple tickets were seen, `jira_keys_seen` lists all keys. |
 | **Insights** | Per-Jira cost breakdown. Enables per-ticket AI spend tracking. |
 | **Optimize relevance** | ⬜ Attribution data, not an optimization signal on its own. |
 
 ---
 
-## Tier 2 — Planned (Phase 2: Session Telemetry)
+## Session telemetry fields
 
 ### `turn_count`
 | | |
@@ -122,20 +118,20 @@ The **Optimize column** marks data points the `burnrate-optimize` skill can use 
 
 ---
 
-### `duration_secs`
-| | |
-|---|---|
-| **Source** | `last_known_stats.total_duration_ms` from StatusLine stdin if available; falls back to `now - started_at` |
-| **Hook** | StatusLine (persists stats), SessionEnd (computes final) |
-| **What it captures** | Wall-clock session duration in seconds. |
-| **Optimize relevance** | ✅ Very long sessions relative to cost suggest idle time. Very short high-cost sessions suggest expensive per-turn reasoning. |
-
----
-
-### `response_time_p50_ms` / `response_time_max_ms`
+### `turn_interval_p50_ms` / `turn_interval_max_ms` / `turn_interval_count`
 | | |
 |---|---|
 | **Source** | Timestamp delta between consecutive `userPromptSubmitted` events |
 | **Hook** | userPromptSubmitted |
-| **What it captures** | P50 and max response time across all turns in the session (milliseconds). |
-| **Optimize relevance** | ✅ Consistently slow response times may indicate excessive context window fill. |
+| **What it captures** | P50 and max elapsed time between user prompts across all turns in the session (milliseconds), plus the count of measured intervals. Measures combined user think-time + AI response time (Copilot has no assistant-complete hook, so pure AI latency cannot be isolated). |
+| **Optimize relevance** | ✅ Consistently long intervals may indicate excessive context window fill slowing AI responses. |
+
+---
+
+### `subagent_count` / `subagent_types`
+| | |
+|---|---|
+| **Source** | `preToolUse` hook — accumulated for tool calls that spawn sub-agents |
+| **Hook** | preToolUse |
+| **What it captures** | Total number of sub-agents spawned in the session and a breakdown by type (e.g. `{ "general-purpose": 2, "explore": 1 }`). |
+| **Optimize relevance** | ✅ Frequent sub-agent spawning multiplies token usage. Sessions with high `subagent_count` relative to `turn_count` are strong candidates for reviewing delegation patterns. |

@@ -450,7 +450,7 @@ node scripts/statusline.js <<< '{"session_id":"test","model":{"id":"claude-sonne
 
 ---
 
-## Phase 6 — Docs Completion
+## ✅ Phase 6 — Docs Completion
 
 Update `docs/data-points.md` and `docs/quick-start.md` to reflect all phases above once they are complete.
 
