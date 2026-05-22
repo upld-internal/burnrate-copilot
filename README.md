@@ -8,7 +8,7 @@ $0.08 session  |  May: $6.21 (~$41/mo)  |  claude-sonnet-4.6  |  28%  |  8m  |  
 
 ## How it works
 
-GitHub Copilot CLI supports a custom statusline via `statusLine.command` in `~/.copilot/config.json` (requires `"experimental": true`). On every turn, Copilot pipes a JSON object to the configured script's stdin. The script renders its output to stdout and Copilot displays it in the footer.
+GitHub Copilot CLI supports a custom statusline via `statusLine.command` in `~/.copilot/settings.json`. On every turn, Copilot pipes a JSON object to the configured script's stdin. The script renders its output to stdout and Copilot displays it in the footer.
 
 This plugin:
 1. Reads `context_window` token counts from the Copilot stdin JSON
@@ -16,14 +16,14 @@ This plugin:
 3. Accumulates completed-session costs in a monthly JSONL file
 4. Displays session cost, MTD total, context %, model, and git info
 
-## Relationship to claude-hud
+## Relationship to burnrate-claude
 
-`burnrate-copilot` and `claude-hud` (sibling folder) are parallel implementations of the same concept:
+`burnrate-copilot` and `burnrate-claude` (sibling folder) are parallel implementations of the same concept:
 
-| | burnrate-copilot | claude-hud |
+| | burnrate-copilot | burnrate-claude |
 |---|---|---|
 | Platform | GitHub Copilot CLI | Claude Code CLI |
-| Config | `~/.copilot/config.json` → `statusLine.command` | `~/.claude/settings.json` → `statusLine.command` |
+| Config | `~/.copilot/settings.json` → `statusLine.command` | `~/.claude/settings.json` → `statusLine.command` |
 | Cost source | Computed from `context_window` token breakdown | `cost.total_cost_usd` from stdin (native) |
 | Cache tokens | `total_cache_read_tokens` / `total_cache_write_tokens` | Handled automatically via native cost |
 | Pricing | Anthropic direct API rates (or GitHub Models rates) | AWS Bedrock cross-region rates |
@@ -32,7 +32,7 @@ This plugin:
 
 Both plugins use the same JSONL schema for monthly cost records, enabling a future unified `cost-summary` command across both tools.
 
-## Key difference from claude-hud
+## Key difference from burnrate-claude
 
 Claude Code provides `cost.total_cost_usd` directly in the stdin JSON — a pre-computed dollar figure that handles cache tokens automatically. Copilot does **not** include a USD cost field. Instead, Copilot provides a full token breakdown in `context_window`:
 

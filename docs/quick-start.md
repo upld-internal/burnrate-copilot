@@ -21,27 +21,26 @@ On every turn, Copilot CLI pipes session data (including running token totals) t
 
 ## Installation
 
-**1. Install the plugin**
+**1. Install via SSH (recommended)**
+
+If you have an ssh key configured for github, installation is simple. In the Copilot CLI chat, use:
 
 ```bash
-gh copilot plugin install <path-to-burnrate-copilot>
+ /plugin install git@github.com:upld-internal/burnrate-copilot.git
+
 ```
 
-**2. Configure the statusline**
+Our Github organizations require that SAML SSO be authorized for the upld-internal org. As of now, this is preventing Copilot CLI plugin installs via HTTPS. We are investigating whether this can be resolved, but ssh is better anyways, so use that.
 
-Add to `~/.copilot/config.json`:
+> [!INFO] Need a Git SSH key?
+[SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh) is the preferred (and easiest) way to interact with git. If you do not have an ssh key configured for use with GitHub, do so [here](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) now. It only takes 5 minutes and you will never need to provide a password or API token again. :) 
 
-```json
-{
-  "experimental": true,
-  "statusLine": {
-    "type": "command",
-    "command": "node /path/to/burnrate-copilot/scripts/statusline.js"
-  }
-}
-```
+
+**2. Configuring your statusline**
 
 The plugin will auto-configure this on first session start if not already set. See `commands/configure.md` for full configuration options.
+
+Add to `~/.copilot/settings.json`:
 
 ---
 

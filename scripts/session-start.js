@@ -16,9 +16,20 @@ const fs   = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { getDataDir, getCopilotConfigDir } = require('./paths');
+const { loadPricing, computeSessionCost } = require('./pricing');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
 const { ensureStatusLineConfig } = require('./statusline-config');
+
+function computeFinalCost(session, modelId) {
+  const tokens = session.last_known_tokens;
+  const snap   = session.snapshot;
+  if (tokens && snap) {
+    const pricing = loadPricing(modelId, dataDir, __dirname);
+    if (pricing) return computeSessionCost(tokens, snap, pricing);
+  }
+  return session.last_known_cost || 0;
+}
 
 const dataDir = getDataDir();
 
@@ -57,8 +68,8 @@ function recoverOrphanedSessions(currentSessionId) {
         if (age < TWO_MIN) continue; // too recent — may be a concurrent session
       }
 
-      // Write recovery record. cost_usd is 0 until pricing is resolved
-      // in Phase 6. last_known_tokens is preserved for retroactive computation.
+      // Write recovery record using last_known_tokens for accurate cost.
+      // Falls back to last_known_cost if tokens or pricing are unavailable.
       const modelId    = session.last_known_model || session.model_id || '';
       const startMonth = session.start_month || new Date().toISOString().slice(0, 7);
       const monthlyDir = path.join(dataDir, 'monthly');
@@ -69,8 +80,8 @@ function recoverOrphanedSessions(currentSessionId) {
         id:           session.session_id,
         date:         new Date().toISOString().slice(0, 10),
         start_month:  startMonth,
-        cost_usd:     0,         // placeholder until pricing resolved (Phase 6)
-        cost_pending: true,      // flag that cost needs recomputation
+        cost_usd:     computeFinalCost(session, modelId),
+        cost_pending: false,
         model:        modelId,
         project:      session.last_known_project    || session.project    || undefined,
         project_id:   session.last_known_project_id || session.project_id || undefined,

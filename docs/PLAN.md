@@ -146,13 +146,13 @@ node tests/jira-widget.test.js
 - **No `PreCompact/PostCompact` or `InstructionsLoaded` hooks.** Those fields are Claude Code-specific and are not included.
 - The existing `pre-tool-use.js` and `post-tool-use.js` write to `state.json` for the live tools widget. Phase 2 adds a *secondary* write to the session JSON file for JSONL telemetry — both writes are preserved.
 - Field names in Copilot hook payloads use camelCase: `toolName`, `toolInput` (vs Claude's `tool_name`, `tool_input`).
-- `logHookDebug` activates when `COPILOT_HUD_DEBUG=1` is set; writes to `~/.copilot/copilot-hud/debug/hooks.jsonl`.
+- `logHookDebug` activates when `COPILOT_HUD_DEBUG=1` is set; writes to `~/.copilot/burnrate-copilot/debug/hooks.jsonl`.
 
 ### New files
 
 | File | Purpose |
 |---|---|
-| `scripts/session-file.js` | `updateSession(id, fn)` — atomic read/mutate/write; `buildTelemetryFields(session)` — extracts JSONL fields; `logHookDebug(event, data, id)` — debug logger. Adapted from Claude version: use `getCopilotConfigDir`, `DATA_DIR_NAME = 'copilot-hud'`; remove Claude-specific fields (`compaction_triggers`, `instruction_files`, `has_project_claude_md`). |
+| `scripts/session-file.js` | `updateSession(id, fn)` — atomic read/mutate/write; `buildTelemetryFields(session)` — extracts JSONL fields; `logHookDebug(event, data, id)` — debug logger. Adapted from Claude version: use `getCopilotConfigDir`, `DATA_DIR_NAME = 'burnrate-copilot'`; remove Claude-specific fields (`compaction_triggers`, `instruction_files`, `has_project_claude_md`). |
 | `scripts/session-posttooluse.js` | PostToolUse: accumulates `ext_counts` for Edit/Write file operations. Note Copilot field name: `toolInput.file_path` (from `toolInput`, not `tool_input`). |
 | `scripts/session-promptsubmit.js` | userPromptSubmitted: increments `turn_count` and records `last_prompt_at` timestamp. Also used for response time: when `last_prompt_at` is set and this hook fires again, compute elapsed ms as the previous response time. |
 | `tests/telemetry.test.js` | Integration tests that run hook scripts as subprocesses with a temp config dir |
@@ -200,7 +200,7 @@ node tests/jira-widget.test.js
 node tests/telemetry.test.js
 
 # Manual: run a session with a few tool calls, end it, inspect the JSONL
-cat ~/.copilot/copilot-hud/monthly/$(date +%Y-%m).jsonl | tail -1 | node -e \
+cat ~/.copilot/burnrate-copilot/monthly/$(date +%Y-%m).jsonl | tail -1 | node -e \
   "process.stdin.on('data',d=>console.log(JSON.stringify(JSON.parse(d),null,2)))" | \
   grep -E '"turn_count|tool_counts|ext_counts|git_branch"'
 ```
@@ -214,7 +214,7 @@ cat ~/.copilot/copilot-hud/monthly/$(date +%Y-%m).jsonl | tail -1 | node -e \
 **Entry criteria:** Phase 1 complete (Jira fields in JSONL)
 
 **Design decisions:**
-- Script reads from `~/.copilot/copilot-hud/monthly/YYYY-MM.jsonl` — identical schema to Claude version. Only change is `getClaudeConfigDir` → `getCopilotConfigDir`.
+- Script reads from `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl` — identical schema to Claude version. Only change is `getClaudeConfigDir` → `getCopilotConfigDir`.
 - Skill definition lives in `commands/burnrate-cost-summary.md` (Copilot CLI slash-command format).
 - Reference output format doc is included so the skill can instruct the LLM how to present the output.
 
@@ -224,7 +224,7 @@ cat ~/.copilot/copilot-hud/monthly/$(date +%Y-%m).jsonl | tail -1 | node -e \
 |---|---|
 | `commands/burnrate-cost-summary.md` | Skill definition — triggers, allowed tools, instruction to run script and present via OUTPUT_FORMAT.md |
 | `skills/burnrate-cost-summary/scripts/summarize-costs.js` | Adapted from Claude version: `getCopilotConfigDir` for data dir; all other logic identical |
-| `skills/burnrate-cost-summary/reference/OUTPUT_FORMAT.md` | Output format reference — copied from Claude version, update header to reference copilot-hud |
+| `skills/burnrate-cost-summary/reference/OUTPUT_FORMAT.md` | Output format reference — copied from Claude version, update header to reference burnrate-copilot |
 
 ### Tests
 
@@ -243,7 +243,7 @@ node tests/cost-summary.test.js
 
 # Manual: write a synthetic JSONL to the monthly dir and invoke the skill
 echo '{"id":"test-1","date":"2026-05-01","start_month":"2026-05","cost_usd":1.23,"model":"claude-sonnet-4.6","project":"my-app","jira_key":"PLAT-101","jira_costs":{"PLAT-101":1.23}}' \
-  >> ~/.copilot/copilot-hud/monthly/2026-05.jsonl
+  >> ~/.copilot/burnrate-copilot/monthly/2026-05.jsonl
 node skills/burnrate-cost-summary/scripts/summarize-costs.js 2026-05 --by-project --by-jira
 ```
 
@@ -256,7 +256,7 @@ node skills/burnrate-cost-summary/scripts/summarize-costs.js 2026-05 --by-projec
 **Entry criteria:** Phase 2 complete (session files have telemetry fields worth including in a bug report)
 
 **Design decisions:**
-- Packages `~/.copilot/copilot-hud/` (monthly JSONL, session files, config, debug log if present) instead of `~/.claude/burnrate-claude/`.
+- Packages `~/.copilot/burnrate-copilot/` (monthly JSONL, session files, config, debug log if present) instead of `~/.claude/burnrate-claude/`.
 - Uses Node's built-in `zlib` (deflate) — no npm deps.
 - Default output path: `burnrate-report-YYYY-MM-DD.zip` in the current working directory.
 
@@ -265,7 +265,7 @@ node skills/burnrate-cost-summary/scripts/summarize-costs.js 2026-05 --by-projec
 | File | Purpose |
 |---|---|
 | `commands/burnrate-report.md` | Skill definition — triggers, instruction to run script and report output path |
-| `skills/burnrate-report/scripts/report.js` | Adapted from Claude version: update data dir path to `~/.copilot/copilot-hud/`; update messages to reference `copilot-hud` |
+| `skills/burnrate-report/scripts/report.js` | Adapted from Claude version: update data dir path to `~/.copilot/burnrate-copilot/`; update messages to reference `burnrate-copilot` |
 
 ### Tests
 
@@ -336,7 +336,7 @@ node skills/burnrate-optimize/scripts/optimize.js --days 30
 
 **Design decisions:**
 - Targets `~/.copilot/config.json` (Copilot CLI's config file) with the format `{ "statusLine": { "type": "command", "command": "node /path/to/statusline.js" } }`.
-- If `statusLine` is already set to a different command, the existing command is preserved as a `custom_command` widget in `~/.copilot/copilot-hud/config.json` and replaced with ours.
+- If `statusLine` is already set to a different command, the existing command is preserved as a `custom_command` widget in `~/.copilot/burnrate-copilot/config.json` and replaced with ours.
 - Simpler than the Claude version — no launcher file indirection, no `settings.json` vs `config.json` distinction.
 - `PLUGIN_ROOT` environment variable (set by Copilot CLI) provides the absolute plugin path.
 
@@ -380,7 +380,7 @@ node tests/statusline-config.test.js
 
 **Design decisions:**
 - Activated by `COPILOT_HUD_DEBUG=1` environment variable.
-- Debug log written to `~/.copilot/copilot-hud/debug/hooks.jsonl`.
+- Debug log written to `~/.copilot/burnrate-copilot/debug/hooks.jsonl`.
 - `show-hook-debug.js` reads the log and pretty-prints entries, grouped by hook type, newest first.
 - `logHookDebug` is already defined in `session-file.js` from Phase 2; this phase just wires it into the remaining hook scripts and adds the viewer.
 
@@ -408,7 +408,7 @@ COPILOT_HUD_DEBUG=1 node scripts/session-start.js <<< '{"session_id":"dbg-test",
 node scripts/show-hook-debug.js
 
 # Verify hooks.jsonl exists and contains an entry with hook: "sessionStart"
-cat ~/.copilot/copilot-hud/debug/hooks.jsonl | \
+cat ~/.copilot/burnrate-copilot/debug/hooks.jsonl | \
   node -e "process.stdin.on('data',d=>console.log(JSON.parse(d.toString().split('\n')[0]).hook))"
 ```
 

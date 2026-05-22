@@ -5,7 +5,7 @@
 // Written by hook scripts (session-start, pre/postToolUse, userPromptSubmitted).
 // Read by the statusline compositor on every turn.
 //
-// writeState uses mkdir-based atomic locking (same pattern as griches/copilot-hud).
+// writeState uses mkdir-based atomic locking (same pattern as griches/burnrate-copilot).
 // Multiple concurrent Copilot sessions will contend for the lock safely.
 
 const fs   = require('fs');
@@ -43,7 +43,7 @@ function readState(stateFile) {
 }
 
 // ---------------------------------------------------------------------------
-// Atomic locking (mkdir-based, same pattern as griches/copilot-hud bash impl)
+// Atomic locking (mkdir-based, same pattern as griches/burnrate-copilot bash impl)
 // ---------------------------------------------------------------------------
 
 function syncSleepMs(ms) {

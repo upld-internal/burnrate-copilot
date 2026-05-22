@@ -328,7 +328,7 @@ Temporarily enable debug capture in the script and check the output:
 ```js
 // In statusline.js, temporarily force DEBUG:
 const DEBUG = true;
-// Output goes to: ~/.copilot/copilot-hud/stdin-debug.jsonl
+// Output goes to: ~/.copilot/burnrate-copilot/stdin-debug.jsonl
 ```
 
 Or use a wrapper script that logs stdin before passing it on.
@@ -356,7 +356,7 @@ plugin-name/
 
 ```json
 {
-  "name": "copilot-hud",
+  "name": "burnrate-copilot",
   "description": "...",
   "version": "0.1.0",
   "author": { "name": "username" },
@@ -643,10 +643,10 @@ File: `~/.copilot/settings.json`
 | `~/.copilot/installed-plugins/local/<name>` | Symlink for local plugins |
 | `~/.copilot/logs/process-<ts>-<pid>.log` | Session log files |
 | `~/.copilot/session-state/<session_id>/` | Session transcript and state |
-| `~/.copilot/copilot-hud/` | copilot-hud data directory |
-| `~/.copilot/copilot-hud/sessions/<uuid>.json` | Per-session token snapshot |
-| `~/.copilot/copilot-hud/monthly/<YYYY-MM>.jsonl` | Monthly cost records |
-| `~/.copilot/copilot-hud/config.json` | copilot-hud widget config |
+| `~/.copilot/burnrate-copilot/` | burnrate-copilot data directory |
+| `~/.copilot/burnrate-copilot/sessions/<uuid>.json` | Per-session token snapshot |
+| `~/.copilot/burnrate-copilot/monthly/<YYYY-MM>.jsonl` | Monthly cost records |
+| `~/.copilot/burnrate-copilot/config.json` | burnrate-copilot widget config |
 | `~/.copilot/hud-state.json` | Live state updated by hook scripts |
 | `.github/hooks/*.json` | Repo-level hook declarations |
 
@@ -692,7 +692,7 @@ Temporarily force debug capture in `scripts/statusline.js`:
 const DEBUG = true;  // was: process.env.COPILOT_HUD_DEBUG === '1'
 ```
 
-Then read `~/.copilot/copilot-hud/stdin-debug.jsonl`.
+Then read `~/.copilot/burnrate-copilot/stdin-debug.jsonl`.
 
 ### Testing statusLine manually
 
@@ -702,7 +702,7 @@ echo '{"session_id":"test","cwd":"/path","model":{"id":"claude-sonnet-4.6","disp
   | /path/to/scripts/statusline.js
 
 # Test with real captured data
-tail -1 ~/.copilot/copilot-hud/stdin-debug.jsonl | \
+tail -1 ~/.copilot/burnrate-copilot/stdin-debug.jsonl | \
   python3 -c "import sys,json;d=json.load(sys.stdin);print(json.dumps(d['data']))" | \
   /path/to/scripts/statusline.js
 ```
@@ -756,7 +756,7 @@ default log level, hooks appear to do nothing even when working perfectly.
 ### `sessionEnd` is not called on crash/force-quit
 
 If Copilot exits unexpectedly, `sessionEnd` never fires. The session file in
-`sessions/<uuid>.json` remains on disk. The copilot-hud `sessionStart` hook
+`sessions/<uuid>.json` remains on disk. The burnrate-copilot `sessionStart` hook
 handles this with orphan recovery: it scans for stale session files older than
 2 minutes and archives them to the monthly JSONL before deleting.
 
@@ -780,7 +780,7 @@ real path work correctly — the symlink is transparent on macOS and Linux.
 
 ### Orphaned sessions accumulate if sessionEnd never fires
 
-After a crash, session files remain in `~/.copilot/copilot-hud/sessions/`. The
+After a crash, session files remain in `~/.copilot/burnrate-copilot/sessions/`. The
 orphan recovery in `session-start.js` cleans these up at the next session start.
 The 2-minute grace period prevents cleaning up a session that may be running
 concurrently in another terminal window.
@@ -790,7 +790,7 @@ concurrently in another terminal window.
 As of v1.0.46, the `custom` widget appears as an **additional line below** the
 built-in footer, not as a replacement for it. The built-in footer widgets
 (branch, directory, quota, model/effort, etc.) are still shown. To avoid
-redundancy, the default copilot-hud config omits widgets that duplicate the
+redundancy, the default burnrate-copilot config omits widgets that duplicate the
 built-in footer (git branch, lines changed).
 
 This may change in future versions — the feature is explicitly marked as

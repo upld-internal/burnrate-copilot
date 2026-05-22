@@ -16,21 +16,49 @@ Key files to understand before starting:
 - `scripts/themes.js` — ANSI color helpers (reuse directly)
 - `scripts/widgets/cost.js`, `context.js`, `git.js`, `session.js` — widget rendering (mostly reusable)
 
-## Copilot CLI statusline mechanism
+## Installation and uninstallation
 
-Configured in `~/.copilot/config.json`:
+### Installing
 
-```json
-{
-  "experimental": true,
-  "statusLine": {
-    "type": "command",
-    "command": "node /path/to/scripts/statusline.js"
-  }
-}
+```sh
+copilot plugin install git@github.com:upld-internal/burnrate-copilot.git
 ```
 
-On every turn, Copilot pipes a JSON object to the script's stdin. The script writes its rendered output to stdout. Copilot displays it in the footer.
+The installer:
+1. Caches the plugin to `~/.copilot/installed-plugins/_direct/<slug>/`
+2. Appends an entry to `installedPlugins` in **`~/.copilot/config.json`** (managed automatically — do not edit by hand):
+   ```json
+   {
+     "name": "burnrate-copilot",
+     "marketplace": "",
+     "version": "0.1.0",
+     "installed_at": "<ISO timestamp>",
+     "enabled": true,
+     "cache_path": "/Users/you/.copilot/installed-plugins/_direct/<slug>",
+     "source": { "source": "url", "url": "git@github.com:upld-internal/burnrate-copilot.git" }
+   }
+   ```
+3. Writes the `statusLine` key to **`~/.copilot/settings.json`** (user settings file):
+   ```json
+   "statusLine": {
+     "type": "command",
+     "command": "/Users/you/.copilot/installed-plugins/_direct/<slug>/scripts/statusline.js"
+   }
+   ```
+
+**No `experimental` flag and no `featureFlags: STATUS_LINE` are required.** The statusLine feature works with a plain `settings.json` entry.
+
+### Uninstalling
+
+```sh
+copilot plugin uninstall burnrate-copilot
+```
+
+This removes the `installedPlugins` entry from `config.json`, removes the `statusLine` key from `settings.json`, and deletes the cached plugin directory.
+
+## Copilot CLI statusline mechanism
+
+On every turn, Copilot runs the `statusLine` command and pipes a JSON object to its stdin. The script writes its rendered output to stdout. Copilot displays it in the footer.
 
 ## Copilot stdin JSON schema (confirmed from burnrate-copilot source)
 
@@ -118,7 +146,7 @@ Write to `~/.copilot/burnrate-copilot/sessions/<session_id>.json`:
 
 The `snapshot` is a zero baseline (tokens start at 0 each session). On each statusline turn, the compositor computes cost as (current totals − snapshot). Write `last_known_cost`, `last_known_model`, `last_known_at` back to the session file on every turn — these are used by SessionEnd and orphan recovery.
 
-## Monthly JSONL schema (shared with claude-hud)
+## Monthly JSONL schema (shared with burnrate-claude)
 
 Append to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`:
 
@@ -126,7 +154,7 @@ Append to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`:
 {"id":"session-abc123","date":"2026-05-13","start_month":"2026-05","cost_usd":0.082341,"model":"claude-sonnet-4.6","project":"my-app","project_id":"-Users-you-projects-my-app"}
 ```
 
-This schema is identical to claude-hud's JSONL schema, enabling a future unified cost summary.
+This schema is identical to burnrate-claude's JSONL schema, enabling a future unified cost summary.
 
 ## Data directory
 
@@ -141,7 +169,7 @@ All plugin data lives in `~/.copilot/burnrate-copilot/`:
 
 ## Pricing table
 
-`pricing.json` uses the same schema as claude-hud but with Copilot model IDs and Anthropic direct API rates (not Bedrock). Model IDs in Copilot stdin appear to use the format `claude-sonnet-4.6` (without the `us.anthropic.` Bedrock prefix).
+`pricing.json` uses the same schema as burnrate-claude but with Copilot model IDs and Anthropic direct API rates (not Bedrock). Model IDs in Copilot stdin appear to use the format `claude-sonnet-4.6` (without the `us.anthropic.` Bedrock prefix).
 
 **Verify the exact model IDs from a real Copilot session before publishing the pricing table.** Log the first `model.id` value you see and confirm it matches the keys in pricing.json.
 
@@ -161,7 +189,7 @@ All plugin data lives in `~/.copilot/burnrate-copilot/`:
 
 ## What's NOT needed for v1
 
-- The statusline conflict detection from claude-hud's session-start.js (no equivalent in Copilot)
+- The statusline conflict detection from burnrate-claude's session-start.js (no equivalent in Copilot)
 - The launcher file indirection (that's a Claude plugin marketplace workaround)
 - The `/cost-summary` skill install (can add later)
 - The `account` widget (Copilot-specific account detection is different)
