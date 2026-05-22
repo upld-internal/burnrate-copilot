@@ -1,5 +1,5 @@
 'use strict';
-// compositor.js — full widget compositor for copilot-hud.
+// compositor.js — full widget compositor for burnrate-copilot.
 //
 // render(stdinData, dataDir, scriptDir) → string
 //

@@ -1,6 +1,6 @@
 # /burnrate:setup
 
-Configure GitHub Copilot CLI to use the copilot-hud statusline script.
+Configure GitHub Copilot CLI to use the burnrate-copilot statusline script.
 
 ## Instructions
 
@@ -16,19 +16,19 @@ Call this `COPILOT_DIR`.
 
 Check for the plugin in this order (stop at the first one where `scripts/statusline.js` exists as a file):
 
-1. `$COPILOT_DIR/installed-plugins/local/copilot-hud/scripts/statusline.js`
-2. `$COPILOT_DIR/installed-plugins/copilot-hud/scripts/statusline.js`
+1. `$COPILOT_DIR/installed-plugins/local/burnrate-copilot/scripts/statusline.js`
+2. `$COPILOT_DIR/installed-plugins/burnrate-copilot/scripts/statusline.js`
 
 Print which path was found and whether it was a local or marketplace install.
 
 If neither path contains the file, tell the user:
 
-> copilot-hud is not installed. To install locally, run:
+> burnrate-copilot is not installed. To install locally, run:
 > ```
 > mkdir -p ~/.copilot/installed-plugins/local
-> ln -sf /path/to/copilot-hud ~/.copilot/installed-plugins/local/copilot-hud
+> ln -sf /path/to/burnrate-copilot ~/.copilot/installed-plugins/local/burnrate-copilot
 > ```
-> Or install from the marketplace with: `copilot plugin install bripley/copilot-hud`
+> Or install from the marketplace with: `copilot plugin install bripley/burnrate-copilot`
 
 Then stop.
 
@@ -61,7 +61,7 @@ Current statusLine config:
   type:    <current type>
   command: <current command>
 ```
-Ask the user: **"Replace this with the copilot-hud statusline? (yes/no)"**
+Ask the user: **"Replace this with the burnrate-copilot statusline? (yes/no)"**
 - If no: skip the statusLine update but continue with the other changes.
 - If yes (or if no existing statusLine): set:
 ```json
@@ -78,7 +78,7 @@ Ask the user: **"Replace this with the copilot-hud statusline? (yes/no)"**
 ### 7. Ensure `footer.showCustom` is not disabled
 
 If `settings.footer?.showCustom === false`, warn the user:
-> ⚠️ `footer.showCustom` is set to `false` in your settings. The copilot-hud
+> ⚠️ `footer.showCustom` is set to `false` in your settings. The burnrate-copilot
 > statusline will not be visible until this is changed.
 > Set it to `true`? (yes/no)
 
@@ -118,7 +118,7 @@ Check whether `$COPILOT_DIR/burnrate-copilot/config.json` already exists.
 ### 9. Print a summary
 
 ```
-✓ copilot-hud setup complete
+✓ burnrate-copilot setup complete
 
   Config file:   ~/.copilot/settings.json
   Plugin path:   <path>

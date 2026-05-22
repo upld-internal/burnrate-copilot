@@ -113,7 +113,7 @@ const records = loadRecords();
 
 if (!records.length) {
   console.log(`No session data found for the last ${days} days.`);
-  console.log('Start using Copilot CLI with the copilot-hud plugin to capture telemetry.');
+  console.log('Start using Copilot CLI with the burnrate-copilot plugin to capture telemetry.');
   process.exit(0);
 }
 

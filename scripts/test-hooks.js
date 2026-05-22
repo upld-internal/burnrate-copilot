@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 'use strict';
-// test-hooks.js — smoke-test harness for copilot-hud hook scripts and statusline.
+// test-hooks.js — smoke-test harness for burnrate-copilot hook scripts and statusline.
 //
 // Usage:
 //   node scripts/test-hooks.js
 //
 // Runs 6 end-to-end tests in a temporary COPILOT_HOME directory so the real
-// ~/.copilot/copilot-hud data is never touched. Each test pipes a fixture
+// ~/.copilot/burnrate-copilot data is never touched. Each test pipes a fixture
 // payload into the target script and verifies the expected side-effects.
 
 const fs           = require('fs');
@@ -15,7 +15,7 @@ const os           = require('os');
 const { spawnSync } = require('child_process');
 
 const SCRIPTS_DIR = __dirname;
-const TEST_HOME   = path.join(os.tmpdir(), 'copilot-hud-test-' + process.pid);
+const TEST_HOME   = path.join(os.tmpdir(), 'burnrate-copilot-test-' + process.pid);
 const TEST_DATA   = path.join(TEST_HOME, 'burnrate-copilot');
 const STATE_FILE  = path.join(TEST_HOME, 'hud-state.json');
 const SESSION_ID  = 'test-session-001';
@@ -128,7 +128,7 @@ const SESSION_END_PAYLOAD = {
 // Setup
 // ---------------------------------------------------------------------------
 
-console.log('copilot-hud test harness\n');
+console.log('burnrate-copilot test harness\n');
 console.log(`Test home: ${TEST_HOME}\n`);
 
 // Clean slate
@@ -218,7 +218,7 @@ console.log('\nTest 5: statusline');
 
   const out = (result.stdout || '').trim();
   check('produces output', out.length > 0, '(empty)');
-  check('no error marker', !out.includes('[copilot-hud error]'), out.slice(0, 80));
+  check('no error marker', !out.includes('[burnrate-copilot error]'), out.slice(0, 80));
 
   // Verify session file was updated with last_known_tokens by compositor
   const sessionFile = path.join(TEST_DATA, 'sessions', SESSION_ID + '.json');

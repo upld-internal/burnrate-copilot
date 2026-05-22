@@ -1,5 +1,5 @@
 'use strict';
-// widgets/system.js — system/environment widgets for copilot-hud.
+// widgets/system.js — system/environment widgets for burnrate-copilot.
 //
 // Note: `account` widget from cost-display is omitted — Copilot CLI has no
 // equivalent Bedrock/Anthropic distinction.

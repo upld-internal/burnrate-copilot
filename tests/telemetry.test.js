@@ -20,7 +20,7 @@ let tmpHome;
 let tmpDataDir;  // tmpHome/burnrate-copilot/
 
 before(() => {
-  tmpHome    = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-hud-test-'));
+  tmpHome    = fs.mkdtempSync(path.join(os.tmpdir(), 'burnrate-copilot-test-'));
   tmpDataDir = path.join(tmpHome, 'burnrate-copilot');
   fs.mkdirSync(path.join(tmpDataDir, 'sessions'), { recursive: true });
   fs.mkdirSync(path.join(tmpDataDir, 'monthly'),  { recursive: true });

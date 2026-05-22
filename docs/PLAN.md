@@ -1,4 +1,4 @@
-# copilot-hud — Feature Parity Plan
+# burnrate-copilot — Feature Parity Plan
 
 This plan brings `burnrate-copilot` up to parity with `burnrate-claude`, which received three major feature areas since the Copilot version was last synced: Jira cost attribution, rich session telemetry, and three skills (`burnrate-cost-summary`, `burnrate-optimize`, `burnrate-report`). Two supporting additions — auto-configure statusLine and a docs folder — round out the work.
 

@@ -1,5 +1,5 @@
 {
-  "name": "copilot-hud",
+  "name": "burnrate-copilot",
   "description": "Real-time cost and context display for GitHub Copilot CLI. Shows session cost, MTD total, context window usage, tool/agent activity, model, and git status in the statusline.",
   "version": "0.1.0",
   "author": {

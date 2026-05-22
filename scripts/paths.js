@@ -1,6 +1,6 @@
 'use strict';
 /**
- * paths.js — shared path helpers for copilot-hud.
+ * paths.js — shared path helpers for burnrate-copilot.
  *
  * Exports:
  *   getCopilotConfigDir() → string — respects COPILOT_HOME env var

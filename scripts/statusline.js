@@ -9,7 +9,7 @@
 // (The command must be an executable path — not "node /path/..." — and this file
 // must be chmod +x. Run /burnrate:setup to configure automatically.)
 //
-// Fallback on stdin parse failure: [copilot-hud error]
+// Fallback on stdin parse failure: [burnrate-copilot error]
 
 const fs   = require('fs');
 const path = require('path');
@@ -31,7 +31,7 @@ process.stdin.on('end', () => {
     if (!raw) { process.stdout.write('\n'); process.exit(0); }
     data = JSON.parse(raw);
   } catch (_) {
-    process.stdout.write('[copilot-hud error]\n');
+    process.stdout.write('[burnrate-copilot error]\n');
     process.exit(0);
   }
 
@@ -46,6 +46,6 @@ process.stdin.on('end', () => {
     const output = render(data, dataDir, __dirname);
     process.stdout.write(output + '\n');
   } catch (_) {
-    process.stdout.write('[copilot-hud error]\n');
+    process.stdout.write('[burnrate-copilot error]\n');
   }
 });

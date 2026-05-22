@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// report.js — package copilot-hud user data into a zip for bug reports.
+// report.js — package burnrate-copilot user data into a zip for bug reports.
 // Usage: node report.js [--output /path/to/output.zip]
 // Writes burnrate-report-YYYY-MM-DD.zip to the current directory by default.
 
@@ -206,7 +206,7 @@ entries.push({ name: 'sysinfo.json', data: Buffer.from(JSON.stringify(sysinfo, n
 // ─── write zip ────────────────────────────────────────────────────────────────
 
 if (entries.length === 0) {
-  console.error('No copilot-hud data found. Has the plugin been used yet?');
+  console.error('No burnrate-copilot data found. Has the plugin been used yet?');
   process.exit(1);
 }
 

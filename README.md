@@ -1,4 +1,4 @@
-# copilot-hud
+# burnrate-copilot
 
 Real-time cost and context display for GitHub Copilot CLI. Shows per-session token spend, month-to-date total, context window usage, model, and git branch — directly in the Copilot CLI statusline, updated every turn.
 
@@ -18,9 +18,9 @@ This plugin:
 
 ## Relationship to claude-hud
 
-`copilot-hud` and `claude-hud` (sibling folder) are parallel implementations of the same concept:
+`burnrate-copilot` and `claude-hud` (sibling folder) are parallel implementations of the same concept:
 
-| | copilot-hud | claude-hud |
+| | burnrate-copilot | claude-hud |
 |---|---|---|
 | Platform | GitHub Copilot CLI | Claude Code CLI |
 | Config | `~/.copilot/config.json` → `statusLine.command` | `~/.claude/settings.json` → `statusLine.command` |
@@ -55,7 +55,3 @@ This plugin computes cost from these four token types using a pricing table. Thi
 2. **statusLine command** — computes cost from token delta vs baseline, writes `last_known_cost` back to session file, renders display
 3. **SessionEnd hook** — reads `last_known_cost`, appends record to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`
 4. **Orphan recovery** — on next SessionStart, recovers costs from sessions that exited without firing SessionEnd
-
-## Reference implementation
-
-`https://github.com/griches/copilot-hud` is a working statusline plugin for Copilot CLI that demonstrates the full plugin structure, hook system, stdin schema, and rendering approach. Use it as the primary reference when building this project.

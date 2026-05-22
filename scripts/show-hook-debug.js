@@ -63,7 +63,7 @@ const args = process.argv.slice(2);
 
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
-${BOLD}show-hook-debug.js${RESET} — viewer for copilot-hud hook debug log
+${BOLD}show-hook-debug.js${RESET} — viewer for burnrate-copilot hook debug log
 
 ${BOLD}Usage:${RESET}
   node scripts/show-hook-debug.js [options]
@@ -182,7 +182,7 @@ const hookTypes = [
 const totalShown = filtered.length;
 const totalFile  = entries.length;
 console.log(
-  `\n${BOLD}copilot-hud hook debug log${RESET}  ` +
+  `\n${BOLD}burnrate-copilot hook debug log${RESET}  ` +
   `${DIM}${debugFile}${RESET}\n` +
   `${DIM}${totalShown} entries shown / ${totalFile} total${RESET}\n`
 );

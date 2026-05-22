@@ -1,5 +1,5 @@
 'use strict';
-// widgets/cost.js — cost display widgets for copilot-hud.
+// widgets/cost.js — cost display widgets for burnrate-copilot.
 //
 // Cost computation is deferred to Phase 6 (GitHub Copilot pricing model TBD).
 // These widgets return a "?" placeholder until Phase 6 implements pricing.

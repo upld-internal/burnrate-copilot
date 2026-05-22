@@ -1,6 +1,6 @@
 'use strict';
 /**
- * pricing.js — cost computation for copilot-hud.
+ * pricing.js — cost computation for burnrate-copilot.
  *
  * Uses GitHub Copilot AI Credits rates (effective June 1 2026, 1 credit = $0.01 USD).
  * Rates are sourced from GitHub's official pricing table, not Anthropic/AWS direct rates.

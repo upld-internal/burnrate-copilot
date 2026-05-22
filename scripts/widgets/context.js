@@ -1,7 +1,7 @@
 'use strict';
 // widgets/context.js — context_window and Copilot-specific context widgets.
 //
-// New in copilot-hud vs cost-display:
+// New in burnrate-copilot vs cost-display:
 //   - premium_requests — total premium API requests this session
 //   - token_breakdown  — compact in/out/cache summary
 //   - output_speed     — tokens per second (output / API duration)

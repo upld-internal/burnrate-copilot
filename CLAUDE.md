@@ -1,17 +1,8 @@
-# copilot-hud — GitHub Copilot CLI cost display
+# burnrate-copilot — GitHub Copilot CLI cost display
 
 ## Project goal
 
 Build a real-time cost display plugin for GitHub Copilot CLI, mirroring the functionality of the Claude Code cost display at `~/Projects/cost-display`. Display session spend, MTD total, context window usage, model, and git status in the Copilot CLI statusline footer.
-
-## Reference implementation
-
-**`https://github.com/griches/copilot-hud`** — a fully working Copilot CLI statusline plugin (TypeScript/Node.js). Study this project first. It demonstrates:
-- The exact `plugin.json` and `hooks.json` format required by Copilot CLI
-- How to read stdin and write stdout for the statusline command
-- The complete stdin JSON schema (all field names confirmed by this codebase)
-- The hook system (`sessionStart`, `sessionEnd`, `preToolUse`, `postToolUse`)
-- How to persist state across turns using a local JSON file
 
 ## Existing Claude Code implementation to adapt from
 
@@ -41,7 +32,7 @@ Configured in `~/.copilot/config.json`:
 
 On every turn, Copilot pipes a JSON object to the script's stdin. The script writes its rendered output to stdout. Copilot displays it in the footer.
 
-## Copilot stdin JSON schema (confirmed from copilot-hud source)
+## Copilot stdin JSON schema (confirmed from burnrate-copilot source)
 
 ```json
 {
@@ -85,7 +76,7 @@ The `computeSessionCost` function in `~/Projects/cost-display/scripts/pricing.js
 
 ## Hook system
 
-Configured in `hooks.json` at the plugin root. Format based on `griches/copilot-hud`:
+Configured in `hooks.json` at the plugin root.
 
 ```json
 {

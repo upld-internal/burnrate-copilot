@@ -1,5 +1,5 @@
 'use strict';
-// widgets/git.js — git_branch and git_status widgets for copilot-hud.
+// widgets/git.js — git_branch and git_status widgets for burnrate-copilot.
 //
 // Enhancement vs cost-display:
 //   git_branch includes ahead/behind counts (↑2 ↓1) when the branch

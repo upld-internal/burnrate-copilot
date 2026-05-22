@@ -1,6 +1,6 @@
 # /burnrate:configure
 
-Interactively configure the copilot-hud widget layout. Writes to the hud config file.
+Interactively configure the burnrate-copilot widget layout. Writes to the hud config file.
 
 ## Instructions
 
@@ -18,7 +18,7 @@ default (shown below under **Standard** preset).
 
 Show the user:
 ```
-Current copilot-hud config: <path to config.json>
+Current burnrate-copilot config: <path to config.json>
   powerline: <true|false>
   theme:     <theme name>
   separator: "<char>"

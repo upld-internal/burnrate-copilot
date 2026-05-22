@@ -1,8 +1,8 @@
-# copilot-hud — Quick Start
+# burnrate-copilot — Quick Start
 
 ## What is this?
 
-**copilot-hud** is a GitHub Copilot CLI plugin that tracks your session spend in real time. It shows per-session cost and a month-to-date total directly in the statusline footer — updated every turn — and stores everything locally with no external calls.
+**burnrate-copilot** is a GitHub Copilot CLI plugin that tracks your session spend in real time. It shows per-session cost and a month-to-date total directly in the statusline footer — updated every turn — and stores everything locally with no external calls.
 
 ## How it works
 
@@ -24,7 +24,7 @@ On every turn, Copilot CLI pipes session data (including running token totals) t
 **1. Install the plugin**
 
 ```bash
-gh copilot plugin install <path-to-copilot-hud>
+gh copilot plugin install <path-to-burnrate-copilot>
 ```
 
 **2. Configure the statusline**
@@ -36,7 +36,7 @@ Add to `~/.copilot/config.json`:
   "experimental": true,
   "statusLine": {
     "type": "command",
-    "command": "node /path/to/copilot-hud/scripts/statusline.js"
+    "command": "node /path/to/burnrate-copilot/scripts/statusline.js"
   }
 }
 ```
@@ -90,13 +90,13 @@ Interactively configure the statusline widget layout. Choose from Minimal, Stand
 
 ### `/burnrate:setup`
 
-Configure GitHub Copilot CLI to point its statusline at the copilot-hud script. Run this once after installation if auto-configure did not fire.
+Configure GitHub Copilot CLI to point its statusline at the burnrate-copilot script. Run this once after installation if auto-configure did not fire.
 
 ---
 
 ## Jira Integration
 
-When you work on a branch named after a Jira ticket (e.g., `feature/PLAT-4821-new-auth`), copilot-hud automatically attributes session cost to that ticket.
+When you work on a branch named after a Jira ticket (e.g., `feature/PLAT-4821-new-auth`), burnrate-copilot automatically attributes session cost to that ticket.
 
 **Optional config** in `~/.copilot/burnrate-copilot/config.json`:
 

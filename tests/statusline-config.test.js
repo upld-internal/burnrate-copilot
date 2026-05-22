@@ -16,7 +16,7 @@ const { ensureStatusLineConfig } = require('../scripts/statusline-config');
 // ---------------------------------------------------------------------------
 
 function mkTmpDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-hud-test-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'burnrate-copilot-test-'));
 }
 
 function rmDir(dir) {

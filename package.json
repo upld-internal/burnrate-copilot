@@ -1,5 +1,5 @@
 {
-  "name": "copilot-hud",
+  "name": "burnrate-copilot",
   "version": "0.1.0",
   "description": "Real-time cost and context display for GitHub Copilot CLI",
   "license": "MIT",

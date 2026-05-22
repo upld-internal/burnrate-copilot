@@ -1,6 +1,6 @@
 # /burnrate:burnrate-report
 
-Package copilot-hud user data into a zip file for bug reports.
+Package burnrate-copilot user data into a zip file for bug reports.
 Collects monthly cost records, session files, config, and settings into a
 single zip the user can share with support.
 

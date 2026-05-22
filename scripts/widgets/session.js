@@ -1,5 +1,5 @@
 'use strict';
-// widgets/session.js — session-related widgets for copilot-hud.
+// widgets/session.js — session-related widgets for burnrate-copilot.
 //
 // model_name  — model ID with effort/multiplier badge parsed from display_name
 // session_duration — elapsed time since session start
