@@ -1,8 +1,10 @@
 # Burnrate
 
-Real-time cost and context display for GitHub Copilot CLI. Shows per-session token spend, month-to-date total, context window usage, model, and git branch — directly in the Copilot CLI statusline, updated every turn.
+Real-time cost and context display for GitHub Copilot CLI. Shows per-session token spend, month-to-date total, context window usage, model, and git branch; directly in the statusline, updated every turn.
 
 ![](docs/images/Statusline.png)
+
+Layout is fully configurable. See [`/burnrate:configure`](#skills).
 
 ---
 
@@ -14,50 +16,63 @@ The goal is behavioral: when cost is visible in real time, you make different de
 
 ---
 
-## What you see
-
-```
-$0.08 session  |  May: $6.21 (~$41/mo)  |  claude-sonnet-4.6  |  28%  |  8m  |  main ✎
-```
-
-| Segment | What it shows |
-|---|---|
-| `$0.08 session` | Cost for the current session (computed from token deltas) |
-| `May: $6.21 (~$41/mo)` | Month-to-date total + linear projection |
-| `claude-sonnet-4.6` | Active model |
-| `28%` | Context window utilization |
-| `8m` | Session elapsed time |
-| `main ✎` | Git branch + uncommitted changes indicator |
-
-Layout is fully configurable. See [`/burnrate:configure`](#skills).
-
----
-
 ## Installation
 
-In the Copilot CLI chat:
-
-```
-/plugin install git@github.com:upld-internal/burnrate-copilot.git
-```
-
-SSH is required (HTTPS is blocked by SAML SSO on the `upld-internal` org). The plugin auto-configures the statusline on first session start — no manual config edits needed.
-
-See [`docs/quick-start.md`](docs/quick-start.md) for full installation details, requirements, and troubleshooting.
+See [`docs/quick-start.md`](docs/quick-start.md) for full installation details, requirements, and configuration.
 
 ---
 
-## Skills
+## Features:
 
-| Skill | Invocation | What it does |
-|---|---|---|
-| Cost summary | `/burnrate:burnrate-cost-summary` | Monthly spend by project, model, and Jira ticket |
-| Optimize | `/burnrate:burnrate-optimize` | Scored health report with actionable cost-reduction recommendations |
-| Report | `/burnrate:burnrate-report` | Packages session data into a zip for bug reports |
-| Configure | `/burnrate:configure` | Interactive statusline layout configurator |
-| Setup | `/burnrate:setup` | Manually (re-)configure the statusline pointer |
+### 1. Real-time Cost Awareness
 
----
+Token consumption and cost, MTD and projected month total, context window usage, model, Jira, and git branch; directly in the statusline, updated every turn. 
+
+### 2. Context Window Warnings
+
+LLMs are less effective when the context window becomes saturated. Warn user when context window gets into the “dumb zone”. 
+
+### 3. Structured Spend Report
+
+Produces a structured spend report. Useful for accountability; answering "where did my budget actually go this month" and attributing AI spend to specific projects or work items.
+
+Shows:
+
+- **MTD Cost** (or a date range you specify)
+- **Token Breakdown** — input, output, cache writes, cache reads across all sessions
+- **By-Model Breakdown** — session count and cost per model, so you can see if an expensive model is being used for bulk work
+- **Top Expensive Sessions** — the 5 costliest sessions with date, turn count, and model
+- **By-project and by-Jira breakdown** — when branches follow ticket naming conventions, cost is attributed per project or per ticket
+
+![](docs/images/cost-summary.png)
+
+## 4. Anti-Pattern Correction (/optimize)
+
+Runs analysis over the last 30 days (configurable with --days) and produces a scored health report (0–100). Useful for anti-pattern correction; answering "how could I be using this tool more efficiently" and surfacing habits that silently inflate costs.
+
+Shows:
+
+- **Health score** — a single number summarizing usage efficiency
+- **Model mix** — what fraction of spend is on which model
+- **Tool usage frequency** — which tools are called most, useful for spotting expensive patterns (e.g., excessive web_fetch or long-running bash chains)
+- **Session stats** — average turns per session, p95 outliers
+- **Recommendations** — prioritized, actionable suggestions (e.g., "3 sessions exceeded 50 turns — consider compacting earlier")
+
+![](docs/images/optimize.png)
+
+## Next Steps & Features
+
+- Built-in Model Routing - automatically choose right-size model for task
+- Model or Tool Blocking - prevent users from using models or tools
+- Mechanism for distributing SDLC workflows/functionality to teams
+  - Update plugin to receive new features
+  - Codify team workflow patterns as skills/commands (Jira, Confluence, Git, Plans, Tests, Docs)
+- Use Hooks to enable safety checks (configure per team)
+  - Eg. Check git diff for API tokens or passwords before commit  
+- Push AI Cost/Token data to Jira field per task
+- Push developer telemetry to our cloud for reporting
+  - Aggregate reporting on developer usage (model, context, work item, etc)
+  - Identify SDLC trends & opportunities for improvement
 
 ## How it works
 
@@ -85,7 +100,7 @@ This plugin computes cost from these four token types using a local pricing tabl
 3. **SessionEnd hook** — reads `last_known_tokens`, computes final cost, appends a record to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`, deletes the session file
 4. **Orphan recovery** — on next SessionStart, scans for session files left behind by Ctrl+C exits or crashes; recovers cost from `last_known_tokens` and archives them to the JSONL
 
-All data is local. No network calls. No telemetry.
+All data is local. Plugin data folder structure:
 
 ```
 ~/.copilot/burnrate-copilot/
@@ -94,23 +109,6 @@ All data is local. No network calls. No telemetry.
   sessions/<id>.json        ← per-session state (deleted at clean exit)
   monthly/YYYY-MM.jsonl     ← completed session records
 ```
-
----
-
-## Relationship to burnrate-claude
-
-`burnrate-copilot` and [`burnrate-claude`](../burnrate-claude/) are parallel implementations of the same concept for two different AI CLI tools:
-
-| | burnrate-copilot | burnrate-claude |
-|---|---|---|
-| Platform | GitHub Copilot CLI | Claude Code CLI |
-| Config | `~/.copilot/settings.json` | `~/.claude/settings.json` |
-| Cost source | Computed from token breakdown × pricing table | Native `cost.total_cost_usd` from stdin |
-| Pricing | GitHub AI Credits rates | Anthropic direct API rates |
-| Data dir | `~/.copilot/burnrate-copilot/` | `~/.claude/burnrate-claude/` |
-| Hooks | `sessionStart`, `userPromptSubmitted`, `preToolUse`, `postToolUse`, `sessionEnd` | `SessionStart`, `PostToolUse`, `SessionEnd` |
-
-Both use the same JSONL schema for monthly records, enabling a future unified cross-tool cost summary.
 
 ---
 
