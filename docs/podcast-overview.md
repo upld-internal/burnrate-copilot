@@ -51,25 +51,11 @@ When you're working on a Jira ticket, the active ticket key also appears — mor
 
 ---
 
-## How cost is computed: the key technical difference
-
-The two plugins take different approaches to cost computation, because the two host tools expose different data.
-
-**Claude Code** includes a field called `cost.total_cost_usd` in the data it pipes to the statusline script on every turn. This is a running cumulative total that Claude Code computes itself from the underlying token counts, including all cache token types at their correct rates. burnrate-claude reads this field directly and uses it as the primary cost source. This is accurate, simple, and requires no pricing table.
-
-**GitHub Copilot CLI** does not include a pre-computed cost figure. What it does provide is a full breakdown of all four token types — input tokens, output tokens, cache write tokens, and cache read tokens. burnrate-copilot takes those four numbers, subtracts a zero-baseline snapshot captured at session start to get the per-session delta, and multiplies by rates from a local pricing table sourced from GitHub's official billing documentation.
-
-This approach is actually more transparent than the Claude version. Every token type and its per-million-token rate is visible and auditable. The trade-off is that the pricing table needs periodic maintenance as GitHub updates their rates — a script handles this automatically.
-
----
-
 ## Session lifecycle and data persistence
 
 Understanding the session lifecycle is important for both using the plugin correctly and contributing to it.
 
-When a session starts, the `sessionStart` hook fires. The plugin writes a JSON session file capturing the session ID, start time, model, current working directory, git branch, and a zero-baseline token snapshot. For burnrate-copilot this baseline is always zero because Copilot resets token counts per session. For burnrate-claude, the baseline captures the cost at the moment the session started, since Claude Code's cumulative cost persists across sessions in some cases.
-
-On every turn of the session, the statusline command runs. For burnrate-copilot, this means computing cost from (current tokens − baseline). The result is written back to the session file as `last_known_cost` and `last_known_tokens`, along with a timestamp. These fields serve two purposes: they update the statusline display, and they act as a recovery snapshot in case the session ends abnormally.
+When a session starts, the `sessionStart` hook fires. The plugin writes a JSON session file capturing the session ID, start time, model, current working directory, git branch, and a baseline cost snapshot. On every turn of the session, the statusline command runs, computing the current session cost against that baseline. The result is written back to the session file as `last_known_cost` and `last_known_tokens`, along with a timestamp. These fields serve two purposes: they update the statusline display, and they act as a recovery snapshot in case the session ends abnormally.
 
 At clean session end, the `sessionEnd` hook fires. The plugin reads `last_known_tokens`, computes the final cost using the pricing table, and appends a completed record to the monthly JSONL file. The session file is then deleted.
 
@@ -180,10 +166,16 @@ Users sometimes run multiple Copilot CLI sessions concurrently — one per termi
 
 ## Future directions
 
-The most significant planned enhancement is a unified cost-summary command that aggregates across both plugins. Since both use the same JSONL schema with the same field names, a single script could read `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl` and `~/.claude/burnrate-claude/monthly/YYYY-MM.jsonl` and produce a combined report. For users who use both tools, this would give a single answer to "how much did I spend on AI this month."
+Several features are on the roadmap that extend the plugin from a passive cost display into an active workflow tool.
 
-The optimize skill's recommendation engine has significant room for expansion. The current checks are heuristic — they flag patterns that are commonly expensive without knowing the specifics of the user's workflow. A more sophisticated version could learn from session history to identify the specific inefficiencies that matter most for a given user's usage pattern.
+**Built-in model routing** would automatically select the right-sized model for a given task — routing simple lookups to Haiku or Sonnet while reserving Opus for complex multi-step work. This closes the feedback loop on one of the most actionable optimize recommendations: model mix efficiency.
 
-Pricing table maintenance is currently semi-manual — users run a script to check for updates. This could be automated to check for pricing changes on session start and notify through the statusline when an update is available.
+**Model and tool blocking** would let teams or individuals set guardrails — preventing specific models or tools from being used, enforcing cost ceilings per session, or requiring confirmation before invoking expensive operations.
 
-Windows support is on the roadmap for both plugins. The main obstacle is path handling and the shell environment for hook scripts. The core JavaScript logic is platform-independent; it's the shell wrappers and path construction that need adaptation.
+**SDLC workflow distribution** is a broader vision: using the plugin infrastructure to distribute codified team workflows as skills and commands. Patterns for working with Jira, Confluence, Git, test suites, and documentation can be packaged and updated centrally, giving every engineer on a team the same set of battle-tested prompting patterns without each person having to discover and maintain them individually.
+
+**Safety checks via hooks** would enable teams to configure pre-action checks that run before sensitive operations — for example, scanning a git diff for API tokens or passwords before a commit, or requiring a linked Jira ticket before starting a session on a production codebase.
+
+**Push AI cost and token data to Jira** would close the attribution loop: rather than just tagging session records with a ticket key, the plugin would write the actual AI cost back to a Jira field on the ticket. Sprint velocity reports and ticket estimates would then include AI compute as a first-class cost alongside engineer time.
+
+**Developer telemetry to the cloud** is the enterprise reporting layer: aggregating model usage, context window utilization, work item attribution, and session patterns across an entire team into a dashboard. This turns individual cost visibility into organizational insight — identifying which projects are AI-heavy, which workflows are inefficient at scale, and where investment in better tooling or prompting practices would have the highest leverage.
