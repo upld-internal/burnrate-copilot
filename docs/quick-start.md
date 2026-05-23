@@ -1,101 +1,120 @@
 # burnrate-copilot — Quick Start
 
-## What is this?
+**burnrate-copilot** is a GitHub Copilot CLI plugin that makes your AI spend visible in real time. It shows per-session cost and a month-to-date total directly in the statusline footer — updated every turn — and stores everything locally with no external calls.
 
-**burnrate-copilot** is a GitHub Copilot CLI plugin that tracks your session spend in real time. It shows per-session cost and a month-to-date total directly in the statusline footer — updated every turn — and stores everything locally with no external calls.
+```
+$0.08 session  |  May: $6.21 (~$41/mo)  |  claude-sonnet-4.6  |  28%  |  8m  |  main ✎
+```
+
+The plugin computes cost from the token breakdown Copilot CLI pipes to the statusline on every turn, multiplies by the current GitHub AI Credits rates, and accumulates completed sessions into a monthly JSONL log. No network calls, no telemetry, nothing leaves your machine.
 
 ![](images/Statusline.png)
-
-## How it works
-
-On every turn, Copilot CLI pipes session data (including running token totals) to the statusline command configured in `~/.copilot/settings.json`. The plugin computes cost from token deltas × pricing, writes it to a local session file, and rolls it into a monthly JSONL log at session end.
 
 ---
 
 ## Requirements
 
-- GitHub Copilot CLI (`gh copilot` or standalone)
+- GitHub Copilot CLI (standalone or via `gh copilot`)
 - Node.js ≥ 18 on your `PATH`
-- macOS, Linux, or Windows
-- Default Copilot config directory (`~/.copilot/`). Override with `COPILOT_HOME` env var if you use a custom location.
+- macOS or Linux (Windows support planned)
+- A GitHub SSH key configured for the `upld-internal` org (required for installation — see below)
 
 ---
 
 ## Installation
 
-**1. Install via SSH (recommended)**
+**1. Install via SSH**
 
-If you have an ssh key configured for github, installation is simple. In the Copilot CLI chat, use:
-
-```bash
- /plugin install git@github.com:upld-internal/burnrate-copilot.git
+In the Copilot CLI chat:
 
 ```
+/plugin install git@github.com:upld-internal/burnrate-copilot.git
+```
 
-Our Github organizations require that SAML SSO be authorized for the upld-internal org. As of now, this is preventing Copilot CLI plugin installs via HTTPS. We are investigating whether this can be resolved, but ssh is better anyways, so use that. :) 
+HTTPS installation is blocked by SAML SSO on the `upld-internal` org. SSH is the correct path.
 
-> [!INFO] Need a Git SSH key?
-[SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh) is the preferred (and easiest) way to interact with git. If you do not have an ssh key configured for use with GitHub, do so [here](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) now. It only takes 5 minutes and you will never need to provide a password or API token again. 
+> **Need a GitHub SSH key?** [Set one up here](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) — it takes 5 minutes and eliminates passwords for all future GitHub interactions.
 
+**2. Start a new session**
 
-**2. Customizing your StatusLine (optional)**
+The plugin auto-configures itself on the first session start. It writes the `statusLine` entry to `~/.copilot/settings.json` and the statusline will appear from the first turn.
 
-The plugin will auto-configure this on first session start if not already set. See `/burnrate:configure` for full configuration options.
+**3. (Optional) Customize your layout**
+
+Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build a custom widget layout. Configuration is saved to `~/.copilot/burnrate-copilot/config.json`.
 
 ---
 
-## Included skills
+## What the statusline shows
+
+| Segment | Description |
+|---|---|
+| `$0.08 session` | Cost for the current session, computed from token deltas × pricing |
+| `May: $6.21 (~$41/mo)` | Month-to-date total across all completed sessions + linear projection |
+| `claude-sonnet-4.6` | Active model ID |
+| `28%` | Context window utilization (used / total) |
+| `8m` | Session elapsed time |
+| `main ✎` | Git branch + indicator when there are uncommitted changes |
+
+The Jira ticket widget (`PLAT-4821`) also appears when your branch follows a `[PROJECT-NNN]` naming convention — see [Jira Integration](#jira-integration) below.
+
+---
+
+## Skills
+
+All skills are invoked inside the Copilot CLI chat. The `/burnrate:` prefix is the namespace for this plugin.
 
 ### `/burnrate:burnrate-cost-summary`
 
-Shows a cost breakdown for the current month (or any month you specify), grouped by project and optionally by Jira ticket.
+Monthly spend report grouped by project, model, and optionally Jira ticket. Reads from `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`.
 
-**Example usage:**
-- `/burnrate:burnrate-cost-summary` — current month summary
-- `/burnrate:burnrate-cost-summary 2026-04` — April summary
-- `/burnrate:burnrate-cost-summary 2026-05 2026-05-01 2026-05-15` — date range
+```
+/burnrate:burnrate-cost-summary              ← current month
+/burnrate:burnrate-cost-summary 2026-04      ← specific month
+/burnrate:burnrate-cost-summary 2026-05 2026-05-01 2026-05-15   ← date range
+```
 
-The output includes total cost, by-model breakdown, and by-project grouping. Use `--by-jira` for per-ticket attribution (requires Jira integration to be active).
+Output includes: total cost, token breakdown, by-model table, top expensive sessions, and per-project grouping.
 
 ---
 
 ### `/burnrate:burnrate-optimize`
 
-Analyzes the last 30 days of session records for cost and efficiency patterns. Produces a scored health report with actionable recommendations.
+Analyzes your last 30 days of session records and produces a scored health report (0–100) with prioritized recommendations. Checks include model mix efficiency, high-cost outlier sessions, session length distribution, and tool usage patterns.
 
-**Example usage:**
-- `/burnrate:burnrate-optimize` — analyze last 30 days
-- `/burnrate:burnrate-optimize --days 7` — last 7 days only
-
-Checks include: high-cost session outliers, model mix efficiency, session length distribution, and tool usage patterns.
+```
+/burnrate:burnrate-optimize            ← last 30 days
+/burnrate:burnrate-optimize --days 7   ← last 7 days
+```
 
 ---
 
 ### `/burnrate:burnrate-report`
 
-Packages your session data and config into a zip file for bug reports or support requests.
+Packages your session data, config, and debug log into a zip file for bug reports or support requests.
 
-**Example usage:**
-- `/burnrate:burnrate-report` — writes `burnrate-report-YYYY-MM-DD.zip` to the current directory
-- `/burnrate:burnrate-report --output /tmp/my-report.zip` — custom output path
+```
+/burnrate:burnrate-report                             ← writes burnrate-report-YYYY-MM-DD.zip to cwd
+/burnrate:burnrate-report --output /tmp/report.zip    ← custom path
+```
 
 ---
 
 ### `/burnrate:configure`
 
-Interactively configure the statusline widget layout. Choose from Minimal, Standard, Full, or Powerline presets, or build a custom layout widget by widget. Writes to `~/.copilot/burnrate-copilot/config.json`.
+Interactive statusline configurator. Choose from Minimal, Standard, Full, or Powerline presets, or assemble a custom layout widget by widget. Writes to `~/.copilot/burnrate-copilot/config.json`.
 
 ---
 
 ### `/burnrate:setup`
 
-Configure GitHub Copilot CLI to point its statusline at the burnrate-copilot script. Run this once after installation if auto-configure did not fire.
+Manually (re-)configures the `statusLine` entry in `~/.copilot/settings.json` to point at the plugin script. Run this if auto-configure didn't fire on first start.
 
 ---
 
 ## Jira Integration
 
-When you work on a branch named after a Jira ticket (e.g., `feature/PLAT-4821-new-auth`), burnrate-copilot automatically attributes session cost to that ticket.
+When you work on a branch named after a Jira ticket (e.g., `feature/PLAT-4821-new-auth`), burnrate-copilot automatically attributes session cost to that ticket. The attribution flows through to `/burnrate:burnrate-cost-summary` and the monthly JSONL, enabling per-ticket cost reporting.
 
 **Optional config** in `~/.copilot/burnrate-copilot/config.json`:
 
@@ -107,9 +126,9 @@ When you work on a branch named after a Jira ticket (e.g., `feature/PLAT-4821-ne
 }
 ```
 
-When `project_keys` is set, only matching keys are detected. Without it, any `[A-Z]+-\d+` pattern in the branch name is treated as a Jira key.
+Without `project_keys`, any `[A-Z]+-\d+` pattern in the branch name is treated as a Jira key. Setting `project_keys` restricts detection to only those prefixes.
 
-The `jira_ticket` widget can be added to your statusline segments:
+To show the active ticket in the statusline, add the `jira_ticket` widget to your segments:
 
 ```json
 {
@@ -123,15 +142,33 @@ The `jira_ticket` widget can be added to your statusline segments:
 
 ## Data directory
 
-All plugin data lives in `~/.copilot/burnrate-copilot/`:
+All plugin data lives in `~/.copilot/burnrate-copilot/`. Nothing is written outside this directory and nothing is sent over the network.
 
 ```
 ~/.copilot/burnrate-copilot/
   pricing.json              ← model pricing table (override rates here)
   config.json               ← widget layout and theme configuration
   sessions/<id>.json        ← per-session state (deleted at clean SessionEnd)
-  monthly/YYYY-MM.jsonl     ← completed session records
+  monthly/YYYY-MM.jsonl     ← completed session records (one line per session)
   debug/hooks.jsonl         ← hook debug log (when COPILOT_HUD_DEBUG=1)
+```
+
+---
+
+## Pricing maintenance
+
+Model pricing is sourced from [GitHub's official billing docs](https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing) and stored in `pricing.json`. It does not update automatically.
+
+```bash
+node scripts/update-pricing.js          # diff local vs current GitHub docs
+node scripts/update-pricing.js --apply  # write changes to pricing.json
+```
+
+To verify which model IDs are active on your plan:
+
+```bash
+bash scripts/verify-model-ids.sh          # scan historical sessions
+bash scripts/verify-model-ids.sh --test   # also send a live test prompt per model
 ```
 
 ---
@@ -145,41 +182,40 @@ COPILOT_HUD_DEBUG=1 gh copilot chat "hello"
 node scripts/show-hook-debug.js
 ```
 
-This captures payloads for all hook types (`sessionStart`, `sessionEnd`, `preToolUse`, `postToolUse`, `userPromptSubmitted`) and is useful for verifying that field names match what the plugin expects.
+Useful for verifying field names in Copilot hook payloads when debugging unexpected behavior.
 
 ---
 
-## Pricing maintenance
+## Fallback behavior
 
-Model pricing is stored locally in `~/.copilot/burnrate-copilot/pricing.json` and does not update automatically.
+The statusline never crashes or shows blank. If something goes wrong:
 
-**To check for pricing changes:**
+| Condition | Display |
+|---|---|
+| Normal operation | `$0.08 session \| May: $6.21 (~$41/mo)` |
+| No session file yet | `? session \| May: $6.21` |
+| Monthly file unreadable | `$0.08 session \| May: ?` |
+| Pricing not found for model | Session cost shows `?` |
+| Stdin parse failure | `[burnrate error]` |
 
-```bash
-node scripts/update-pricing.js
-```
-
-Fetches the [GitHub Copilot billing docs](https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing) and diffs against your local `pricing.json`. If prices have changed, run with `--apply` to write the update:
-
-```bash
-node scripts/update-pricing.js --apply
-```
-
-**To verify model IDs on your plan:**
+If you see `? session`, check that `sessions/` contains a file for the current session ID:
 
 ```bash
-bash scripts/verify-model-ids.sh          # historical scan only (no API calls)
-bash scripts/verify-model-ids.sh --test   # also tests each model with a live prompt
+ls ~/.copilot/burnrate-copilot/sessions/
 ```
-
-This reports which models are CONFIRMED (seen in interactive sessions), ACCESSIBLE (responded to a test prompt), or NO_SESSION (not available on your plan or invalid ID).
 
 ---
 
 ## Custom config directory
 
-If you use a non-standard Copilot config location, set `COPILOT_HOME`:
+If your Copilot config is not at `~/.copilot/`, set `COPILOT_HOME`:
 
 ```bash
 export COPILOT_HOME=/custom/path/.copilot
 ```
+
+---
+
+## Contributing
+
+The plugin is plain Node.js with no runtime npm dependencies. See [CLAUDE.md](../CLAUDE.md) for architecture details, the stdin JSON schema, and session file schemas. The test suite lives in `tests/` and each file can be run directly with `node tests/<file>.test.js`.
