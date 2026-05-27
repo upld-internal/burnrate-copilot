@@ -97,7 +97,9 @@ Both plugins ship with a set of skills — slash commands that run analysis scri
 
 The cost-summary skill produces a structured report for any month or date range. It shows the total cost broken down by model, by project, and optionally by Jira ticket. For teams using Jira attribution, this turns raw session data into a complete picture of AI compute spend attributable to specific work.
 
-A typical output shows something like: this month you spent $47 total. $32 was on the auth-service project, split across PLAT-4821 ($18) and PLAT-4902 ($14). The remaining $15 was on burnrate-copilot itself.
+A typical output shows something like: this month you spent $47 total. 
+- $32 was on the `auth-service project`, split across `JIRA-4821` and `JIRA-4902`.
+- The remaining $15 was on `burnrate-copilot` itself.
 
 ### Optimize
 

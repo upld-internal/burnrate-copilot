@@ -133,6 +133,8 @@ function buildTelemetryFields(session) {
 
   if (session.git_branch) f.git_branch = session.git_branch;
 
+  if (session.compaction_count > 0) f.compaction_count = session.compaction_count;
+
   return f;
 }
 

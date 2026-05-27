@@ -51,6 +51,7 @@ function parseEventsFile(sessionId) {
 
   let shutdownMetrics = null;
   const subagents = [];
+  const compactions = [];
 
   try {
     const content = fs.readFileSync(eventsFile, 'utf8');
@@ -62,8 +63,17 @@ function parseEventsFile(sessionId) {
         const event = JSON.parse(line);
         if (event.type === 'session.shutdown') {
           shutdownMetrics = (event.data || {}).modelMetrics || null;
-        } else if (event.type === 'subagent.completed') {
+        } else if (event.type === 'subagent.completed' || event.type === 'subagent.failed') {
           subagents.push(event.data || {});
+        } else if (event.type === 'session.compaction_complete') {
+          const d = event.data || {};
+          if (d.compactionTokensUsed) {
+            compactions.push({
+              ...d.compactionTokensUsed,
+              preCompactionTokens: d.preCompactionTokens || 0,
+              timestamp: event.timestamp,
+            });
+          }
         }
       } catch (_) {}
     }
@@ -71,7 +81,7 @@ function parseEventsFile(sessionId) {
     return null;
   }
 
-  return { shutdownMetrics, subagents };
+  return { shutdownMetrics, subagents, compactions };
 }
 
 /**
@@ -126,6 +136,46 @@ function parseSubagentCompletions(sessionId, pricingTable) {
       tool_calls:  sa.totalToolCalls || 0,
     };
   });
+}
+
+/**
+ * Parse compaction costs from events.jsonl.
+ * Returns summary of compaction API calls (tokens consumed by compaction itself).
+ *
+ * @param {string} sessionId
+ * @param {Object} pricingTable
+ * @returns {{ count, total_cost_usd, compactions: [] } | null}
+ */
+function parseCompactionCosts(sessionId, pricingTable) {
+  const result = parseEventsFile(sessionId);
+  if (!result || result.compactions.length === 0) return null;
+
+  let totalCost = 0;
+  const compactions = result.compactions.map(c => {
+    const model = c.model || 'unknown';
+    const pricing = pricingTable[model];
+    let cost = 0;
+    if (pricing) {
+      cost = (c.inputTokens || 0) / 1e6 * (pricing.input || 0) +
+             (c.outputTokens || 0) / 1e6 * (pricing.output || 0) +
+             (c.cacheReadTokens || 0) / 1e6 * (pricing.cache_read || 0) +
+             (c.cacheWriteTokens || 0) / 1e6 * (pricing.cache_write || 0);
+    }
+    totalCost += cost;
+    return {
+      model,
+      input_tokens: c.inputTokens || 0,
+      output_tokens: c.outputTokens || 0,
+      cost_usd: Math.round(cost * 1e6) / 1e6,
+      duration_ms: c.duration || 0,
+    };
+  });
+
+  return {
+    count: compactions.length,
+    total_cost_usd: Math.round(totalCost * 1e6) / 1e6,
+    compactions,
+  };
 }
 
 /**
@@ -238,6 +288,7 @@ module.exports = {
   parseEventsFile,
   parseShutdownMetrics,
   parseSubagentCompletions,
+  parseCompactionCosts,
   computeMultiModelCost,
   computeMultiModelCostForSession,
   loadPricingTable,

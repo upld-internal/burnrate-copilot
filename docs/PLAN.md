@@ -1,482 +1,421 @@
-# burnrate-copilot — Feature Parity Plan
+# burnrate-copilot — Accurate Cost & Data Capture Plan
 
-This plan brings `burnrate-copilot` up to parity with `burnrate-claude`, which received three major feature areas since the Copilot version was last synced: Jira cost attribution, rich session telemetry, and three skills (`burnrate-cost-summary`, `burnrate-optimize`, `burnrate-report`). Two supporting additions — auto-configure statusLine and a docs folder — round out the work.
+This plan implements accurate multi-model cost tracking, subagent cost attribution, and enriched session telemetry by leveraging the newly-discovered `events.jsonl` data source and additional hook registrations.
+
+**Key finding:** Copilot CLI's statusline `total_*_tokens` fields **include subagent tokens** — unlike Claude Code where subagent costs are hidden. However, our current implementation applies a single model's pricing to ALL tokens, which is incorrect for multi-model sessions (measured 3.2% error on real data). The fix requires per-model token attribution from `session.shutdown.modelMetrics`.
+
+**Reference:** See `copilot-data.md` at repo root for complete schema documentation.
 
 ---
 
-## Status: What's Already Done
+## Baseline: What's Already Working
 
-### ✅ Phases 1–5 (original build)
 - Plugin skeleton, session lifecycle (start/end), hooks.json
 - Full widget compositor (powerline + plain), config system
-- Widgets: `model_name`, `session_duration`, `session_name`, `lines_changed`, `context_window`, `premium_requests`, `token_breakdown`, `output_speed`, `last_call`, `cache_breakdown`, `git_branch`, `git_status`, `cwd`, `custom_*`, `separator`, `newline`
-- Tool and agent activity tracking (tools widget, state.js, pre/post-tool-use hooks)
-- Commands: `configure.md`, `setup.md`
-
-### ✅ Phase 6 (cost calculation)
-- `scripts/pricing.js` — `computeCost`, `getMtdAndProjected`, `loadPricing`
-- `pricing.json` — GitHub Copilot AI Credits rates for all supported models (Claude, OpenAI, Google, GitHub fine-tuned)
-- `scripts/compositor.js` — token-delta cost computation (Copilot field names: `total_cache_write_tokens`, `total_cache_read_tokens`)
-- `scripts/session-end.js` — appends cost record to monthly JSONL
-- `scripts/session-start.js` — snapshot baseline, orphan recovery
+- All widgets: model_name, session_duration, context_window, git, tools, etc.
+- Tool and agent activity tracking (pre/post-tool-use hooks, state.js)
+- Cost calculation from statusline tokens (single-model pricing)
+- Monthly JSONL with session telemetry, tool_counts, turn_counts
+- Jira cost attribution from git branch
+- Orphan session recovery
 
 ---
 
-## ✅ Phase 0 — Docs Folder
+## Task 1 — Verify Subagent Token Inclusion in StatusLine
 
-Mirror the `burnrate-claude` docs structure so both projects have consistent reference material.
+**Goal:** Confirm empirically that Copilot CLI's statusline `context_window.total_*_tokens` includes subagent tokens, and quantify the cost error from single-model pricing.
 
-**New files:**
+**Why first:** In Claude Code, subagent tokens were NOT included in the statusline — they were a hidden cost. We need to confirm this is NOT the case here before building solutions on top of the statusline data.
 
-| File | Purpose |
-|---|---|
-| `docs/PLAN.md` | This file — implementation plan and phase tracker |
-| `docs/data-points.md` | Catalog of every data point captured — source, hook, what it enables, optimize relevance |
-| `docs/quick-start.md` | User-facing install guide, skill descriptions, config reference |
+**Work:**
+1. Write a verification script (`scripts/verify-subagent-tokens.js`) that:
+   - Scans `~/.copilot/session-state/` for sessions with `subagent.completed` events
+   - For each such session, extracts `session.shutdown.modelMetrics` token totals
+   - Compares against the monthly JSONL `final_tokens` (which came from the statusline)
+   - Reports: match/mismatch, per-model breakdown, cost error from single-model pricing
+2. Run it against existing session data
+3. Document findings in the script's header comments
 
-**Validation:**
-- `docs/` directory exists with all three files present
-- `data-points.md` covers at minimum: `cost_usd`, `model`, `project`, `duration_secs`, `input_tokens`/`output_tokens`, `jira_key`/`jira_costs` (once Phase 1 lands), and each telemetry field (once Phase 2 lands)
-- `quick-start.md` documents all three skills and the `statusLine` config block
+**Verification:**
+- Script runs without error: `node scripts/verify-subagent-tokens.js`
+- Output shows at least 2 sessions with subagents
+- Output confirms tokens match (statusline includes subagent tokens)
+- Output shows the cost error percentage from single-model pricing
+- Script confirms: "Subagent tokens ARE included in statusline totals"
+
+**Acceptance criteria:**
+- Script produces a clear PASS/FAIL verdict
+- If PASS: subagent tokens are included, single-model pricing is the only cost error
+- If FAIL: we need to add subagent token tracking before proceeding
 
 ---
 
-## ✅ Phase 1 — Jira Integration
+## Task 2 — Parse events.jsonl for session.shutdown modelMetrics
 
-**Goal:** Detect the active Jira ticket from the git branch name on every statusline turn. Track cost attribution per ticket across context switches within a session. Expose a `jira_ticket` widget and include Jira fields in the monthly JSONL record.
+**Goal:** At SessionEnd, read the session's `events.jsonl` to extract `session.shutdown.modelMetrics` and compute accurate per-model cost.
 
-**Entry criteria:** Phase 6 complete ✅
+**Why:** The statusline gives us aggregate tokens but no per-model split. `session.shutdown` fires just before SessionEnd and contains the authoritative per-model breakdown. This eliminates the 3.2% cost error from single-model pricing.
 
-**Design decisions:**
-- Jira key is detected from `git branch --show-current` on each statusline turn — no hook needed.
-- When the branch key changes mid-session, subsequent cost deltas are attributed to the new key.
-- `config.jira.project_keys` (optional array) filters detection to known project prefixes; falls back to broad `[A-Z]+-\d+` pattern when absent.
-- `jira_ticket` widget renders as a clickable OSC 8 hyperlink pointing to the configured Atlassian base URL.
-- Copilot cost source is `sessionData.sessionCost` (computed from token delta × pricing); Claude uses `nativeCost` (provided by Claude Code). The `applyJiraDelta` call uses `sessionData.sessionCost` unchanged.
+**Work:**
+1. Create `scripts/events-parser.js` with:
+   - `parseShutdownMetrics(sessionId)` — reads `events.jsonl`, finds `session.shutdown`, returns `modelMetrics`
+   - `computeMultiModelCost(modelMetrics, pricingDir)` — computes cost per model using each model's pricing
+2. Update `scripts/session-end.js` to:
+   - Call `parseShutdownMetrics()` before writing the monthly record
+   - If modelMetrics available: compute per-model cost, sum for total
+   - If unavailable (old session or crash): fall back to current single-model computation
+   - Add `model_metrics` field to the monthly JSONL record
+3. Update monthly JSONL schema to include per-model breakdown
 
-### New files
+**Verification:**
+- Unit test: `node tests/events-parser.test.js` passes (uses fixture events.jsonl)
+- Integration: Start a session, use at least 2 models (e.g. switch model mid-session), end session
+- Monthly JSONL record for that session contains `model_metrics` with correct per-model costs
+- Fallback: delete events.jsonl before session end → still produces a valid record with single-model cost
 
-| File | Purpose |
-|---|---|
-| `scripts/jira-detector.js` | `extractJiraKey(text, projectKeys)`, `detectJiraKey(cwd, projectKeys)` — pure copy from Claude version (uses only git, no AI-specific deps) |
-| `scripts/jira-attribution.js` | `applyJiraDelta`, `selectPrimaryJiraKey`, `normalizeJiraCosts` — pure copy (pure math/object logic) |
-| `scripts/widgets/jira.js` | `jira_ticket` widget — copy from Claude version; confirm OSC 8 link uses configurable base URL |
-| `tests/jira-detector.test.js` | Unit tests for `extractJiraKey` and `detectJiraKey` |
-| `tests/jira-attribution.test.js` | Unit tests for `applyJiraDelta`, `selectPrimaryJiraKey`, `normalizeJiraCosts` |
-| `tests/jira-widget.test.js` | Widget render tests and compositor integration |
+**Acceptance criteria:**
+- `cost_usd` in monthly JSONL matches per-model computation (not single-model approximation)
+- Existing sessions without events.jsonl still work (graceful fallback)
 
-### Modified files
+---
 
-| File | Change |
-|---|---|
-| `scripts/compositor.js` | `require('./jira-detector')`, `require('./jira-attribution')`; add `jiraKey`, `jiraSource`, `lastKnownJiraKey`, `lastKnownJiraSource` to `loadSessionData`; call `detectJiraKey` using `config.jira.project_keys`; call `applyJiraDelta(sessionRaw, sd.sessionCost, sd.lastKnownJiraKey)` in write-back block; write `last_known_jira_key` and `last_known_jira_source` back to session file |
-| `scripts/session-end.js` | Include `jira_costs`, `jira_key`, `jira_source`, `jira_keys_seen` in JSONL record using same pattern as Claude version |
-| `scripts/session-start.js` | Include Jira fields (`jira_costs`, `jira_key`) in orphan recovery records when present in session file |
-| `scripts/widgets/index` (compositor.js WIDGETS map) | Register `jira_ticket` from `./widgets/jira` |
+## Task 3 — Real-Time Multi-Model Cost in StatusLine
 
-### Session file additions
+**Goal:** Track per-model token attribution during the session (not just at shutdown) so the statusline shows accurate cost in real-time.
+
+**Why:** Task 2 fixes cost at session end, but the live statusline still uses single-model pricing. Model switches happen mid-session via `session.model_change` events.
+
+**Work:**
+1. Update `scripts/session-start.js` to initialize `model_tokens` map in the session file
+2. Update `scripts/compositor.js` (`loadSessionData`) to:
+   - Track the current model from statusline `model.id`
+   - On each turn, compute token delta from previous `last_known_tokens`
+   - Attribute the delta to the current model's bucket
+   - Compute total cost as sum of per-model costs
+3. Session file gains: `model_tokens: { "claude-opus-4.6": { input: N, output: N, cache_write: N, cache_read: N } }`
+4. Statusline cost widget uses the per-model sum instead of single-model computation
+
+**Verification:**
+- Start session with model A → do some work → switch to model B → do more work
+- StatusLine cost should be lower than naive single-model (if model B is cheaper)
+- At session end, compare statusline cost vs `session.shutdown.modelMetrics` cost
+- Error should be < 0.5% (small timing gaps between model switch and next statusline call)
+
+**Acceptance criteria:**
+- Multi-model sessions show accurate real-time cost (within 1% of shutdown-verified total)
+- Single-model sessions (the common case) work identically to before
+
+---
+
+## Task 4 — Subagent Cost Attribution in Monthly Records
+
+**Goal:** Record per-subagent cost breakdowns in the monthly JSONL so the optimize skill can analyze which agents cost most.
+
+**Why:** `subagent.completed` events provide `totalTokens`, `model`, and `durationMs` — everything needed to compute per-agent cost. This enables "which agent types are expensive?" analysis.
+
+**Work:**
+1. Extend `scripts/events-parser.js` with:
+   - `parseSubagentCompletions(sessionId)` — extracts all `subagent.completed` events
+   - Returns: `[{ name, model, totalTokens, durationMs, totalToolCalls, costUsd }]`
+2. Update `scripts/session-end.js` to:
+   - Call `parseSubagentCompletions()` 
+   - Add `subagents_detail` array to monthly JSONL record
+3. Monthly JSONL gains:
+   ```json
+   "subagents_detail": [
+     { "name": "rubber-duck", "model": "gpt-5.5", "tokens": 375820, "cost_usd": 0.42, "duration_ms": 416707, "tool_calls": 17 }
+   ]
+   ```
+
+**Verification:**
+- Run a session that spawns at least one subagent (e.g. use `task` tool)
+- Monthly JSONL record contains `subagents_detail` with correct cost per agent
+- `sum(subagents_detail[].cost_usd)` ≤ `cost_usd` (subagent cost is subset of total)
+- Verify: subagent model pricing is used (not parent model pricing)
+
+**Acceptance criteria:**
+- Monthly record shows per-subagent breakdown with accurate cost
+- Sessions without subagents omit the field (no empty arrays)
+
+---
+
+## Task 5 — Register SubagentStart/SubagentStop Hooks
+
+**Goal:** Track subagent lifecycle in real-time via hooks (independent of events.jsonl parsing).
+
+**Why:** Hooks fire synchronously during the session, enabling real-time agent status in the statusline. Currently we only detect agents via the `task` preToolUse workaround, which misses agent name, model, and completion timing.
+
+**Work:**
+1. Add to `hooks.json`:
+   ```json
+   "subagentStart": [{ "type": "command", "command": "node ${PLUGIN_ROOT}/scripts/subagent-start.js", "timeoutSec": 5 }],
+   "subagentStop":  [{ "type": "command", "command": "node ${PLUGIN_ROOT}/scripts/subagent-stop.js",  "timeoutSec": 5 }]
+   ```
+2. Create `scripts/subagent-start.js`:
+   - Parse stdin: `{ sessionId, transcriptPath, agentName, agentDisplayName, agentDescription }`
+   - Update `hud-state.json` agents array with richer metadata
+   - Update session file `subagents[]` with name and model (from agentName mapping or description)
+3. Create `scripts/subagent-stop.js`:
+   - Parse stdin: `{ sessionId, transcriptPath, agentName, agentDisplayName, stopReason }`
+   - Mark agent as completed in `hud-state.json`
+   - Record end time in session file
+4. Remove the `task` tool workaround from `pre-tool-use.js` (no longer needed)
+
+**Verification:**
+- Run session, spawn a subagent → statusline shows agent name (not just "running")
+- Agent completion updates status correctly
+- `hud-state.json` shows `agentName` and `agentDisplayName`
+- Session file `subagents[]` has accurate start/end times
+
+**Acceptance criteria:**
+- Subagent lifecycle tracked without relying on `task` tool detection
+- Statusline shows agent display name while running
+- No regression: sessions without subagents still work
+
+---
+
+## Task 6 — Register PreCompact Hook & Bank Pre-Compaction Cost
+
+**Goal:** Prevent cost undercount when context compaction occurs.
+
+**Why:** Compaction resets the context window. If we only track token deltas from the statusline, post-compaction tokens are lower than pre-compaction, causing our delta calculation to produce negative values (clamped to 0 = lost cost). We need to bank the cost before compaction.
+
+**Work:**
+1. Add to `hooks.json`:
+   ```json
+   "preCompact": [{ "type": "command", "command": "node ${PLUGIN_ROOT}/scripts/pre-compact.js", "timeoutSec": 5 }]
+   ```
+2. Create `scripts/pre-compact.js`:
+   - Read session file's `last_known_cost`
+   - Write `compaction_banked_cost` to the session file
+   - Reset `snapshot` to current `last_known_tokens` (new baseline post-compaction)
+3. Update `scripts/compositor.js`:
+   - Session cost = `compaction_banked_cost` + computed cost since last snapshot
+4. Update `scripts/session-end.js`:
+   - Include compaction data in monthly record
+
+**Verification:**
+- Simulate compaction: Start session, accumulate significant tokens, trigger `/compact`
+- After compaction: statusline cost should NOT drop
+- Monthly record `cost_usd` should include pre-compaction cost
+- Verify with `events.jsonl`: `session.compaction_complete.preCompactionTokens` should match banked amount
+
+**Acceptance criteria:**
+- Cost never decreases during a session (monotonically increasing)
+- Sessions with 0 compactions work identically to before (no regression)
+- Monthly record reflects true total cost including pre-compaction tokens
+
+---
+
+## Task 7 — Compaction Token Cost Tracking
+
+**Goal:** Track the token cost of compaction itself (it makes a separate API call).
+
+**Why:** `session.compaction_complete.compactionTokensUsed` shows the compaction API call uses its own tokens (typically 130K+ input tokens). These contribute to session cost but aren't visible in the main statusline totals.
+
+**Work:**
+1. Extend `scripts/events-parser.js`:
+   - `parseCompactionCosts(sessionId)` — extracts `compactionTokensUsed` from all `session.compaction_complete` events
+   - Returns: `[{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, duration, model }]`
+2. Update `scripts/session-end.js`:
+   - Add compaction costs to the monthly record
+   - Include in total `cost_usd` calculation
+3. Monthly JSONL gains:
+   ```json
+   "compaction_costs": [{ "input": 137858, "output": 3275, "model": "claude-sonnet-4.6", "cost_usd": 0.045 }]
+   ```
+
+**Verification:**
+- Find a session with compaction in events.jsonl (existing data)
+- Run `scripts/verify-subagent-tokens.js` (extended) to compute compaction cost delta
+- Monthly record shows `compaction_costs` for sessions that had compaction
+- Total cost includes compaction overhead
+
+**Acceptance criteria:**
+- Compaction cost is tracked and included in session total
+- Sessions without compaction omit the field
+
+---
+
+## Task 8 — Enriched Monthly Records
+
+**Goal:** Add all available signals from `session.shutdown` to the monthly JSONL for the optimize skill.
+
+**Why:** The shutdown event contains data we don't currently capture: `filesModified`, `premiumRequests`, `reasoningTokens`, context breakdown, and precise timing.
+
+**Work:**
+1. Extend `scripts/events-parser.js`:
+   - `parseShutdownEnriched(sessionId)` — extracts all useful fields from shutdown
+2. Update `scripts/session-end.js` to include:
+   - `files_modified: string[]` — list of modified file paths
+   - `files_modified_count: number`
+   - `premium_requests: number` — from `totalPremiumRequests`
+   - `api_duration_ms: number` — from `totalApiDurationMs`  
+   - `reasoning_tokens: number` — sum across models
+   - `context_breakdown: { system, conversation, tool_definitions }` — token allocation
+   - `models_used: string[]` — all model IDs used
+3. Ensure backward compatibility: new fields are optional, old records still parse
+
+**Verification:**
+- End a session → monthly record contains all new fields
+- `node -e "require('./scripts/events-parser').parseShutdownEnriched('session-id')"` returns expected data
+- `burnrate-cost-summary` skill still works with both old and new record formats
+- `files_modified_count` matches git diff expectations
+
+**Acceptance criteria:**
+- Monthly JSONL contains enriched fields for new sessions
+- Old records without these fields don't break any consumers
+- Optimize skill can query: "which sessions had reasoning tokens?" or "which sessions modified most files?"
+
+---
+
+## Task 9 — Events.jsonl Watcher for Live Subagent Display
+
+**Goal:** Read subagent events from events.jsonl in near-real-time for the statusline, as a supplement to the hooks (which may not yet be available in all Copilot versions).
+
+**Why:** Not all Copilot CLI versions may dispatch `subagentStart`/`subagentStop` hooks, but ALL versions write to events.jsonl. A watcher provides a fallback.
+
+**Work:**
+1. Create `scripts/events-watcher.js`:
+   - Tails the current session's `events.jsonl` (maintains file position in session state)
+   - On each statusline call: read new lines since last position
+   - Extract `subagent.started`/`subagent.completed` events
+   - Update hud-state.json with agent status
+2. Update `scripts/compositor.js`:
+   - Call watcher on each render if hooks didn't fire (detection: agent in events but not in hud-state)
+3. Watcher is a supplement, not a replacement — hooks are preferred when available
+
+**Verification:**
+- Disable subagent hooks → spawn subagent → statusline still shows agent activity
+- Re-enable hooks → both sources agree (no duplicate agents displayed)
+- Performance: watcher adds < 50ms to statusline render
+
+**Acceptance criteria:**
+- Subagent display works with OR without subagent hooks registered
+- No performance regression for sessions without subagents
+
+---
+
+## Task 10 — Optimize Skill Integration
+
+**Goal:** Ensure the `burnrate-optimize` skill can query the enriched monthly data to surface actionable cost insights.
+
+**Why:** All the data capture is only valuable if the optimize skill can query it to find patterns: expensive subagent types, cache inefficiency, model selection waste, etc.
+
+**Work:**
+1. Update `skills/burnrate-optimize/` to query new fields:
+   - "Which subagent types cost most?" — query `subagents_detail`
+   - "What's my cache hit rate?" — compute from `final_tokens`
+   - "Which sessions used reasoning tokens?" — query `reasoning_tokens`
+   - "What's my model cost distribution?" — query `model_metrics`
+   - "Which sessions had compaction overhead?" — query `compaction_costs`
+2. Add optimization recommendations:
+   - If cache_read/total_input ratio < 60%: "Context may be too volatile — consider longer sessions"
+   - If reasoning_tokens > 10% of total: "Extended thinking is adding significant cost"
+   - If subagent cost > 30% of session: "Subagent usage is a major cost driver"
+3. Write example queries and test with real data
+
+**Verification:**
+- Run `/burnrate-optimize` in a session → produces at least 3 actionable insights
+- Insights reference specific sessions and dollar amounts
+- Recommendations are accurate (verified manually against JSONL data)
+
+**Acceptance criteria:**
+- Optimize skill surfaces insights from ALL new data fields
+- No false recommendations (e.g. don't recommend reducing subagents if they saved time)
+- Works with both old (sparse) and new (enriched) monthly records
+
+---
+
+## Task 11 — Retroactive Cost Recomputation
+
+**Goal:** Recompute cost for historical sessions that have `final_tokens` but `cost_pending: true` or inaccurate single-model costs.
+
+**Why:** Early sessions were recorded before pricing was implemented. Sessions with events.jsonl can be recomputed with per-model accuracy.
+
+**Work:**
+1. Create `scripts/recompute-costs.js`:
+   - Reads monthly JSONL files
+   - For each record with `cost_pending: true` OR `final_tokens` present:
+     - If events.jsonl exists: recompute from `modelMetrics`
+     - Else: recompute from `final_tokens` using best-guess model pricing
+   - Writes corrected records back (atomic replace)
+2. Add a `/burnrate:recompute` command that runs this script
+3. Report: number of records updated, total cost delta
+
+**Verification:**
+- Run against existing 2026-05.jsonl
+- Records with `cost_pending: true` get corrected costs
+- Records with `cost_pending: false` but multi-model get more accurate costs
+- Total MTD changes by the expected amount
+- Original file is backed up before modification
+
+**Acceptance criteria:**
+- All `cost_pending` records resolved
+- Multi-model records get per-model accurate cost
+- Backup file preserved at `monthly/YYYY-MM.jsonl.bak`
+- Running twice is idempotent (no double-correction)
+
+---
+
+## Dependency Graph
+
+```
+Task 1 (verify) → Task 2 (shutdown parsing) → Task 3 (real-time multi-model)
+                                             → Task 4 (subagent detail)
+                                             → Task 7 (compaction cost)
+                                             → Task 8 (enriched records)
+                                             → Task 11 (retroactive recompute)
+
+Task 5 (subagent hooks) → Task 9 (events watcher fallback)
+
+Task 6 (preCompact hook) — independent
+
+Tasks 2-8 → Task 10 (optimize integration)
+```
+
+---
+
+## Monthly JSONL Target Schema (after all tasks)
 
 ```json
 {
-  "jira_key": "PLAT-4821",
-  "jira_source": "branch",
-  "last_known_jira_key": "PLAT-4821",
-  "last_known_jira_source": "branch",
-  "jira_costs": { "PLAT-4821": 0.082341 },
-  "last_jira_cost_checkpoint": 0.082341,
-  "jira_keys_seen": ["PLAT-4821"]
+  "id": "session-uuid",
+  "date": "YYYY-MM-DD",
+  "start_month": "YYYY-MM",
+  "cost_usd": 99.71,
+  "cost_pending": false,
+  "model": "claude-opus-4.6",
+  "models_used": ["claude-opus-4.6", "gpt-5.5", "claude-haiku-4.5"],
+  "model_metrics": {
+    "claude-opus-4.6": { "input": 12116761, "output": 76438, "cache_read": 10621575, "cache_write": 1476728, "reasoning": 0, "cost_usd": 77.04, "requests": 129 },
+    "gpt-5.5": { "input": 3163582, "output": 29684, "cache_read": 2984960, "cache_write": 0, "reasoning": 0, "cost_usd": 18.20, "requests": 43 }
+  },
+  "final_tokens": { "total_input_tokens": 16091871, "total_output_tokens": 110901, "total_cache_write_tokens": 2043919, "total_cache_read_tokens": 13850828 },
+  "project": "website",
+  "project_id": "-Users-bripley-Projects-personal-website",
+  "premium_requests": 146.16,
+  "api_duration_ms": 2126547,
+  "reasoning_tokens": 13076,
+  "context_breakdown": { "system": 9826, "conversation": 82976, "tool_definitions": 16543 },
+  "files_modified": ["src/app.js", "src/utils.js"],
+  "files_modified_count": 2,
+  "subagents_detail": [
+    { "name": "rubber-duck", "model": "gpt-5.5", "tokens": 375820, "cost_usd": 5.27, "duration_ms": 416707, "tool_calls": 17 }
+  ],
+  "compaction_costs": [
+    { "input": 137858, "output": 3275, "cache_read": 135252, "model": "claude-sonnet-4.6", "cost_usd": 0.045 }
+  ],
+  "turn_count": 29,
+  "tool_counts": { "bash": 60, "view": 18, "create": 83 },
+  "ext_counts": { ".md": 45, ".js": 10 },
+  "subagent_count": 3,
+  "subagent_types": { "explore": 2, "general-purpose": 1 },
+  "turn_interval_p50_ms": 877704,
+  "turn_interval_max_ms": 74539980,
+  "git_branch": "main",
+  "jira_costs": { "PROJ-123": 50.0, "unattributed": 49.71 },
+  "jira_key": "PROJ-123",
+  "recovered": false
 }
-```
-
-### JSONL record additions
-
-```json
-{
-  "jira_key": "PLAT-4821",
-  "jira_source": "branch",
-  "jira_costs": { "PLAT-4821": 0.082341 },
-  "jira_keys_seen": ["PLAT-4821"]
-}
-```
-
-### Tests
-
-Use `node:test` (no external deps). Mirror the Claude test suite structure.
-
-**`tests/jira-detector.test.js`:**
-- `extractJiraKey` — matches configured keys, rejects non-configured, uses broad fallback when keys absent
-- `detectJiraKey` — detects key from git branch, returns null for non-git dir, returns null when branch has no matching key
-
-**`tests/jira-attribution.test.js`:**
-- `normalizeJiraCosts` — keeps only positive numeric values, rounds to 6dp
-- `applyJiraDelta` — first delta attributed to current key; branch-change attributes subsequent delta to new key; null key → unattributed bucket; negative delta clamped to 0
-- `selectPrimaryJiraKey` — returns highest-cost key; tie-breaks by last-known key; returns null when all keys are unattributed
-
-**`tests/jira-widget.test.js`:**
-- Returns null when no jira key present
-- Renders key as plain text
-- Renders source icon when `show_source: true`
-- Renders OSC 8 hyperlink by default; disabled when `link: false`
-- Compositor integration: jira_ticket segment appears in rendered output when session has a key
-
-### Verification
-
-```bash
-# All tests pass
-node tests/jira-detector.test.js
-node tests/jira-attribution.test.js
-node tests/jira-widget.test.js
-
-# Manual: check out a branch with a Jira key in its name, run a session,
-# verify the jira_ticket widget appears in the statusline output
-```
-
----
-
-## ✅ Phase 2 — Rich Session Telemetry
-
-**Goal:** Add per-session telemetry fields to monthly JSONL records: tool call counts, edited file extension counts, prompt/response timing, and basic subagent tracking. Refactor session file writes to use atomic temp-rename to prevent partial writes on concurrent hook execution.
-
-**Entry criteria:** Phase 1 complete
-
-**Design decisions:**
-- Introduce `scripts/session-file.js` as a shared helper so all hook scripts use the same atomic write path. Existing hooks (`session-start.js`, `session-end.js`, `pre-tool-use.js`, `post-tool-use.js`, `user-prompt.js`) are updated to import from it.
-- **No `Stop` hook in Copilot CLI.** Turn counting uses `userPromptSubmitted` as a proxy (each prompt submitted = one turn started). This counts turns conservatively (misses autonomous sub-turns) but is reliable.
-- **No `SubagentStart/Stop` hooks.** Subagent tracking remains as-is via the `task` tool in `pre-tool-use.js`, but is not promoted to JSONL telemetry in this phase.
-- **No `PreCompact/PostCompact` or `InstructionsLoaded` hooks.** Those fields are Claude Code-specific and are not included.
-- The existing `pre-tool-use.js` and `post-tool-use.js` write to `state.json` for the live tools widget. Phase 2 adds a *secondary* write to the session JSON file for JSONL telemetry — both writes are preserved.
-- Field names in Copilot hook payloads use camelCase: `toolName`, `toolInput` (vs Claude's `tool_name`, `tool_input`).
-- `logHookDebug` activates when `COPILOT_HUD_DEBUG=1` is set; writes to `~/.copilot/burnrate-copilot/debug/hooks.jsonl`.
-
-### New files
-
-| File | Purpose |
-|---|---|
-| `scripts/session-file.js` | `updateSession(id, fn)` — atomic read/mutate/write; `buildTelemetryFields(session)` — extracts JSONL fields; `logHookDebug(event, data, id)` — debug logger. Adapted from Claude version: use `getCopilotConfigDir`, `DATA_DIR_NAME = 'burnrate-copilot'`; remove Claude-specific fields (`compaction_triggers`, `instruction_files`, `has_project_claude_md`). |
-| `scripts/session-posttooluse.js` | PostToolUse: accumulates `ext_counts` for Edit/Write file operations. Note Copilot field name: `toolInput.file_path` (from `toolInput`, not `tool_input`). |
-| `scripts/session-promptsubmit.js` | userPromptSubmitted: increments `turn_count` and records `last_prompt_at` timestamp. Also used for response time: when `last_prompt_at` is set and this hook fires again, compute elapsed ms as the previous response time. |
-| `tests/telemetry.test.js` | Integration tests that run hook scripts as subprocesses with a temp config dir |
-
-### Modified files
-
-| File | Change |
-|---|---|
-| `scripts/session-file.js` | *(new)* |
-| `scripts/pre-tool-use.js` | Import `updateSession` from `session-file.js`; after the existing `state.json` write, also call `updateSession` to increment `tool_counts[toolName]` |
-| `scripts/post-tool-use.js` | Import `updateSession`; after state write, also call `updateSession` to increment `ext_counts[ext]` for file edits (toolName is `edit`, `create`, `view` for Copilot) |
-| `scripts/user-prompt.js` | Import `updateSession`; record `last_prompt_at` and increment `turn_count` |
-| `scripts/session-end.js` | Import `buildTelemetryFields`; merge result into JSONL record |
-| `scripts/session-start.js` | Import `updateSession`, `logHookDebug`; use `updateSession` for the session file write (merges instead of overwrites); also capture `git_branch` via `git branch --show-current` and store in session file |
-| `hooks.json` | Verify `userPromptSubmitted` → `session-promptsubmit.js` is listed (it currently routes to `user-prompt.js`; decide whether to merge or keep separate) |
-
-### New JSONL fields
-
-| Field | Source | Notes |
-|---|---|---|
-| `turn_count` | `userPromptSubmitted` count | One per user message |
-| `tool_counts` | `preToolUse` accumulation | `{ "bash": 12, "edit": 4, ... }` |
-| `ext_counts` | `postToolUse` file edits | `{ ".ts": 3, ".json": 1, ... }` |
-| `response_time_p50_ms` | `userPromptSubmitted` timestamps | p50 of per-turn response times |
-| `response_time_max_ms` | `userPromptSubmitted` timestamps | max response time in session |
-| `response_time_count` | count of measured turns | |
-| `git_branch` | `git branch --show-current` at session start | |
-| `duration_secs` | `last_known_stats.total_duration_ms` if available; else `now - started_at` | |
-
-### Tests
-
-**`tests/telemetry.test.js`** — runs each hook script as a subprocess with `COPILOT_CONFIG_DIR` set to a temp directory:
-
-- `session-file.js` unit tests: `updateSession` creates file when absent; merges fields atomically; handles concurrent writes via temp-rename
-- `pre-tool-use.js` subprocess: verify `tool_counts.bash` increments correctly; verify `tool_counts` is absent for internal tools (`report_intent`, etc.)
-- `post-tool-use.js` subprocess (file edit tools): verify `ext_counts['.ts']` increments for an edit to a `.ts` file
-- `session-promptsubmit.js` subprocess: verify `turn_count` increments; verify `last_prompt_at` is written; verify `response_times` array gains an entry on second call
-- `session-end.js` subprocess: verify `turn_count`, `tool_counts`, `ext_counts` appear in the JSONL record when present in session file
-- `buildTelemetryFields` unit: omits empty maps; includes `subagent_count` when `subagents` array is populated; includes `response_time_p50_ms` when `response_times` has data
-
-### Verification
-
-```bash
-# All tests pass
-node tests/telemetry.test.js
-
-# Manual: run a session with a few tool calls, end it, inspect the JSONL
-cat ~/.copilot/burnrate-copilot/monthly/$(date +%Y-%m).jsonl | tail -1 | node -e \
-  "process.stdin.on('data',d=>console.log(JSON.stringify(JSON.parse(d),null,2)))" | \
-  grep -E '"turn_count|tool_counts|ext_counts|git_branch"'
-```
-
----
-
-## ✅ Phase 3a — `burnrate-cost-summary` Skill
-
-**Goal:** Port the cost summary skill from `burnrate-claude`. Shows session cost grouped by project and Jira ticket for a given month, with by-model breakdown and a `% of total` column.
-
-**Entry criteria:** Phase 1 complete (Jira fields in JSONL)
-
-**Design decisions:**
-- Script reads from `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl` — identical schema to Claude version. Only change is `getClaudeConfigDir` → `getCopilotConfigDir`.
-- Skill definition lives in `commands/burnrate-cost-summary.md` (Copilot CLI slash-command format).
-- Reference output format doc is included so the skill can instruct the LLM how to present the output.
-
-### New files
-
-| File | Purpose |
-|---|---|
-| `commands/burnrate-cost-summary.md` | Skill definition — triggers, allowed tools, instruction to run script and present via OUTPUT_FORMAT.md |
-| `skills/burnrate-cost-summary/scripts/summarize-costs.js` | Adapted from Claude version: `getCopilotConfigDir` for data dir; all other logic identical |
-| `skills/burnrate-cost-summary/reference/OUTPUT_FORMAT.md` | Output format reference — copied from Claude version, update header to reference burnrate-copilot |
-
-### Tests
-
-**`tests/cost-summary.test.js`:**
-- Script with empty JSONL exits cleanly with "No data file" message
-- Script with sample JSONL produces correct total, by-model, by-project sections
-- `--by-jira` flag shows Jira attribution section
-- `--daily` flag shows per-day breakdown
-- Date range filter (`from` / `to`) correctly limits included records
-- `% of total` column sums to ~100% across all rows
-
-### Verification
-
-```bash
-node tests/cost-summary.test.js
-
-# Manual: write a synthetic JSONL to the monthly dir and invoke the skill
-echo '{"id":"test-1","date":"2026-05-01","start_month":"2026-05","cost_usd":1.23,"model":"claude-sonnet-4.6","project":"my-app","jira_key":"PLAT-101","jira_costs":{"PLAT-101":1.23}}' \
-  >> ~/.copilot/burnrate-copilot/monthly/2026-05.jsonl
-node skills/burnrate-cost-summary/scripts/summarize-costs.js 2026-05 --by-project --by-jira
-```
-
----
-
-## ✅ Phase 3b — `burnrate-report` Skill
-
-**Goal:** Package user data into a self-contained zip file for bug reports. Includes monthly cost records, session files, config, and `package.json`.
-
-**Entry criteria:** Phase 2 complete (session files have telemetry fields worth including in a bug report)
-
-**Design decisions:**
-- Packages `~/.copilot/burnrate-copilot/` (monthly JSONL, session files, config, debug log if present) instead of `~/.claude/burnrate-claude/`.
-- Uses Node's built-in `zlib` (deflate) — no npm deps.
-- Default output path: `burnrate-report-YYYY-MM-DD.zip` in the current working directory.
-
-### New files
-
-| File | Purpose |
-|---|---|
-| `commands/burnrate-report.md` | Skill definition — triggers, instruction to run script and report output path |
-| `skills/burnrate-report/scripts/report.js` | Adapted from Claude version: update data dir path to `~/.copilot/burnrate-copilot/`; update messages to reference `burnrate-copilot` |
-
-### Tests
-
-**`tests/report.test.js`:**
-- Creates a zip in a temp dir; verifies the file exists and has non-zero size
-- Verifies the zip contains at least one `monthly/*.jsonl` entry and the `config.json` entry when they exist
-- Runs cleanly when the data directory is empty (no error, zip still created)
-- `--output` flag writes to the specified path
-
-### Verification
-
-```bash
-node tests/report.test.js
-
-# Manual
-node skills/burnrate-report/scripts/report.js --output /tmp/test-report.zip
-ls -lh /tmp/test-report.zip
-unzip -l /tmp/test-report.zip
-```
-
----
-
-## ✅ Phase 3c — `burnrate-optimize` Skill
-
-**Goal:** Analyze session telemetry data and monthly JSONL records for cost and efficiency patterns. Produce a prioritized health report with actionable recommendations.
-
-**Entry criteria:** Phase 2 complete (telemetry fields in JSONL)
-
-**Design decisions:**
-- **Copilot does not expose raw session transcripts** (`~/.claude/projects/**/*.jsonl`) the way Claude Code does. The Claude version's optimize skill analyzes those transcripts directly. The Copilot version must work from the monthly JSONL records and any telemetry fields captured there.
-- Analysis checks: high-cost sessions (top 5 most expensive), model mix (are expensive models used for simple tasks?), session length distribution (very long sessions suggest unbounded loops), high tool-call sessions (`tool_counts` from Phase 2), and top file types edited (`ext_counts`).
-- Produces a scored health report (HIGH/MEDIUM/LOW severity findings) with copy-paste recommendations.
-- Because raw transcript analysis is not available, a "Data collection note" section tells the user what additional context would improve recommendations once more sessions accumulate telemetry fields.
-
-### New files
-
-| File | Purpose |
-|---|---|
-| `commands/burnrate-optimize.md` | Skill definition — triggers, instruction to run script and explain top finding |
-| `skills/burnrate-optimize/scripts/optimize.js` | Copilot-specific implementation reading monthly JSONL + telemetry fields |
-
-### Tests
-
-**`tests/optimize.test.js`:**
-- Exits cleanly with "No data" message when JSONL is absent
-- Detects high-cost session finding when one session's cost > 3× the median
-- Detects model mix finding when >50% of sessions use an expensive model
-- Detects high tool-call finding when a session has `tool_counts` total > threshold
-- Reports "insufficient data" cleanly when fewer than 5 sessions exist
-- Output is formatted as plain text (no ANSI escape codes)
-
-### Verification
-
-```bash
-node tests/optimize.test.js
-
-# Manual: after Phase 2 has populated some JSONL records with telemetry
-node skills/burnrate-optimize/scripts/optimize.js --days 30
-```
-
----
-
-## ✅ Phase 4 — Auto-configure statusLine
-
-**Goal:** On session start, check whether `~/.copilot/config.json` already points to this plugin's statusline script. If not, configure it automatically and notify the user once. Idempotent — safe to run every session.
-
-**Entry criteria:** Phase 2 complete
-
-**Design decisions:**
-- Targets `~/.copilot/config.json` (Copilot CLI's config file) with the format `{ "statusLine": { "type": "command", "command": "node /path/to/statusline.js" } }`.
-- If `statusLine` is already set to a different command, the existing command is preserved as a `custom_command` widget in `~/.copilot/burnrate-copilot/config.json` and replaced with ours.
-- Simpler than the Claude version — no launcher file indirection, no `settings.json` vs `config.json` distinction.
-- `PLUGIN_ROOT` environment variable (set by Copilot CLI) provides the absolute plugin path.
-
-### New files
-
-| File | Purpose |
-|---|---|
-| `scripts/statusline-config.js` | `ensureStatusLineConfig(pluginRoot, copilotConfigDir, dataDir)` — idempotent auto-configure; returns notification string on change or null when already configured |
-
-### Modified files
-
-| File | Change |
-|---|---|
-| `scripts/session-start.js` | Call `ensureStatusLineConfig(process.env.PLUGIN_ROOT, copilotConfigDir, dataDir)` early in the hook; if a notification string is returned, emit it as `additionalContext` |
-
-### Tests
-
-**`tests/statusline-config.test.js`:**
-- No existing config → writes `statusLine` entry, returns notification string
-- Already pointing to our script → returns null (no-op)
-- Different command present → migrates existing command as `custom_command` widget, replaces `statusLine`, returns notification string describing the migration
-- Malformed `config.json` → returns null (does not throw or corrupt the file)
-- Missing `config.json` → creates it with `statusLine` entry
-
-### Verification
-
-```bash
-node tests/statusline-config.test.js
-
-# Manual: temporarily rename ~/.copilot/config.json, run a session,
-# verify config.json is created with the correct statusLine entry
-```
-
----
-
-## ✅ Phase 5 — Debug Tooling
-
-**Goal:** Add a debug mode that captures full hook payloads to a JSONL log. Provide a viewer script so it's easy to inspect what Copilot CLI sends for each hook type — essential for validating that field names and shapes match what the hook scripts expect.
-
-**Entry criteria:** Phase 2 complete (session-file.js already has `logHookDebug`)
-
-**Design decisions:**
-- Activated by `COPILOT_HUD_DEBUG=1` environment variable.
-- Debug log written to `~/.copilot/burnrate-copilot/debug/hooks.jsonl`.
-- `show-hook-debug.js` reads the log and pretty-prints entries, grouped by hook type, newest first.
-- `logHookDebug` is already defined in `session-file.js` from Phase 2; this phase just wires it into the remaining hook scripts and adds the viewer.
-
-### New files
-
-| File | Purpose |
-|---|---|
-| `scripts/show-hook-debug.js` | CLI viewer for `debug/hooks.jsonl` — adapted from Claude version; update paths and field names for Copilot |
-
-### Modified files
-
-| File | Change |
-|---|---|
-| `scripts/pre-tool-use.js` | Add `logHookDebug('preToolUse', data, sessionId)` call |
-| `scripts/post-tool-use.js` | Add `logHookDebug('postToolUse', data, sessionId)` call |
-| `scripts/user-prompt.js` | Add `logHookDebug('userPromptSubmitted', data, sessionId)` call |
-| `scripts/session-start.js` | Add `logHookDebug('sessionStart', data, sessionId)` call |
-| `scripts/session-end.js` | Add `logHookDebug('sessionEnd', data, sessionId)` call |
-
-### Validation
-
-```bash
-# Run a short session with debug enabled
-COPILOT_HUD_DEBUG=1 node scripts/session-start.js <<< '{"session_id":"dbg-test","model":{"id":"claude-sonnet-4.6"},"cwd":"/tmp"}'
-node scripts/show-hook-debug.js
-
-# Verify hooks.jsonl exists and contains an entry with hook: "sessionStart"
-cat ~/.copilot/burnrate-copilot/debug/hooks.jsonl | \
-  node -e "process.stdin.on('data',d=>console.log(JSON.parse(d.toString().split('\n')[0]).hook))"
-```
-
----
-
-## ✅ Phase 7 — Pricing Maintenance Tooling
-
-**Goal:** Provide maintainer scripts to keep `pricing.json` accurate as GitHub changes model rates and adds new models. Also provide a model ID verification utility so that pricing.json keys can be confirmed against real Copilot session data without submitting full requests to each model.
-
-**Entry criteria:** None — can be done any time. Evaluate before each release when GitHub announces pricing changes.
-
-**Design decisions:**
-
-- **No network calls in production paths.** `statusline.js`, `session-start.js`, and all hook scripts must never make outbound HTTP requests. Pricing data is always read from the bundled `pricing.json` — the staleness warning in `pricing.js` (60-day threshold, stderr only) is sufficient runtime alerting.
-- **`scripts/update-pricing.js`** is a *maintainer tool* run locally before cutting a release. It fetches the GitHub docs pricing page, parses the HTML tables, and prints a diff against the current `pricing.json`. It does **not** write the file automatically — the maintainer reviews the diff and applies it. This avoids silent overwrites.
-- **`scripts/verify-model-ids.sh`** verifies pricing.json keys against the actual `model.id` values Copilot CLI sends. Strategy: start a `copilot` session with each `--model <id>` flag, immediately quit (no message needed), and read `model_id` from the session file written by the `sessionStart` hook. Compare against the pricing.json key. Any mismatch is flagged.
-- Pricing source URL is already in `pricing.json` `_meta.source` and `pricing.js` header comment.
-
-### New files
-
-| File | Purpose |
-|---|---|
-| `scripts/update-pricing.js` | Maintainer tool: fetch GitHub docs pricing page, parse HTML tables, print diff vs current `pricing.json`. Requires Node.js built-in `https`/`http` — no npm deps. Dry-run only; does not write files. |
-| `scripts/verify-model-ids.sh` | Maintainer tool: for each model key in `pricing.json`, start `copilot --model <key>`, exit immediately, read `model_id` from the session file, compare. Reports MATCH / MISMATCH / NOT_FOUND. Requires `jq`. |
-
-### Verification
-
-```bash
-# Run the pricing updater — review the diff output
-node scripts/update-pricing.js
-
-# Run the model ID verifier — all lines should show MATCH
-bash scripts/verify-model-ids.sh
-
-# Confirm no network calls are made during normal statusline operation
-node scripts/statusline.js <<< '{"session_id":"test","model":{"id":"claude-sonnet-4.6"},"cwd":"/tmp","context_window":{},"cost":{}}'
-# Should complete instantly (< 50ms) with no DNS lookups
-```
-
----
-
-## ✅ Phase 6 — Docs Completion
-
-Update `docs/data-points.md` and `docs/quick-start.md` to reflect all phases above once they are complete.
-
-**`docs/data-points.md`** — add entries for every new field added in Phases 1 and 2 (jira fields, telemetry fields). Follow the same table format as `burnrate-claude`: source, hook, what it captures, insights, optimize relevance.
-
-**`docs/quick-start.md`** — document all three skills, the config.json `jira` block, debug mode, and the auto-configure behaviour.
-
----
-
-## Test Runner
-
-All tests use Node.js's built-in `node:test` — no additional packages required. Run the full suite:
-
-```bash
-node tests/jira-detector.test.js
-node tests/jira-attribution.test.js
-node tests/jira-widget.test.js
-node tests/telemetry.test.js
-node tests/cost-summary.test.js
-node tests/report.test.js
-node tests/optimize.test.js
-node tests/statusline-config.test.js
-```
-
-Or all at once:
-
-```bash
-for f in tests/*.test.js; do echo "▶ $f" && node "$f"; done
 ```

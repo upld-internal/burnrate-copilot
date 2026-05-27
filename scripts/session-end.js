@@ -13,7 +13,7 @@ const fs   = require('fs');
 const path = require('path');
 const { getDataDir } = require('./paths');
 const { loadPricing, computeCost, computeSessionCost } = require('./pricing');
-const { computeMultiModelCostForSession, parseSubagentCompletions, loadPricingTable } = require('./events-parser');
+const { computeMultiModelCostForSession, parseSubagentCompletions, parseCompactionCosts, loadPricingTable } = require('./events-parser');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
 
@@ -158,6 +158,11 @@ process.stdin.on('end', () => {
       const subagentsDetail = parseSubagentCompletions(sessionId, pricingTable);
       if (subagentsDetail && subagentsDetail.length > 0) {
         record.subagents_detail = subagentsDetail;
+      }
+      // Compaction cost data
+      const compactionData = parseCompactionCosts(sessionId, pricingTable);
+      if (compactionData) {
+        record.compaction_cost = compactionData;
       }
     } catch (_) {}
 
