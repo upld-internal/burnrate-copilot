@@ -13,21 +13,50 @@ const fs   = require('fs');
 const path = require('path');
 const { getDataDir } = require('./paths');
 const { loadPricing, computeSessionCost } = require('./pricing');
+const { computeMultiModelCostForSession, loadPricingTable } = require('./events-parser');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
 
 const dataDir = getDataDir();
 
-// Compute final cost from last_known_tokens and pricing.
-// Falls back to last_known_cost (written by compositor each turn) if pricing unavailable.
-function computeFinalCost(session, modelId, dataDir) {
-  const tokens  = session.last_known_tokens;
-  const snap    = session.snapshot;
+// Compute final cost — tries multi-model (events.jsonl) first, falls back to single-model.
+// Returns { cost, model_metrics, cost_method }
+function computeFinalCostWithMetrics(session, sessionId, modelId, dataDir) {
+  // Strategy 1: Multi-model cost from events.jsonl session.shutdown.modelMetrics
+  // This is the most accurate method — per-model rates applied to per-model tokens.
+  try {
+    const pricingTable = loadPricingTable(dataDir, __dirname);
+    const result = computeMultiModelCostForSession(sessionId, pricingTable);
+    if (result && result.total > 0) {
+      return {
+        cost: result.total,
+        model_metrics: result.perModel,
+        cost_method: 'multi_model',
+      };
+    }
+  } catch (_) {}
+
+  // Strategy 2: Single-model pricing from last_known_tokens (fallback)
+  // Used when events.jsonl is unavailable (Ctrl+C, crash, cleaned up session-state)
+  const tokens = session.last_known_tokens;
+  const snap   = session.snapshot;
   if (tokens && snap) {
     const pricing = loadPricing(modelId, dataDir, __dirname);
-    if (pricing) return computeSessionCost(tokens, snap, pricing);
+    if (pricing) {
+      return {
+        cost: computeSessionCost(tokens, snap, pricing),
+        model_metrics: null,
+        cost_method: 'single_model',
+      };
+    }
   }
-  return session.last_known_cost || 0;
+
+  // Strategy 3: Use last_known_cost from compositor (last resort)
+  return {
+    cost: session.last_known_cost || 0,
+    model_metrics: null,
+    cost_method: session.last_known_cost ? 'last_known' : 'none',
+  };
 }
 
 let raw = '';
@@ -56,16 +85,21 @@ process.stdin.on('end', () => {
     fs.mkdirSync(monthlyDir, { recursive: true });
     const monthlyFile = path.join(monthlyDir, startMonth + '.jsonl');
 
+    // Compute cost — prefers multi-model (events.jsonl) over single-model
+    const costResult = computeFinalCostWithMetrics(session, sessionId, modelId, dataDir);
+
     const record = {
       id:           sessionId,
       date:         new Date().toISOString().slice(0, 10),
       start_month:  startMonth,
-      cost_usd:     computeFinalCost(session, modelId, dataDir),
+      cost_usd:     costResult.cost,
       cost_pending: false,
+      cost_method:  costResult.cost_method,
       model:        modelId,
       project:      session.last_known_project    || session.project    || undefined,
       project_id:   session.last_known_project_id || session.project_id || undefined,
       final_tokens: session.last_known_tokens     || undefined,
+      model_metrics: costResult.model_metrics     || undefined,
     };
 
     // Jira attribution — include per-ticket cost breakdown when tracked.

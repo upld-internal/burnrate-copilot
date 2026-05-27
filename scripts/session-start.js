@@ -17,11 +17,25 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { getDataDir, getCopilotConfigDir } = require('./paths');
 const { loadPricing, computeSessionCost } = require('./pricing');
+const { computeMultiModelCostForSession, loadPricingTable } = require('./events-parser');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
 const { ensureStatusLineConfig } = require('./statusline-config');
 
 function computeFinalCost(session, modelId) {
+  // Try multi-model cost from events.jsonl first (most accurate).
+  // For orphan recovery, session.shutdown may or may not be present —
+  // it fires before sessionEnd hook but Ctrl+C may prevent both.
+  const sessionId = session.session_id;
+  if (sessionId) {
+    try {
+      const pricingTable = loadPricingTable(dataDir, __dirname);
+      const result = computeMultiModelCostForSession(sessionId, pricingTable);
+      if (result && result.total > 0) return result.total;
+    } catch (_) {}
+  }
+
+  // Fallback: single-model pricing from last_known_tokens
   const tokens = session.last_known_tokens;
   const snap   = session.snapshot;
   if (tokens && snap) {
