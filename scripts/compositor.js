@@ -14,7 +14,8 @@ const fs   = require('fs');
 const path = require('path');
 
 const { getTheme, setBg, setFg, PL_RIGHT, R } = require('./themes');
-const { loadPricing, computeSessionCost, getMtdAndProjected } = require('./pricing');
+const { loadPricing, computeCost, computeSessionCost, getMtdAndProjected } = require('./pricing');
+const { loadPricingTable } = require('./events-parser');
 const { detectJiraKey } = require('./jira-detector');
 const { applyJiraDelta, round6 } = require('./jira-attribution');
 
@@ -164,39 +165,75 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
     } catch (_) {}
   }
 
-  // Compute session cost and load MTD once pricing is available.
-  const pricing = loadPricing(sd.modelId, dataDir, scriptDir);
-  if (pricing && sd.hasSnapshot) {
-    sd.hasPricing  = true;
-    sd.sessionCost = computeSessionCost(ctx, sd.snapshot, pricing);
-    const { mtd, error } = getMtdAndProjected(sd.monthKey, dataDir);
-    sd.mtd      = (mtd || 0) + sd.sessionCost; // completed sessions + current session
-    sd.mtdError = error;
-    // Project from total MTD — works from day 1, no completed sessions required
-    if (sd.mtd > 0) {
-      const dayOfMonth  = now.getUTCDate();
-      const daysInMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0)).getDate();
-      sd.projected = (sd.mtd / Math.max(1, dayOfMonth)) * daysInMonth;
-    }
+  // Compute session cost using per-model attribution for accuracy.
+  // The model_tokens map in the session file tracks per-model token deltas
+  // across turns, allowing correct per-model pricing even mid-session.
+  const pricingTable = loadPricingTable(dataDir, scriptDir);
+  const primaryPricing = loadPricing(sd.modelId, dataDir, scriptDir);
+  if (primaryPricing && sd.hasSnapshot) {
+    sd.hasPricing = true;
   }
 
-  // Write last_known_tokens (and cost) back to the session file on every turn.
-  // Used by session-end.js and orphan recovery.
+  // Write last_known_tokens and update model_tokens attribution on every turn.
   if (sessionId) {
     try {
       const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
       if (fs.existsSync(sessionPath)) {
         const sessionRaw = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
 
-        sessionRaw.last_known_tokens = {
+        const currentTokens = {
           total_input_tokens:       ctx.total_input_tokens       || 0,
           total_output_tokens:      ctx.total_output_tokens      || 0,
           total_cache_write_tokens: ctx.total_cache_write_tokens || 0,
           total_cache_read_tokens:  ctx.total_cache_read_tokens  || 0,
         };
+
+        // Compute token delta since last turn (or since session start = 0 snapshot)
+        const prev = sessionRaw.last_known_tokens || sessionRaw.snapshot || {
+          total_input_tokens: 0, total_output_tokens: 0,
+          total_cache_write_tokens: 0, total_cache_read_tokens: 0,
+        };
+        const dInput      = Math.max(0, currentTokens.total_input_tokens - (prev.total_input_tokens || 0));
+        const dOutput     = Math.max(0, currentTokens.total_output_tokens - (prev.total_output_tokens || 0));
+        const dCacheWrite = Math.max(0, currentTokens.total_cache_write_tokens - (prev.total_cache_write_tokens || 0));
+        const dCacheRead  = Math.max(0, currentTokens.total_cache_read_tokens - (prev.total_cache_read_tokens || 0));
+
+        // Attribute this turn's delta to the current model
+        if (!sessionRaw.model_tokens) sessionRaw.model_tokens = {};
+        const currentModel = sd.modelId || 'unknown';
+        if (!sessionRaw.model_tokens[currentModel]) {
+          sessionRaw.model_tokens[currentModel] = {
+            input: 0, output: 0, cache_write: 0, cache_read: 0,
+          };
+        }
+        const mt = sessionRaw.model_tokens[currentModel];
+        mt.input       += dInput;
+        mt.output      += dOutput;
+        mt.cache_write += dCacheWrite;
+        mt.cache_read  += dCacheRead;
+
+        // Compute multi-model cost from model_tokens map
+        let multiModelCost = 0;
+        let hasAnyPricing = false;
+        for (const [mid, tokens] of Object.entries(sessionRaw.model_tokens)) {
+          const mp = pricingTable[mid];
+          if (mp) {
+            hasAnyPricing = true;
+            multiModelCost += computeCost(tokens.input, tokens.output, tokens.cache_write, tokens.cache_read, mp);
+          }
+        }
+
+        // Use multi-model cost if we have pricing, else fall back to single-model
+        if (hasAnyPricing) {
+          sd.sessionCost = multiModelCost;
+        } else if (sd.hasPricing) {
+          sd.sessionCost = computeSessionCost(ctx, sd.snapshot, primaryPricing);
+        }
+
+        sessionRaw.last_known_tokens = currentTokens;
         sessionRaw.last_known_model = sd.modelId || undefined;
         sessionRaw.last_known_at    = now.toISOString().replace(/\.\d{3}Z$/, 'Z');
-        if (sd.hasPricing) {
+        if (sd.sessionCost > 0) {
           sessionRaw.last_known_cost = sd.sessionCost;
         }
 
@@ -212,6 +249,18 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
         fs.writeFileSync(sessionPath, JSON.stringify(sessionRaw, null, 2));
       }
     } catch (_) {} // never crash the statusline
+  }
+
+  // Compute MTD (after sessionCost is determined)
+  if (sd.hasPricing || sd.sessionCost > 0) {
+    const { mtd, error } = getMtdAndProjected(sd.monthKey, dataDir);
+    sd.mtd      = (mtd || 0) + sd.sessionCost;
+    sd.mtdError = error;
+    if (sd.mtd > 0) {
+      const dayOfMonth  = now.getUTCDate();
+      const daysInMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0)).getDate();
+      sd.projected = (sd.mtd / Math.max(1, dayOfMonth)) * daysInMonth;
+    }
   }
 
   // Load tool/agent state (Phase 1/2 stub returns empty defaults)

@@ -35,6 +35,25 @@ function computeFinalCost(session, modelId) {
     } catch (_) {}
   }
 
+  // Try model_tokens from session file (per-model real-time tracking)
+  // This is available even after Ctrl+C since compositor writes it every turn.
+  if (session.model_tokens && Object.keys(session.model_tokens).length) {
+    try {
+      const pricingTable = loadPricingTable(dataDir, __dirname);
+      let total = 0;
+      let hasPricing = false;
+      for (const [mid, tokens] of Object.entries(session.model_tokens)) {
+        const mp = pricingTable[mid];
+        if (mp) {
+          hasPricing = true;
+          const { computeCost } = require('./pricing');
+          total += computeCost(tokens.input || 0, tokens.output || 0, tokens.cache_write || 0, tokens.cache_read || 0, mp);
+        }
+      }
+      if (hasPricing && total > 0) return total;
+    } catch (_) {}
+  }
+
   // Fallback: single-model pricing from last_known_tokens
   const tokens = session.last_known_tokens;
   const snap   = session.snapshot;
@@ -188,6 +207,7 @@ process.stdin.on('end', () => {
         total_cache_write_tokens: 0,
         total_cache_read_tokens:  0,
       },
+      model_tokens: {},
     };
 
     const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');

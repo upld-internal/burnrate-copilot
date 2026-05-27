@@ -12,7 +12,7 @@
 const fs   = require('fs');
 const path = require('path');
 const { getDataDir } = require('./paths');
-const { loadPricing, computeSessionCost } = require('./pricing');
+const { loadPricing, computeCost, computeSessionCost } = require('./pricing');
 const { computeMultiModelCostForSession, loadPricingTable } = require('./events-parser');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
@@ -36,8 +36,37 @@ function computeFinalCostWithMetrics(session, sessionId, modelId, dataDir) {
     }
   } catch (_) {}
 
-  // Strategy 2: Single-model pricing from last_known_tokens (fallback)
-  // Used when events.jsonl is unavailable (Ctrl+C, crash, cleaned up session-state)
+  // Strategy 2: model_tokens from session file (real-time per-model tracking)
+  // Available after Ctrl+C since compositor writes model_tokens every turn.
+  if (session.model_tokens && Object.keys(session.model_tokens).length) {
+    try {
+      const pricingTable = loadPricingTable(dataDir, __dirname);
+      let total = 0;
+      let hasPricing = false;
+      const perModel = {};
+      for (const [mid, tokens] of Object.entries(session.model_tokens)) {
+        const mp = pricingTable[mid];
+        if (mp) {
+          hasPricing = true;
+          const cost = computeCost(tokens.input || 0, tokens.output || 0, tokens.cache_write || 0, tokens.cache_read || 0, mp);
+          total += cost;
+          perModel[mid] = { cost, hasPricing: true, tokens };
+        } else {
+          perModel[mid] = { cost: 0, hasPricing: false, tokens };
+        }
+      }
+      if (hasPricing && total > 0) {
+        return {
+          cost: total,
+          model_metrics: perModel,
+          cost_method: 'model_tokens',
+        };
+      }
+    } catch (_) {}
+  }
+
+  // Strategy 3: Single-model pricing from last_known_tokens (fallback)
+  // Used when both events.jsonl and model_tokens are unavailable
   const tokens = session.last_known_tokens;
   const snap   = session.snapshot;
   if (tokens && snap) {
@@ -51,7 +80,7 @@ function computeFinalCostWithMetrics(session, sessionId, modelId, dataDir) {
     }
   }
 
-  // Strategy 3: Use last_known_cost from compositor (last resort)
+  // Strategy 4: Use last_known_cost from compositor (last resort)
   return {
     cost: session.last_known_cost || 0,
     model_metrics: null,
