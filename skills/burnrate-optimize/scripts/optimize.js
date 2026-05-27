@@ -159,6 +159,78 @@ for (const r of records) {
   projCost[p] = (projCost[p] || 0) + (r.cost_usd || 0);
 }
 
+// Subagent analysis (from subagents_detail — Task 4/10)
+const subagentTypeCost = {};
+const subagentTypeCount = {};
+let totalSubagentCost = 0;
+for (const r of records) {
+  if (!Array.isArray(r.subagents_detail)) continue;
+  for (const sa of r.subagents_detail) {
+    const name = sa.name || 'unnamed';
+    subagentTypeCost[name]  = (subagentTypeCost[name] || 0) + (sa.cost_usd || 0);
+    subagentTypeCount[name] = (subagentTypeCount[name] || 0) + 1;
+    totalSubagentCost += (sa.cost_usd || 0);
+  }
+}
+
+// Cache efficiency (from final_tokens)
+const cacheStats = { totalInput: 0, totalCacheRead: 0, sessionsWithTokens: 0 };
+for (const r of records) {
+  const ft = r.final_tokens;
+  if (!ft) continue;
+  const input = ft.total_input_tokens || 0;
+  const cacheRead = ft.total_cache_read_tokens || 0;
+  if (input > 0) {
+    cacheStats.totalInput += input;
+    cacheStats.totalCacheRead += cacheRead;
+    cacheStats.sessionsWithTokens++;
+  }
+}
+const cacheHitRate = cacheStats.totalInput > 0
+  ? (cacheStats.totalCacheRead / cacheStats.totalInput) * 100 : 0;
+
+// Reasoning tokens analysis
+let totalReasoningTokens = 0;
+let sessionsWithReasoning = 0;
+for (const r of records) {
+  if (r.reasoning_tokens && r.reasoning_tokens > 0) {
+    totalReasoningTokens += r.reasoning_tokens;
+    sessionsWithReasoning++;
+  }
+}
+
+// Compaction overhead
+let totalCompactionCost = 0;
+let sessionsWithCompaction = 0;
+for (const r of records) {
+  if (r.compaction_cost && r.compaction_cost.total_cost_usd > 0) {
+    totalCompactionCost += r.compaction_cost.total_cost_usd;
+    sessionsWithCompaction++;
+  }
+}
+
+// Per-model cost from model_metrics (more accurate than top-level model field)
+const perModelCost = {};
+const perModelRequests = {};
+for (const r of records) {
+  if (!r.model_metrics || typeof r.model_metrics !== 'object') continue;
+  for (const [mid, data] of Object.entries(r.model_metrics)) {
+    const cost = data.cost || data.cost_usd || 0;
+    perModelCost[mid] = (perModelCost[mid] || 0) + cost;
+    perModelRequests[mid] = (perModelRequests[mid] || 0) + (data.requests || 0);
+  }
+}
+
+// Files modified stats
+let totalFilesModified = 0;
+let sessionsWithFiles = 0;
+for (const r of records) {
+  if (r.files_modified_count && r.files_modified_count > 0) {
+    totalFilesModified += r.files_modified_count;
+    sessionsWithFiles++;
+  }
+}
+
 // High-cost sessions
 const sortedByCost = [...records].sort((a, b) => (b.cost_usd || 0) - (a.cost_usd || 0));
 const topSessions  = sortedByCost.slice(0, 5);
@@ -233,6 +305,63 @@ if (totalViews > 0 && totalEdits > 0 && totalViews / totalEdits > 4) {
   });
 }
 
+// Finding: subagent cost concentration
+if (totalSubagentCost > 0 && totalCost > 0) {
+  const subagentPct = (totalSubagentCost / totalCost) * 100;
+  if (subagentPct > 30) {
+    const topAgent = topN(subagentTypeCost, 1)[0];
+    findings.push({
+      severity: 'high',
+      title: `Subagents account for ${subagentPct.toFixed(0)}% of total spend ($${totalSubagentCost.toFixed(2)})`,
+      detail: `Most expensive agent type: "${topAgent[0]}" ($${topAgent[1].toFixed(2)} across ${subagentTypeCount[topAgent[0]]} invocations). Subagents run on separate context windows and can accumulate significant token usage.`,
+      fix: 'Review whether subagent tasks could be done inline (saves context duplication). Consider using cheaper models for exploration agents.',
+    });
+  } else if (subagentPct > 15) {
+    findings.push({
+      severity: 'low',
+      title: `Subagents: ${subagentPct.toFixed(0)}% of spend ($${totalSubagentCost.toFixed(2)})`,
+      detail: `${Object.keys(subagentTypeCost).length} agent types used across sessions. Largest: "${topN(subagentTypeCost, 1)[0][0]}".`,
+      fix: 'Monitor subagent cost. Use haiku-tier models for explore/task agents when precision isn\'t critical.',
+    });
+  }
+}
+
+// Finding: low cache hit rate
+if (cacheStats.sessionsWithTokens >= 3 && cacheHitRate < 60) {
+  findings.push({
+    severity: 'medium',
+    title: `Low cache hit rate: ${cacheHitRate.toFixed(0)}%`,
+    detail: `Only ${cacheHitRate.toFixed(0)}% of input tokens come from cache reads. This means most of each request is being processed from scratch, which is expensive.`,
+    fix: 'Use longer sessions for related tasks (cache benefits accumulate). Avoid frequent model switches which invalidate cache.',
+  });
+}
+
+// Finding: significant reasoning token usage
+if (totalReasoningTokens > 0 && cacheStats.totalInput > 0) {
+  const reasoningPct = (totalReasoningTokens / (cacheStats.totalInput + totalReasoningTokens)) * 100;
+  if (reasoningPct > 10) {
+    findings.push({
+      severity: 'medium',
+      title: `Extended thinking: ${totalReasoningTokens.toLocaleString()} reasoning tokens (${reasoningPct.toFixed(1)}% of total)`,
+      detail: `${sessionsWithReasoning} sessions used extended thinking. Reasoning tokens are billed at output rates, making them expensive.`,
+      fix: 'If tasks don\'t require deep reasoning, switch to a model without extended thinking or disable it when available.',
+    });
+  }
+}
+
+// Finding: compaction overhead
+if (totalCompactionCost > 0 && totalCost > 0) {
+  const compactionPct = (totalCompactionCost / totalCost) * 100;
+  if (compactionPct > 3) {
+    findings.push({
+      severity: 'low',
+      title: `Compaction overhead: $${totalCompactionCost.toFixed(2)} (${compactionPct.toFixed(1)}% of total)`,
+      detail: `${sessionsWithCompaction} sessions triggered context compaction. Each compaction makes an API call that costs tokens.`,
+      fix: 'Start new sessions earlier to avoid hitting the context limit. Break large tasks into smaller sessions.',
+    });
+  }
+}
+
 // Finding: top 5 sessions represent large % of spend
 const top5Cost = topSessions.reduce((s, r) => s + (r.cost_usd || 0), 0);
 const top5Pct  = totalCost > 0 ? (top5Cost / totalCost) * 100 : 0;
@@ -303,6 +432,52 @@ if (allTurns.length > 0 || allIntervals.length > 0) {
     console.log(`  Avg turns/session:   ${avg(allTurns).toFixed(1)}  (p95: ${p95(allTurns)})`);
   if (allIntervals.length > 0)
     console.log(`  Avg turn interval:   ${fmtMs(avg(allIntervals))}  (p95: ${fmtMs(p95(allIntervals))})`);
+  if (sessionsWithFiles > 0)
+    console.log(`  Avg files modified:  ${(totalFilesModified / sessionsWithFiles).toFixed(1)}/session`);
+  if (cacheStats.sessionsWithTokens > 0)
+    console.log(`  Cache hit rate:      ${cacheHitRate.toFixed(0)}%  (${cacheStats.sessionsWithTokens} sessions measured)`);
+}
+
+// Subagent breakdown (if any)
+const saRows = topN(subagentTypeCost, 6);
+if (saRows.length) {
+  console.log('');
+  console.log('Subagent cost by type:');
+  const nameW = Math.max(6, ...saRows.map(([n]) => n.length));
+  for (const [name, cost] of saRows) {
+    const count = subagentTypeCount[name] || 0;
+    const avgCostEach = count > 0 ? cost / count : 0;
+    console.log(`  ${name.padEnd(nameW)}  $${cost.toFixed(2).padStart(7)}  ${String(count).padStart(3)} runs  ~$${avgCostEach.toFixed(2)}/run`);
+  }
+  const subPct = totalCost > 0 ? (totalSubagentCost / totalCost * 100).toFixed(0) : '0';
+  console.log(`  ${'Total'.padEnd(Math.max(6, ...saRows.map(([n]) => n.length)))}  $${totalSubagentCost.toFixed(2).padStart(7)}  (${subPct}% of total)`);
+}
+
+// Per-model detailed cost (from model_metrics — more accurate than session-level model field)
+const pmRows = topN(perModelCost, 6);
+if (pmRows.length && pmRows.some(([, c]) => c > 0)) {
+  console.log('');
+  console.log('Per-model cost (from modelMetrics):');
+  const nameW = Math.max(5, ...pmRows.map(([n]) => n.length));
+  for (const [name, cost] of pmRows) {
+    if (cost <= 0) continue;
+    const pct = totalCost > 0 ? `${((cost / totalCost) * 100).toFixed(0)}%` : 'n/a';
+    const reqs = perModelRequests[name] || 0;
+    const tier = EXPENSIVE_MODELS.has(name) ? ' [premium]' : '';
+    console.log(`  ${name.padEnd(nameW)}  $${cost.toFixed(2).padStart(7)}  ${pct.padStart(4)}  ${reqs} reqs${tier}`);
+  }
+}
+
+// Reasoning & compaction summary
+if (totalReasoningTokens > 0 || totalCompactionCost > 0) {
+  console.log('');
+  console.log('Additional insights:');
+  if (totalReasoningTokens > 0) {
+    console.log(`  Reasoning tokens:    ${totalReasoningTokens.toLocaleString()} across ${sessionsWithReasoning} sessions`);
+  }
+  if (totalCompactionCost > 0) {
+    console.log(`  Compaction overhead:  $${totalCompactionCost.toFixed(2)} across ${sessionsWithCompaction} sessions`);
+  }
 }
 
 // Findings

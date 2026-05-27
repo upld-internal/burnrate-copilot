@@ -307,7 +307,9 @@ Monthly JSONL schema:
 
 ---
 
-## Task 10 — Optimize Skill Integration
+## Task 10 — Optimize Skill Integration ✅
+
+**Status:** COMPLETE
 
 **Goal:** Ensure the `burnrate-optimize` skill can query the enriched monthly data to surface actionable cost insights.
 
