@@ -274,6 +274,32 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
     }
   } catch (_) {}
 
+  // Supplement agent tracking from events.jsonl (fallback for missing hooks).
+  // Only polls if we have a session — adds agents not already known from hooks.
+  if (sessionId) {
+    try {
+      const { pollSubagentEvents } = require('./events-watcher');
+      const knownIds = new Set(sd.agents.map(a => a.id).filter(Boolean));
+      const poll = pollSubagentEvents(sessionId, knownIds);
+
+      // Add newly-started agents not already tracked by hooks
+      for (const agent of poll.started) {
+        if (!knownIds.has(agent.id)) {
+          sd.agents.push(agent);
+          knownIds.add(agent.id);
+        }
+      }
+
+      // Mark completed agents (whether from hooks or watcher)
+      for (const done of poll.completed) {
+        const existing = sd.agents.find(a => a.id === done.id);
+        if (existing) {
+          existing.status = done.status;
+        }
+      }
+    } catch (_) {}
+  }
+
   return sd;
 }
 

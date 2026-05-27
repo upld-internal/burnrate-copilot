@@ -278,7 +278,9 @@ Monthly JSONL schema:
 
 ---
 
-## Task 9 — Events.jsonl Watcher for Live Subagent Display
+## Task 9 — Events.jsonl Watcher for Live Subagent Display ✅
+
+**Status:** COMPLETE
 
 **Goal:** Read subagent events from events.jsonl in near-real-time for the statusline, as a supplement to the hooks (which may not yet be available in all Copilot versions).
 
