@@ -369,6 +369,36 @@ Monthly JSONL schema:
 
 ---
 
+## Task 12 — End-to-End & Performance Validation
+
+**Goal:** Validate all implemented tasks with end-to-end integration tests and performance benchmarks against real Copilot CLI sessions.
+
+**Why:** Unit tests confirm correctness in isolation, but can't verify that hooks fire, the watcher supplements correctly under real conditions, and the statusline stays responsive. This task closes the confidence gap before shipping.
+
+**Work:**
+1. **E2E: Events watcher fallback** — Remove `subagentStart`/`subagentStop` from hooks.json, spawn a subagent in a real session, confirm the statusline shows agent activity purely from the watcher, then restore hooks.
+2. **E2E: No-duplicate agents** — With both hooks AND watcher active, spawn subagents and verify agents list has no duplicates (each agent ID appears once).
+3. **E2E: Multi-model cost accuracy** — Start a session, switch models mid-session, end session. Compare monthly JSONL `cost_usd` against manual calculation from `modelMetrics`.
+4. **E2E: Enriched fields** — End a real session and verify monthly JSONL contains `files_modified`, `reasoning_tokens`, `premium_requests`, `context_breakdown`, `models_used`.
+5. **E2E: PreCompact banking** — Trigger `/compact` mid-session and verify cost never decreases.
+6. **Performance: Statusline render budget** — Benchmark statusline.js render time with and without the events watcher. Target: watcher adds < 50ms. Measure across sessions with 0, 5, and 50+ subagent events.
+7. **Performance: Session-end latency** — Measure session-end.js execution time with all enrichment (events parsing, subagent attribution, compaction cost). Target: < 500ms.
+8. Create `tests/e2e/` directory with scripts that can be run manually against a live Copilot CLI session.
+9. Document results in test output (pass/fail verdicts with measured timings).
+
+**Verification:**
+- All E2E scenarios pass with real session data
+- Performance targets met: statusline < 50ms overhead, session-end < 500ms
+- No regressions in existing unit tests
+
+**Acceptance criteria:**
+- E2E test suite runnable via `node tests/e2e/run-all.js`
+- All scenarios produce PASS/FAIL verdicts
+- Performance results logged with actual ms measurements
+- Any failures are documented with root cause and fix applied
+
+---
+
 ## Dependency Graph
 
 ```
@@ -383,6 +413,8 @@ Task 5 (subagent hooks) → Task 9 (events watcher fallback)
 Task 6 (preCompact hook) — independent
 
 Tasks 2-8 → Task 10 (optimize integration)
+
+Tasks 1-11 → Task 12 (E2E & performance validation)
 ```
 
 ---
