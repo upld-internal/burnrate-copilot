@@ -13,7 +13,7 @@ const fs   = require('fs');
 const path = require('path');
 const { getDataDir } = require('./paths');
 const { loadPricing, computeCost, computeSessionCost } = require('./pricing');
-const { computeMultiModelCostForSession, parseSubagentCompletions, parseCompactionCosts, loadPricingTable } = require('./events-parser');
+const { computeMultiModelCostForSession, parseSubagentCompletions, parseCompactionCosts, parseShutdownEnriched, loadPricingTable } = require('./events-parser');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
 
@@ -163,6 +163,22 @@ process.stdin.on('end', () => {
       const compactionData = parseCompactionCosts(sessionId, pricingTable);
       if (compactionData) {
         record.compaction_cost = compactionData;
+      }
+    } catch (_) {}
+
+    // Enriched fields from session.shutdown — files, reasoning, context breakdown, etc.
+    try {
+      const enriched = parseShutdownEnriched(sessionId);
+      if (enriched) {
+        if (enriched.files_modified)       record.files_modified       = enriched.files_modified;
+        if (enriched.files_modified_count) record.files_modified_count = enriched.files_modified_count;
+        if (enriched.premium_requests)     record.premium_requests     = enriched.premium_requests;
+        if (enriched.api_duration_ms)      record.api_duration_ms      = enriched.api_duration_ms;
+        if (enriched.reasoning_tokens)     record.reasoning_tokens     = enriched.reasoning_tokens;
+        if (enriched.context_breakdown)    record.context_breakdown    = enriched.context_breakdown;
+        if (enriched.models_used)          record.models_used          = enriched.models_used;
+        if (enriched.lines_added != null)  record.lines_added          = enriched.lines_added;
+        if (enriched.lines_removed != null) record.lines_removed       = enriched.lines_removed;
       }
     } catch (_) {}
 

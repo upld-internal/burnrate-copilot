@@ -21,7 +21,9 @@ This plan implements accurate multi-model cost tracking, subagent cost attributi
 
 ---
 
-## Task 1 — Verify Subagent Token Inclusion in StatusLine
+## Task 1 — Verify Subagent Token Inclusion in StatusLine ✅
+
+**Status:** COMPLETE
 
 **Goal:** Confirm empirically that Copilot CLI's statusline `context_window.total_*_tokens` includes subagent tokens, and quantify the cost error from single-model pricing.
 
@@ -50,7 +52,9 @@ This plan implements accurate multi-model cost tracking, subagent cost attributi
 
 ---
 
-## Task 2 — Parse events.jsonl for session.shutdown modelMetrics
+## Task 2 — Parse events.jsonl for session.shutdown modelMetrics ✅
+
+**Status:** COMPLETE
 
 **Goal:** At SessionEnd, read the session's `events.jsonl` to extract `session.shutdown.modelMetrics` and compute accurate per-model cost.
 
@@ -79,7 +83,9 @@ This plan implements accurate multi-model cost tracking, subagent cost attributi
 
 ---
 
-## Task 3 — Real-Time Multi-Model Cost in StatusLine
+## Task 3 — Real-Time Multi-Model Cost in StatusLine ✅
+
+**Status:** COMPLETE
 
 **Goal:** Track per-model token attribution during the session (not just at shutdown) so the statusline shows accurate cost in real-time.
 
@@ -107,7 +113,9 @@ This plan implements accurate multi-model cost tracking, subagent cost attributi
 
 ---
 
-## Task 4 — Subagent Cost Attribution in Monthly Records
+## Task 4 — Subagent Cost Attribution in Monthly Records ✅
+
+**Status:** COMPLETE
 
 **Goal:** Record per-subagent cost breakdowns in the monthly JSONL so the optimize skill can analyze which agents cost most.
 
@@ -139,7 +147,9 @@ This plan implements accurate multi-model cost tracking, subagent cost attributi
 
 ---
 
-## Task 5 — Register SubagentStart/SubagentStop Hooks
+## Task 5 — Register SubagentStart/SubagentStop Hooks ✅
+
+**Status:** COMPLETE
 
 **Goal:** Track subagent lifecycle in real-time via hooks (independent of events.jsonl parsing).
 
@@ -174,7 +184,9 @@ This plan implements accurate multi-model cost tracking, subagent cost attributi
 
 ---
 
-## Task 6 — Register PreCompact Hook & Bank Pre-Compaction Cost
+## Task 6 — Register PreCompact Hook & Bank Pre-Compaction Cost ✅
+
+**Status:** COMPLETE
 
 **Goal:** Prevent cost undercount when context compaction occurs.
 
