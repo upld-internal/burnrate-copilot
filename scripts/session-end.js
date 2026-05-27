@@ -13,7 +13,7 @@ const fs   = require('fs');
 const path = require('path');
 const { getDataDir } = require('./paths');
 const { loadPricing, computeCost, computeSessionCost } = require('./pricing');
-const { computeMultiModelCostForSession, loadPricingTable } = require('./events-parser');
+const { computeMultiModelCostForSession, parseSubagentCompletions, loadPricingTable } = require('./events-parser');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
 
@@ -151,6 +151,15 @@ process.stdin.on('end', () => {
 
     // Telemetry fields — turn counts, tool usage, file extensions, timing
     Object.assign(record, buildTelemetryFields(session));
+
+    // Subagent cost attribution — per-agent breakdown from events.jsonl
+    try {
+      const pricingTable = loadPricingTable(dataDir, __dirname);
+      const subagentsDetail = parseSubagentCompletions(sessionId, pricingTable);
+      if (subagentsDetail && subagentsDetail.length > 0) {
+        record.subagents_detail = subagentsDetail;
+      }
+    } catch (_) {}
 
     // appendFileSync is safe for concurrent sessions on local disk
     fs.appendFileSync(monthlyFile, JSON.stringify(record) + '\n');

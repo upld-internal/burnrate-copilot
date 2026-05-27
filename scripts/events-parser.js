@@ -39,20 +39,18 @@ function getSessionStateDir(sessionId) {
 }
 
 /**
- * Parse the events.jsonl for a session and extract session.shutdown.modelMetrics.
+ * Parse events.jsonl for a session, extracting cost-relevant data in one pass.
  *
- * Returns the modelMetrics object if found, null otherwise.
- * modelMetrics shape:
- *   { "claude-sonnet-4.6": { requests: { count, cost }, usage: { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, reasoningTokens } }, ... }
- *
- * Also attempts to reconstruct metrics from subagent.completed events
- * when session.shutdown is missing (crash/Ctrl+C recovery).
+ * Returns { shutdownMetrics, subagents } or null if file doesn't exist.
+ *   shutdownMetrics: modelMetrics object from session.shutdown, or null
+ *   subagents: array of subagent.completed event data objects
  */
-function parseShutdownMetrics(sessionId) {
+function parseEventsFile(sessionId) {
   const eventsFile = path.join(getSessionStateDir(sessionId), 'events.jsonl');
   if (!fs.existsSync(eventsFile)) return null;
 
   let shutdownMetrics = null;
+  const subagents = [];
 
   try {
     const content = fs.readFileSync(eventsFile, 'utf8');
@@ -64,6 +62,8 @@ function parseShutdownMetrics(sessionId) {
         const event = JSON.parse(line);
         if (event.type === 'session.shutdown') {
           shutdownMetrics = (event.data || {}).modelMetrics || null;
+        } else if (event.type === 'subagent.completed') {
+          subagents.push(event.data || {});
         }
       } catch (_) {}
     }
@@ -71,7 +71,61 @@ function parseShutdownMetrics(sessionId) {
     return null;
   }
 
-  return shutdownMetrics;
+  return { shutdownMetrics, subagents };
+}
+
+/**
+ * Parse the events.jsonl for a session and extract session.shutdown.modelMetrics.
+ * Returns the modelMetrics object if found, null otherwise.
+ */
+function parseShutdownMetrics(sessionId) {
+  const result = parseEventsFile(sessionId);
+  return result ? result.shutdownMetrics : null;
+}
+
+/**
+ * Parse subagent.completed events and compute per-agent cost.
+ *
+ * Returns array of:
+ *   { name, model, tokens, cost_usd, duration_ms, tool_calls }
+ *
+ * Note: subagent.completed.totalTokens = inputTokens + outputTokens only (no cache).
+ * We approximate cost as: totalTokens split 95% input / 5% output for pricing.
+ * This is approximate — the authoritative total comes from modelMetrics.
+ *
+ * @param {string} sessionId
+ * @param {Object} pricingTable — full pricing table
+ * @returns {Array|null} — null if events.jsonl not available
+ */
+function parseSubagentCompletions(sessionId, pricingTable) {
+  const result = parseEventsFile(sessionId);
+  if (!result || result.subagents.length === 0) return null;
+
+  return result.subagents.map(sa => {
+    const model = sa.model || 'unknown';
+    const totalTokens = sa.totalTokens || 0;
+    const pricing = pricingTable[model];
+
+    // Approximate cost: totalTokens ≈ input + output.
+    // From empirical data, subagent token splits are roughly 95% input / 5% output.
+    // Use weighted average rate: (0.95 * input_rate + 0.05 * output_rate) per token
+    let costUsd = 0;
+    if (pricing && totalTokens > 0) {
+      const inputTokens  = Math.round(totalTokens * 0.95);
+      const outputTokens = totalTokens - inputTokens;
+      costUsd = inputTokens / 1e6 * (pricing.input || 0) +
+                outputTokens / 1e6 * (pricing.output || 0);
+    }
+
+    return {
+      name:        sa.agentName || sa.agentDisplayName || 'unnamed',
+      model:       model,
+      tokens:      totalTokens,
+      cost_usd:    Math.round(costUsd * 1e6) / 1e6, // 6 decimal places
+      duration_ms: sa.durationMs || 0,
+      tool_calls:  sa.totalToolCalls || 0,
+    };
+  });
 }
 
 /**
@@ -181,7 +235,9 @@ function loadPricingTable(dataDir, scriptDir) {
 
 module.exports = {
   getSessionStateDir,
+  parseEventsFile,
   parseShutdownMetrics,
+  parseSubagentCompletions,
   computeMultiModelCost,
   computeMultiModelCostForSession,
   loadPricingTable,
