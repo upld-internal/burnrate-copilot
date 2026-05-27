@@ -5,6 +5,8 @@
     "userPromptSubmitted":[{ "type": "command", "command": "node ${PLUGIN_ROOT}/scripts/user-prompt.js",    "timeoutSec": 5 }],
     "preToolUse":         [{ "type": "command", "command": "node ${PLUGIN_ROOT}/scripts/pre-tool-use.js",   "timeoutSec": 5 }],
     "postToolUse":        [{ "type": "command", "command": "node ${PLUGIN_ROOT}/scripts/post-tool-use.js",  "timeoutSec": 5 }],
+    "subagentStart":      [{ "type": "command", "command": "node ${PLUGIN_ROOT}/scripts/subagent-start.js", "timeoutSec": 5 }],
+    "subagentStop":       [{ "type": "command", "command": "node ${PLUGIN_ROOT}/scripts/subagent-stop.js",  "timeoutSec": 5 }],
     "sessionEnd":         [{ "type": "command", "command": "node ${PLUGIN_ROOT}/scripts/session-end.js",    "timeoutSec": 5 }]
   }
 }

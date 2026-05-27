@@ -68,7 +68,10 @@ process.stdin.on('end', () => {
     // Skip internal framework tools
     if (INTERNAL_TOOLS.has(toolName)) process.exit(0);
 
-    // agent spawn detection: `task` tool creates a sub-agent
+    // agent spawn detection: `task` tool creates a sub-agent.
+    // This is a fallback for Copilot CLI versions that don't fire subagentStart hook.
+    // When subagentStart hook is active, this produces a duplicate entry that the
+    // subagent-start.js script deduplicates by toolCallId.
     if (toolName === 'task') {
       const description  = (typeof toolArgs.description === 'string' ? toolArgs.description : '').trim();
       const subagentType = typeof toolArgs.agent_type  === 'string' ? toolArgs.agent_type  : null;
@@ -77,6 +80,12 @@ process.stdin.on('end', () => {
 
       withStateLock(state => {
         const agents = Array.isArray(state.agents) ? state.agents : [];
+        // Skip if subagentStart hook already registered this (by matching description)
+        const alreadyRegistered = agents.some(a =>
+          a.status === 'running' && (a.name === subagentType || a.description === description)
+        );
+        if (alreadyRegistered) return state;
+
         return {
           ...state,
           agents: [...agents, {
