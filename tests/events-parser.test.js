@@ -410,6 +410,148 @@ describe('parseSubagentCompletions', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Unit tests: parseCompactionCosts
+// ---------------------------------------------------------------------------
+
+describe('parseCompactionCosts', () => {
+  test('parses compaction events with cost', () => {
+    const { parseCompactionCosts } = require('../scripts/events-parser');
+    const SESSION_ID_COMP = 'test-compaction-unit';
+
+    // Create events.jsonl with session.compaction_complete events
+    const sessionDir = path.join(tmpSessionStateDir, SESSION_ID_COMP);
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const events = [
+      JSON.stringify({
+        type: 'session.compaction_complete',
+        data: {
+          success: true,
+          preCompactionTokens: 102000,
+          compactionTokensUsed: {
+            inputTokens: 131504,
+            outputTokens: 2706,
+            cacheReadTokens: 129508,
+            cacheWriteTokens: 0,
+            model: 'claude-sonnet-4.6',
+            duration: 8500,
+          },
+        },
+        timestamp: '2026-05-20T10:30:00Z',
+      }),
+      JSON.stringify({
+        type: 'session.compaction_complete',
+        data: {
+          success: true,
+          preCompactionTokens: 105000,
+          compactionTokensUsed: {
+            inputTokens: 135000,
+            outputTokens: 3100,
+            cacheReadTokens: 130000,
+            cacheWriteTokens: 0,
+            model: 'claude-sonnet-4.6',
+            duration: 9200,
+          },
+        },
+        timestamp: '2026-05-20T11:00:00Z',
+      }),
+      JSON.stringify({
+        type: 'session.shutdown',
+        data: { modelMetrics: {} },
+      }),
+    ];
+    fs.writeFileSync(path.join(sessionDir, 'events.jsonl'), events.join('\n') + '\n');
+
+    const pricingTable = {
+      'claude-sonnet-4.6': { input: 3.0, output: 15.0, cache_write: 3.75, cache_read: 0.3 },
+    };
+
+    const origHome = process.env.COPILOT_HOME;
+    process.env.COPILOT_HOME = tmpHome;
+    try {
+      const result = parseCompactionCosts(SESSION_ID_COMP, pricingTable);
+      assert.ok(result, 'should return results');
+      assert.equal(result.count, 2);
+      assert.equal(result.compactions.length, 2);
+      assert.ok(result.total_cost_usd > 0, 'total cost should be positive');
+
+      // Verify first compaction cost
+      // (131504/1e6 * 3) + (2706/1e6 * 15) + (129508/1e6 * 0.3) = 0.394512 + 0.04059 + 0.038852
+      const expectedCost1 = 131504 / 1e6 * 3.0 + 2706 / 1e6 * 15.0 + 129508 / 1e6 * 0.3;
+      assert.ok(Math.abs(result.compactions[0].cost_usd - expectedCost1) < 0.001,
+        `expected ~${expectedCost1}, got ${result.compactions[0].cost_usd}`);
+
+      assert.equal(result.compactions[0].model, 'claude-sonnet-4.6');
+      assert.equal(result.compactions[0].input_tokens, 131504);
+      assert.equal(result.compactions[0].output_tokens, 2706);
+      assert.equal(result.compactions[0].duration_ms, 8500);
+    } finally {
+      if (origHome) process.env.COPILOT_HOME = origHome;
+      else delete process.env.COPILOT_HOME;
+    }
+  });
+
+  test('returns null when no compaction events', () => {
+    const { parseCompactionCosts } = require('../scripts/events-parser');
+    const SESSION_ID_NO_COMP = 'test-no-compaction-unit';
+
+    // events.jsonl without compaction events
+    const sessionDir = path.join(tmpSessionStateDir, SESSION_ID_NO_COMP);
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const events = [
+      JSON.stringify({
+        type: 'session.shutdown',
+        data: { modelMetrics: {} },
+      }),
+    ];
+    fs.writeFileSync(path.join(sessionDir, 'events.jsonl'), events.join('\n') + '\n');
+
+    const origHome = process.env.COPILOT_HOME;
+    process.env.COPILOT_HOME = tmpHome;
+    try {
+      const result = parseCompactionCosts(SESSION_ID_NO_COMP, {});
+      assert.equal(result, null, 'should return null for no compactions');
+    } finally {
+      if (origHome) process.env.COPILOT_HOME = origHome;
+      else delete process.env.COPILOT_HOME;
+    }
+  });
+
+  test('handles compaction events without compactionTokensUsed', () => {
+    const { parseCompactionCosts } = require('../scripts/events-parser');
+    const SESSION_ID_OLD = 'test-old-compaction-format';
+
+    // Older format without compactionTokensUsed
+    const sessionDir = path.join(tmpSessionStateDir, SESSION_ID_OLD);
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const events = [
+      JSON.stringify({
+        type: 'session.compaction_complete',
+        data: {
+          success: true,
+          preCompactionTokens: 102000,
+          // No compactionTokensUsed field
+        },
+      }),
+      JSON.stringify({
+        type: 'session.shutdown',
+        data: { modelMetrics: {} },
+      }),
+    ];
+    fs.writeFileSync(path.join(sessionDir, 'events.jsonl'), events.join('\n') + '\n');
+
+    const origHome = process.env.COPILOT_HOME;
+    process.env.COPILOT_HOME = tmpHome;
+    try {
+      const result = parseCompactionCosts(SESSION_ID_OLD, {});
+      assert.equal(result, null, 'should return null when compactionTokensUsed is missing');
+    } finally {
+      if (origHome) process.env.COPILOT_HOME = origHome;
+      else delete process.env.COPILOT_HOME;
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Integration test: session-end includes subagents_detail
 // ---------------------------------------------------------------------------
 
@@ -522,5 +664,169 @@ describe('session-end.js subagent attribution', () => {
     const subagentTotal = record.subagents_detail.reduce((s, a) => s + a.cost_usd, 0);
     assert.ok(subagentTotal <= record.cost_usd,
       `subagent total (${subagentTotal}) should be <= session total (${record.cost_usd})`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Integration test: session-end includes compaction_cost
+// ---------------------------------------------------------------------------
+
+describe('session-end.js compaction cost', () => {
+  test('includes compaction_cost when compaction events exist', () => {
+    const SESSION_ID_4 = 'test-compaction-integration';
+
+    // Session file
+    const sessionFile = {
+      session_id: SESSION_ID_4,
+      started_at: '2026-05-20T16:00:00Z',
+      start_month: '2026-05',
+      model_id: 'claude-sonnet-4.6',
+      last_known_model: 'claude-sonnet-4.6',
+      last_known_at: '2026-05-20T17:00:00Z',
+      last_known_cost: 30.0,
+      last_known_tokens: {
+        total_input_tokens: 10000000,
+        total_output_tokens: 80000,
+        total_cache_write_tokens: 200000,
+        total_cache_read_tokens: 8000000,
+      },
+      snapshot: {
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        total_cache_write_tokens: 0,
+        total_cache_read_tokens: 0,
+      },
+      project: 'test-project',
+      project_id: '-Users-test-test-project',
+    };
+    fs.writeFileSync(
+      path.join(tmpDataDir, 'sessions', SESSION_ID_4 + '.json'),
+      JSON.stringify(sessionFile, null, 2)
+    );
+
+    // events.jsonl with compaction + shutdown
+    const sessionStateDir = path.join(tmpSessionStateDir, SESSION_ID_4);
+    fs.mkdirSync(sessionStateDir, { recursive: true });
+    const events = [
+      JSON.stringify({
+        type: 'session.compaction_complete',
+        data: {
+          success: true,
+          preCompactionTokens: 102000,
+          compactionTokensUsed: {
+            inputTokens: 130000,
+            outputTokens: 3000,
+            cacheReadTokens: 125000,
+            cacheWriteTokens: 0,
+            model: 'claude-sonnet-4.6',
+            duration: 8000,
+          },
+        },
+        timestamp: '2026-05-20T16:30:00Z',
+      }),
+      JSON.stringify({
+        type: 'session.shutdown',
+        data: {
+          modelMetrics: {
+            'claude-sonnet-4.6': {
+              requests: { count: 120, cost: 18 },
+              usage: { inputTokens: 10000000, outputTokens: 80000, cacheReadTokens: 8000000, cacheWriteTokens: 200000 },
+            },
+          },
+        },
+      }),
+    ];
+    fs.writeFileSync(path.join(sessionStateDir, 'events.jsonl'), events.join('\n') + '\n');
+
+    const stdin = JSON.stringify({ sessionId: SESSION_ID_4 });
+    const result = spawnSync('node', [path.join(__dirname, '..', 'scripts', 'session-end.js')], {
+      input: stdin,
+      env: { ...process.env, COPILOT_HOME: tmpHome },
+      timeout: 5000,
+    });
+
+    assert.equal(result.status, 0, 'should exit cleanly');
+
+    const monthlyFile = path.join(tmpDataDir, 'monthly', '2026-05.jsonl');
+    const lines = fs.readFileSync(monthlyFile, 'utf8').trim().split('\n');
+    const record = JSON.parse(lines[lines.length - 1]);
+
+    assert.equal(record.id, SESSION_ID_4);
+    assert.ok(record.compaction_cost, 'should have compaction_cost');
+    assert.equal(record.compaction_cost.count, 1);
+    assert.ok(record.compaction_cost.total_cost_usd > 0, 'compaction cost should be positive');
+    assert.equal(record.compaction_cost.compactions[0].model, 'claude-sonnet-4.6');
+    assert.equal(record.compaction_cost.compactions[0].input_tokens, 130000);
+
+    // compaction_cost should be a SUBSET of total cost (not additive)
+    assert.ok(record.compaction_cost.total_cost_usd < record.cost_usd,
+      `compaction cost ($${record.compaction_cost.total_cost_usd}) should be < total ($${record.cost_usd})`);
+  });
+
+  test('omits compaction_cost when no compaction events', () => {
+    const SESSION_ID_5 = 'test-no-compaction-integration';
+
+    const sessionFile = {
+      session_id: SESSION_ID_5,
+      started_at: '2026-05-20T18:00:00Z',
+      start_month: '2026-05',
+      model_id: 'claude-sonnet-4.6',
+      last_known_model: 'claude-sonnet-4.6',
+      last_known_at: '2026-05-20T19:00:00Z',
+      last_known_cost: 5.0,
+      last_known_tokens: {
+        total_input_tokens: 1000000,
+        total_output_tokens: 10000,
+        total_cache_write_tokens: 50000,
+        total_cache_read_tokens: 800000,
+      },
+      snapshot: {
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        total_cache_write_tokens: 0,
+        total_cache_read_tokens: 0,
+      },
+      project: 'test-project',
+      project_id: '-Users-test-test-project',
+    };
+    fs.writeFileSync(
+      path.join(tmpDataDir, 'sessions', SESSION_ID_5 + '.json'),
+      JSON.stringify(sessionFile, null, 2)
+    );
+
+    // events.jsonl WITHOUT compaction events
+    const sessionStateDir = path.join(tmpSessionStateDir, SESSION_ID_5);
+    fs.mkdirSync(sessionStateDir, { recursive: true });
+    const events = [
+      JSON.stringify({
+        type: 'session.shutdown',
+        data: {
+          modelMetrics: {
+            'claude-sonnet-4.6': {
+              requests: { count: 20, cost: 3 },
+              usage: { inputTokens: 1000000, outputTokens: 10000, cacheReadTokens: 800000, cacheWriteTokens: 50000 },
+            },
+          },
+        },
+      }),
+    ];
+    fs.writeFileSync(path.join(sessionStateDir, 'events.jsonl'), events.join('\n') + '\n');
+
+    const stdin = JSON.stringify({ sessionId: SESSION_ID_5 });
+    const result = spawnSync('node', [path.join(__dirname, '..', 'scripts', 'session-end.js')], {
+      input: stdin,
+      env: { ...process.env, COPILOT_HOME: tmpHome },
+      timeout: 5000,
+    });
+
+    assert.equal(result.status, 0, 'should exit cleanly');
+
+    const monthlyFile = path.join(tmpDataDir, 'monthly', '2026-05.jsonl');
+    const lines = fs.readFileSync(monthlyFile, 'utf8').trim().split('\n');
+    const record = JSON.parse(lines[lines.length - 1]);
+
+    assert.equal(record.id, SESSION_ID_5);
+    assert.equal(record.compaction_cost, undefined, 'should NOT have compaction_cost field');
+    assert.ok(record.cost_usd > 0);
   });
 });

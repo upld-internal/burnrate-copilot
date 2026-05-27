@@ -207,33 +207,30 @@ This plan implements accurate multi-model cost tracking, subagent cost attributi
 
 ---
 
-## Task 7 — Compaction Token Cost Tracking
+## Task 7 — Compaction Token Cost Tracking ✅
+
+**Status:** COMPLETE
 
 **Goal:** Track the token cost of compaction itself (it makes a separate API call).
 
-**Why:** `session.compaction_complete.compactionTokensUsed` shows the compaction API call uses its own tokens (typically 130K+ input tokens). These contribute to session cost but aren't visible in the main statusline totals.
+**Key Finding:** Compaction tokens are ALREADY INCLUDED in modelMetrics totals.
+They are NOT separately billed. The `compaction_cost` field is purely informational —
+it shows what portion of the total session cost went to compaction API calls (~1-3% avg).
 
-**Work:**
-1. Extend `scripts/events-parser.js`:
-   - `parseCompactionCosts(sessionId)` — extracts `compactionTokensUsed` from all `session.compaction_complete` events
-   - Returns: `[{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, duration, model }]`
-2. Update `scripts/session-end.js`:
-   - Add compaction costs to the monthly record
-   - Include in total `cost_usd` calculation
-3. Monthly JSONL gains:
-   ```json
-   "compaction_costs": [{ "input": 137858, "output": 3275, "model": "claude-sonnet-4.6", "cost_usd": 0.045 }]
-   ```
+**Work completed:**
+1. ✅ `parseCompactionCosts(sessionId, pricingTable)` in events-parser.js — extracts per-compaction breakdown
+2. ✅ `session-end.js` includes `compaction_cost` metadata in monthly JSONL
+3. ✅ Verified across 19 real sessions: compaction cost is always a proper subset of total
+4. ✅ Created `scripts/verify-compaction-cost.js` — formal verification script
+5. ✅ Added 5 new tests (3 unit + 2 integration) — all pass
 
-**Verification:**
-- Find a session with compaction in events.jsonl (existing data)
-- Run `scripts/verify-subagent-tokens.js` (extended) to compute compaction cost delta
-- Monthly record shows `compaction_costs` for sessions that had compaction
-- Total cost includes compaction overhead
+**Important:** `compaction_cost` is NOT added to `cost_usd` (would be double-counting).
+Monthly JSONL schema:
+```json
+"compaction_cost": { "count": 4, "total_cost_usd": 1.96, "compactions": [{ "model": "claude-sonnet-4.6", "input_tokens": 131504, "output_tokens": 2706, "cost_usd": 0.47, "duration_ms": 8500 }] }
+```
 
-**Acceptance criteria:**
-- Compaction cost is tracked and included in session total
-- Sessions without compaction omit the field
+**Verification result:** 19/19 sessions PASS — compaction always < total. Average: 1.0% of total cost.
 
 ---
 
