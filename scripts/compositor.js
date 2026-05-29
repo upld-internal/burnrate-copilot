@@ -130,7 +130,9 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
     lastPrompt:           null,
   };
 
-  // Load session snapshot
+  // Load session snapshot. If the file is missing (e.g. orphan-recovery deleted it
+  // when the model changed mid-session and Copilot issued a new SessionStart), recreate
+  // it lazily so second-line widgets keep rendering for the remainder of the session.
   if (sessionId) {
     try {
       const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
@@ -146,6 +148,33 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
         sd.jiraSource           = session.jira_source           || '';
         sd.lastKnownJiraKey     = session.last_known_jira_key   || '';
         sd.lastKnownJiraSource  = session.last_known_jira_source || '';
+      } else {
+        // Session file missing — recreate a minimal one so widgets don't go blank.
+        // Uses current token counts as the baseline snapshot (cost delta will be 0
+        // from this point forward, but duration and model widgets will work again).
+        const cwd       = (stdinData.cwd || '').trim();
+        const recovered = {
+          session_id:  sessionId,
+          started_at:  now.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+          start_month: now.toISOString().slice(0, 7),
+          model_id:    sd.modelId || '',
+          project:     cwd ? path.basename(cwd) : undefined,
+          project_id:  cwd ? cwd.replace(/[/\\]/g, '-') : undefined,
+          snapshot: {
+            total_input_tokens:       ctx.total_input_tokens       || 0,
+            total_output_tokens:      ctx.total_output_tokens      || 0,
+            total_cache_write_tokens: ctx.total_cache_write_tokens || 0,
+            total_cache_read_tokens:  ctx.total_cache_read_tokens  || 0,
+          },
+          recovered_by_compositor: true,
+        };
+        fs.mkdirSync(path.join(dataDir, 'sessions'), { recursive: true });
+        fs.writeFileSync(sessionPath, JSON.stringify(recovered, null, 2));
+        sd.snapshot    = recovered.snapshot;
+        sd.startedAt   = recovered.started_at;
+        sd.hasSnapshot = true;
+        sd.project     = recovered.project   || '';
+        sd.projectId   = recovered.project_id || '';
       }
     } catch (_) {}
   }

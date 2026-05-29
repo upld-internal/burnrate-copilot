@@ -76,9 +76,15 @@ const dataDir = getDataDir();
 //   - Deletes the file regardless, so orphans don't accumulate.
 //
 // Safety: skips any session file whose last_known_at (or started_at) is
-// less than 2 minutes old — it may belong to a concurrently running session.
+// less than the safety window — it may belong to a concurrently running session.
+// last_known_at is written by the compositor on every statusline turn, so a
+// live session will always be within seconds. A 10-minute window on last_known_at
+// ensures a session can survive a model switch (which triggers a new SessionStart)
+// without being archived. Fall back to a 2-minute window on started_at only when
+// the compositor has never written to the file (very new session, no turns yet).
 function recoverOrphanedSessions(currentSessionId) {
-  const TWO_MIN = 2 * 60 * 1000;
+  const TWO_MIN    = 2  * 60 * 1000;
+  const TEN_MIN    = 10 * 60 * 1000;
   const sessionsDir = path.join(dataDir, 'sessions');
   let files;
   try { files = fs.readdirSync(sessionsDir); } catch (_) { return; }
@@ -94,10 +100,17 @@ function recoverOrphanedSessions(currentSessionId) {
     try {
       const session = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-      // Determine age from last_known_at, falling back to started_at
-      const ageRef = session.last_known_at || session.started_at;
-      if (ageRef) {
-        const age = now - new Date(ageRef).getTime();
+      // Use last_known_at (written by compositor every turn) as the freshness
+      // signal — it reflects actual recent activity. Fall back to started_at only
+      // when the compositor has never written to this file (very new session).
+      const lastActive = session.last_known_at;
+      const startedAt  = session.started_at;
+
+      if (lastActive) {
+        const age = now - new Date(lastActive).getTime();
+        if (age < TEN_MIN) continue; // compositor wrote recently → still active
+      } else if (startedAt) {
+        const age = now - new Date(startedAt).getTime();
         if (age < TWO_MIN) continue; // too recent — may be a concurrent session
       }
 
