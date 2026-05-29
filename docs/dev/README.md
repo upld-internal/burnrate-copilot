@@ -25,8 +25,9 @@ burnrate-copilot is a GitHub Copilot CLI plugin that:
 
 1. **Surfaces real-time cost** — Per-session token spend and USD cost displayed in the statusline every turn.
 2. **Tracks aggregated spend** — Month-to-date totals, projected monthly cost, breakdowns by project, model, and Jira ticket.
-3. **Delivers team workflows** — Skills (`/burnrate:burnrate-cost-summary`, `/burnrate:burnrate-optimize`, `/burnrate:burnrate-report`) provide structured cost reports and anti-pattern detection.
-4. **Teaches efficient AI usage** — The optimize skill analyzes usage patterns and produces actionable recommendations for reducing cost while maintaining output quality.
+3. **Structured cost reports** —  The `/burnrate-cost-summary` skill provides a cost report by model, project, and Jira ticket. 
+4. **Teaches efficient AI usage** — The `/burnrate-optimize` skill analyzes usage patterns and produces actionable recommendations for reducing cost while maintaining output quality.
+5. **Delivers team workflows** - Delevery mechanism for shared team configuration and workflows (Jira, Confluence, Git, Tests, etc)
 
 ---
 
