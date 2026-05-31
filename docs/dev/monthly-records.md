@@ -83,6 +83,13 @@ Records are appended to the file matching `start_month`. A session that starts i
   "turn_interval_count": 28,
   "compaction_count": 2,
   "git_branch": "feature/auth",
+  "prompt_count": 29,
+  "prompt_length_p50_bytes": 312,
+  "prompt_length_max_bytes": 4820,
+  "web_search_requests": 3,
+  "web_fetch_requests": 1,
+  "tool_duration_p50_ms": 145,
+  "tool_duration_max_ms": 8200,
 
   "recovered": false
 }
@@ -153,6 +160,13 @@ Records are appended to the file matching `start_month`. A session that starts i
 | `turn_interval_p50_ms` | number | Median time between user prompts (ms) |
 | `turn_interval_max_ms` | number | Longest gap between prompts (ms) |
 | `turn_interval_count` | number | Number of measured intervals |
+| `prompt_count` | number | Number of user prompts with non-empty text |
+| `prompt_length_p50_bytes` | number | Median prompt byte length |
+| `prompt_length_max_bytes` | number | Longest prompt byte length |
+| `web_search_requests` | number | Web search tool calls (omitted when 0) |
+| `web_fetch_requests` | number | Web fetch tool calls (omitted when 0) |
+| `tool_duration_p50_ms` | number | Median tool execution time across all tools (ms) |
+| `tool_duration_max_ms` | number | Slowest tool execution time (ms) |
 
 ### Recovery
 
@@ -212,4 +226,7 @@ for (const r of records) {
 - `cost_method: "multi_model"` records have `model_metrics`. Other methods may not.
 - `subagents_detail` is only present when events.jsonl contains `subagent.completed` events.
 - `compaction_cost` is only present when the session had compactions with `compactionTokensUsed` data.
+- `web_search_requests` and `web_fetch_requests` are only written when > 0.
+- `prompt_count`/`prompt_length_*` are only written when at least one non-empty prompt was submitted.
+- `tool_duration_p50_ms`/`tool_duration_max_ms` are only written when at least one tool round-trip completed.
 - `recovered: true` records may have less accurate cost (depend on whatever data was in the session file at crash time).

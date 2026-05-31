@@ -135,3 +135,33 @@ The **Optimize column** marks data points the `/burnrate:burnrate-optimize` skil
 | **Hook** | preToolUse |
 | **What it captures** | Total number of sub-agents spawned in the session and a breakdown by type (e.g. `{ "general-purpose": 2, "explore": 1 }`). |
 | **Optimize relevance** | ✅ Frequent sub-agent spawning multiplies token usage. Sessions with high `subagent_count` relative to `turn_count` are strong candidates for reviewing delegation patterns. |
+
+---
+
+### `prompt_count` / `prompt_length_p50_bytes` / `prompt_length_max_bytes`
+| | |
+|---|---|
+| **Source** | `userPromptSubmitted` hook — `prompt.length` accumulated into `session.prompt_lengths[]` per turn. P50/max computed by `buildTelemetryFields` at session-end. |
+| **Hook** | userPromptSubmitted |
+| **What it captures** | Total number of user prompts and the P50/max byte length of prompt text. Raw prompt content is never persisted to disk; only lengths are stored. |
+| **Optimize relevance** | ✅ Very large prompts (max > 50KB) often contain pasted file content that should be provided via file path instead. |
+
+---
+
+### `web_search_requests` / `web_fetch_requests`
+| | |
+|---|---|
+| **Source** | `preToolUse` hook — checks `toolName.toLowerCase()` for `web_search`/`websearch` and `web_fetch`/`webfetch`. Counters accumulated in session file. |
+| **Hook** | preToolUse |
+| **What it captures** | Number of web search and web fetch tool calls in the session. Only written to JSONL when > 0. |
+| **Optimize relevance** | ✅ High web usage in sessions that could use cached/offline reference material may indicate inefficient information gathering patterns. |
+
+---
+
+### `tool_duration_p50_ms` / `tool_duration_max_ms`
+| | |
+|---|---|
+| **Source** | `preToolUse` writes a FIFO start-time queue per tool (`session.tool_start_times[toolName][]`). `postToolUse` pops the oldest entry and computes `endTs - startTs`. Durations > 5 minutes are discarded (stale state guard). All durations accumulated in `session.tool_durations_ms[]`. P50/max computed by `buildTelemetryFields` at session-end. |
+| **Hook** | preToolUse (start), postToolUse (end) |
+| **What it captures** | P50 and max execution time across all tool calls in the session (ms). FIFO queuing handles parallel same-name tools without clobbering. |
+| **Optimize relevance** | ✅ High `tool_duration_max_ms` with slow bash commands suggests long-running test or build steps that may benefit from caching or faster alternatives. |
