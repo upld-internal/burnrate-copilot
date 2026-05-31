@@ -10,7 +10,7 @@
 //   timestamp:  number — unix ms timestamp
 
 const { withStateLock, readState, STATE_FILE } = require('./state');
-const { logHookDebug } = require('./session-file');
+const { updateSession, logHookDebug } = require('./session-file');
 
 // Internal tools to skip, with the exception of `read_agent`
 // (which signals agent completion — handled separately below).
@@ -95,6 +95,24 @@ process.stdin.on('end', () => {
 
       return { ...state, recentTools: newTools };
     }, STATE_FILE);
+
+    // Tool duration tracking — pop oldest start time from FIFO queue
+    const state = readState(STATE_FILE);
+    if (state.sessionActive && state.sessionId) {
+      updateSession(state.sessionId, session => {
+        const queue = session.tool_start_times && session.tool_start_times[toolName];
+        if (Array.isArray(queue) && queue.length > 0) {
+          const start = queue.shift();
+          session.tool_start_times[toolName] = queue;
+          const dur = ts - start;
+          // Cap at 5 minutes — longer durations are likely stale state from a prior session
+          if (dur > 0 && dur < 300_000) {
+            if (!Array.isArray(session.tool_durations_ms)) session.tool_durations_ms = [];
+            session.tool_durations_ms.push(dur);
+          }
+        }
+      }, { mustExist: true });
+    }
 
   } catch (_) {}
 

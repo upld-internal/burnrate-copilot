@@ -53,6 +53,12 @@ process.stdin.on('end', () => {
         }
         session.turn_count   = (session.turn_count || 0) + 1;
         session.last_prompt_at = now;
+
+        // Prompt length stats — used by buildTelemetryFields at session end
+        if (prompt && prompt.length > 0) {
+          if (!Array.isArray(session.prompt_lengths)) session.prompt_lengths = [];
+          session.prompt_lengths.push(prompt.length);
+        }
       }, { mustExist: true });
     }
 

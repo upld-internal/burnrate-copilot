@@ -135,6 +135,31 @@ function buildTelemetryFields(session) {
 
   if (session.compaction_count > 0) f.compaction_count = session.compaction_count;
 
+  // Prompt length stats
+  const promptLengths = session.prompt_lengths;
+  if (Array.isArray(promptLengths) && promptLengths.length) {
+    const p50 = computeP50(promptLengths);
+    if (p50 != null) {
+      f.prompt_count            = promptLengths.length;
+      f.prompt_length_p50_bytes = p50;
+      f.prompt_length_max_bytes = Math.max(...promptLengths);
+    }
+  }
+
+  // Web search / web fetch counts
+  if (session.web_search_requests > 0) f.web_search_requests = session.web_search_requests;
+  if (session.web_fetch_requests  > 0) f.web_fetch_requests  = session.web_fetch_requests;
+
+  // Tool duration stats (all tools combined, same as burnrate-claude)
+  const toolDurations = session.tool_durations_ms;
+  if (Array.isArray(toolDurations) && toolDurations.length) {
+    const p50 = computeP50(toolDurations);
+    if (p50 != null) {
+      f.tool_duration_p50_ms = p50;
+      f.tool_duration_max_ms = Math.max(...toolDurations);
+    }
+  }
+
   return f;
 }
 

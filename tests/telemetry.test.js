@@ -135,6 +135,45 @@ describe('buildTelemetryFields', () => {
     assert.equal(f.subagent_count, 3);
     assert.deepEqual(f.subagent_types, { explore: 2, task: 1 });
   });
+
+  test('computes prompt_count and prompt_length stats from prompt_lengths array', () => {
+    const f = buildTelemetryFields({ prompt_lengths: [100, 500, 200] });
+    assert.equal(f.prompt_count, 3);
+    assert.equal(f.prompt_length_p50_bytes, 200);
+    assert.equal(f.prompt_length_max_bytes, 500);
+  });
+
+  test('omits prompt stats when prompt_lengths is absent', () => {
+    const f = buildTelemetryFields({});
+    assert.equal(f.prompt_count, undefined);
+    assert.equal(f.prompt_length_p50_bytes, undefined);
+  });
+
+  test('includes web_search_requests when > 0', () => {
+    const f = buildTelemetryFields({ web_search_requests: 3 });
+    assert.equal(f.web_search_requests, 3);
+  });
+
+  test('omits web_search_requests when 0', () => {
+    const f = buildTelemetryFields({ web_search_requests: 0 });
+    assert.equal(f.web_search_requests, undefined);
+  });
+
+  test('includes web_fetch_requests when > 0', () => {
+    const f = buildTelemetryFields({ web_fetch_requests: 5 });
+    assert.equal(f.web_fetch_requests, 5);
+  });
+
+  test('computes tool_duration_p50_ms and tool_duration_max_ms from tool_durations_ms', () => {
+    const f = buildTelemetryFields({ tool_durations_ms: [50, 200, 100, 400, 150] });
+    assert.equal(f.tool_duration_p50_ms, 150);
+    assert.equal(f.tool_duration_max_ms, 400);
+  });
+
+  test('omits tool duration stats when tool_durations_ms is absent', () => {
+    const f = buildTelemetryFields({});
+    assert.equal(f.tool_duration_p50_ms, undefined);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -342,11 +381,94 @@ describe('pre-tool-use.js telemetry', () => {
     const data = readSession(sid);
     assert.equal(data.tool_counts, undefined, 'inactive session should not get telemetry');
   });
+
+  test('increments web_search_requests for web_search tool', () => {
+    const sid = 'test-websearch-' + Date.now();
+    writeState(sid);
+    writeSession(sid);
+
+    runHook('pre-tool-use.js', { toolName: 'web_search', toolArgs: { query: 'node.js docs' }, timestamp: Date.now() });
+    runHook('pre-tool-use.js', { toolName: 'web_search', toolArgs: { query: 'typescript' },   timestamp: Date.now() });
+
+    const data = readSession(sid);
+    assert.equal(data.web_search_requests, 2, 'should count 2 web_search calls');
+  });
+
+  test('increments web_fetch_requests for web_fetch tool', () => {
+    const sid = 'test-webfetch-' + Date.now();
+    writeState(sid);
+    writeSession(sid);
+
+    runHook('pre-tool-use.js', { toolName: 'web_fetch', toolArgs: { url: 'https://example.com' }, timestamp: Date.now() });
+
+    const data = readSession(sid);
+    assert.equal(data.web_fetch_requests, 1, 'should count 1 web_fetch call');
+  });
+
+  test('records tool_start_times queue for duration tracking', () => {
+    const sid = 'test-start-times-' + Date.now();
+    writeState(sid);
+    writeSession(sid);
+
+    const ts = Date.now();
+    runHook('pre-tool-use.js', { toolName: 'bash', toolArgs: { command: 'ls' }, timestamp: ts });
+
+    const data = readSession(sid);
+    assert.ok(Array.isArray(data.tool_start_times?.bash), 'tool_start_times.bash should be an array');
+    assert.equal(data.tool_start_times.bash.length, 1, 'should have one start time queued');
+  });
 });
 
 // ---------------------------------------------------------------------------
-// Integration: user-prompt.js
+// Integration: post-tool-use.js tool duration
 // ---------------------------------------------------------------------------
+
+describe('post-tool-use.js tool duration', () => {
+  test('accumulates tool_durations_ms when pre+post fire for same tool', () => {
+    const sid = 'test-duration-' + Date.now();
+    writeState(sid);
+    writeSession(sid);
+
+    const start = Date.now();
+    runHook('pre-tool-use.js',  { toolName: 'bash', toolArgs: { command: 'ls' }, timestamp: start });
+    runHook('post-tool-use.js', { toolName: 'bash', toolResult: { resultType: 'success' }, timestamp: start + 150 });
+
+    const data = readSession(sid);
+    assert.ok(Array.isArray(data.tool_durations_ms), 'tool_durations_ms should be an array');
+    assert.equal(data.tool_durations_ms.length, 1, 'one duration recorded');
+    assert.ok(data.tool_durations_ms[0] > 0, 'duration should be positive');
+  });
+
+  test('clears start time from queue after matching post fires', () => {
+    const sid = 'test-duration-clear-' + Date.now();
+    writeState(sid);
+    writeSession(sid);
+
+    const start = Date.now();
+    runHook('pre-tool-use.js',  { toolName: 'bash', toolArgs: { command: 'pwd' }, timestamp: start });
+    runHook('post-tool-use.js', { toolName: 'bash', toolResult: { resultType: 'success' }, timestamp: start + 200 });
+
+    const data = readSession(sid);
+    assert.equal(data.tool_start_times?.bash?.length ?? 0, 0, 'start time queue should be empty after post fires');
+  });
+
+  test('handles two sequential same-tool calls correctly (FIFO)', () => {
+    const sid = 'test-fifo-' + Date.now();
+    writeState(sid);
+    writeSession(sid);
+
+    const t0 = Date.now();
+    runHook('pre-tool-use.js',  { toolName: 'bash', toolArgs: { command: 'ls' }, timestamp: t0 });
+    runHook('pre-tool-use.js',  { toolName: 'bash', toolArgs: { command: 'pwd' }, timestamp: t0 + 100 });
+    runHook('post-tool-use.js', { toolName: 'bash', toolResult: { resultType: 'success' }, timestamp: t0 + 250 });
+    runHook('post-tool-use.js', { toolName: 'bash', toolResult: { resultType: 'success' }, timestamp: t0 + 500 });
+
+    const data = readSession(sid);
+    assert.equal(data.tool_durations_ms?.length, 2, 'should have 2 duration entries for 2 calls');
+  });
+});
+
+
 
 describe('user-prompt.js telemetry', () => {
   test('increments turn_count on first prompt', () => {
@@ -402,6 +524,21 @@ describe('user-prompt.js telemetry', () => {
     const data = readSession(sid);
     assert.equal(data.turn_intervals, undefined);
     assert.equal(data.turn_count, 1);
+  });
+
+  test('records prompt_lengths array', () => {
+    const sid = 'test-prompt-len-' + Date.now();
+    writeState(sid);
+    writeSession(sid);
+
+    runHook('user-prompt.js', { prompt: 'Short',                        timestamp: Date.now() });
+    runHook('user-prompt.js', { prompt: 'A longer prompt message here', timestamp: Date.now() });
+
+    const data = readSession(sid);
+    assert.ok(Array.isArray(data.prompt_lengths), 'prompt_lengths should be an array');
+    assert.equal(data.prompt_lengths.length, 2);
+    assert.equal(data.prompt_lengths[0], 'Short'.length);
+    assert.equal(data.prompt_lengths[1], 'A longer prompt message here'.length);
   });
 });
 

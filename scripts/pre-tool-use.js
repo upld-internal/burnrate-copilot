@@ -136,6 +136,19 @@ process.stdin.on('end', () => {
         if (!session.tool_counts) session.tool_counts = {};
         session.tool_counts[toolName] = (session.tool_counts[toolName] || 0) + 1;
 
+        // Web search / web fetch counts
+        const tl = toolName.toLowerCase();
+        if (tl === 'web_search' || tl === 'websearch') {
+          session.web_search_requests = (session.web_search_requests || 0) + 1;
+        } else if (tl === 'web_fetch' || tl === 'webfetch') {
+          session.web_fetch_requests = (session.web_fetch_requests || 0) + 1;
+        }
+
+        // Tool start time — FIFO queue per tool name for parallel-safe duration tracking
+        if (!session.tool_start_times) session.tool_start_times = {};
+        if (!Array.isArray(session.tool_start_times[toolName])) session.tool_start_times[toolName] = [];
+        session.tool_start_times[toolName].push(ts);
+
         if (toolName === 'edit' || toolName === 'create') {
           const filePath = (toolArgs.path || toolArgs.file_path || '').trim();
           if (filePath) {
