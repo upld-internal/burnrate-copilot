@@ -28,7 +28,6 @@ If neither path contains the file, tell the user:
 > mkdir -p ~/.copilot/installed-plugins/local
 > ln -sf /path/to/burnrate-copilot ~/.copilot/installed-plugins/local/burnrate-copilot
 > ```
-> Or install from the marketplace with: `copilot plugin install bripley/burnrate-copilot`
 
 Then stop.
 
@@ -49,11 +48,7 @@ Read `$COPILOT_DIR/settings.json`:
   > `settings.json` contains invalid JSON. Please repair or delete it manually before running setup.
   Then stop.
 
-### 5. Set `experimental: true`
-
-Add or update `"experimental": true` at the root of the settings object.
-
-### 6. Configure `statusLine`
+### 5. Configure `statusLine`
 
 If `settings.statusLine` already exists, show the current value:
 ```
@@ -75,7 +70,7 @@ Ask the user: **"Replace this with the burnrate-copilot statusline? (yes/no)"**
 > not a shell command like `node /path/script.js`. The script already has a
 > `#!/usr/bin/env node` shebang and will be made executable in step 3.
 
-### 7. Ensure `footer.showCustom` is not disabled
+### 6. Ensure `footer.showCustom` is not disabled
 
 If `settings.footer?.showCustom === false`, warn the user:
 > ⚠️ `footer.showCustom` is set to `false` in your settings. The burnrate-copilot
@@ -84,11 +79,11 @@ If `settings.footer?.showCustom === false`, warn the user:
 
 If the user says yes, set `settings.footer.showCustom = true`.
 
-### 8. Write `settings.json`
+### 7. Write `settings.json`
 
 Write the updated object back to `$COPILOT_DIR/settings.json` with 2-space indentation.
 
-### 8b. Write default `config.json` if absent
+### 7b. Write default `config.json` if absent
 
 Check whether `$COPILOT_DIR/burnrate-copilot/config.json` already exists.
 
@@ -115,7 +110,7 @@ Check whether `$COPILOT_DIR/burnrate-copilot/config.json` already exists.
 ```
 - If it **already exists**: leave it untouched (the user may have customised it).
 
-### 9. Print a summary
+### 8. Print a summary
 
 ```
 ✓ burnrate-copilot setup complete
@@ -123,7 +118,6 @@ Check whether `$COPILOT_DIR/burnrate-copilot/config.json` already exists.
   Config file:   ~/.copilot/settings.json
   Plugin path:   <path>
   Command:       <statusline.js path>
-  experimental:  true
 
 Restart GitHub Copilot CLI for changes to take effect.
 Run /burnrate:configure to customise the widget layout.
