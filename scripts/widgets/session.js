@@ -115,7 +115,7 @@ function session_name(stdinData, sessionData, opts) {
   if (!name) return null;
 
   const showLabel = opts.show_label === true;
-  const value     = opts._powerline ? name : `${D}${name}${R}`;
+  const value     = opts._powerline ? name : `${B}${name}${R}`;
   return withLabel('Session', value, showLabel, opts._powerline);
 }
 
