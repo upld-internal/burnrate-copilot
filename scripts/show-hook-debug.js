@@ -28,7 +28,7 @@ const os   = require('os');
 function getDataDir() {
   const envHome = (process.env.COPILOT_HOME || '').trim();
   const copilotDir = envHome || path.join(os.homedir(), '.copilot');
-  return path.join(copilotDir, 'burnrate-copilot');
+  return path.join(copilotDir, 'plugin-data', 'burnrate-copilot');
 }
 
 const dataDir   = getDataDir();

@@ -35,7 +35,7 @@ Commands that run a script (cost-summary, optimize, report) are thin wrappers: t
 
 ### What it does
 
-Reads monthly JSONL records from `~/.copilot/burnrate-copilot/monthly/` and prints a formatted cost summary. By default shows the current month grouped by project and Jira ticket.
+Reads monthly JSONL records from `~/.copilot/plugin-data/burnrate-copilot/monthly/` and prints a formatted cost summary. By default shows the current month grouped by project and Jira ticket.
 
 ### Invocation
 
@@ -48,7 +48,7 @@ Arguments: `2026-04` (specific month) or `2026-05 2026-05-01 2026-05-15` (month 
 
 ### Script behavior
 
-- Reads all `.jsonl` files from `~/.copilot/burnrate-copilot/monthly/`
+- Reads all `.jsonl` files from `~/.copilot/plugin-data/burnrate-copilot/monthly/`
 - Filters by month and optional date range
 - Groups by: total, by-project (`--by-project`), by-Jira (`--by-jira`), by-model
 - Outputs formatted tables matching `OUTPUT_FORMAT.md`
@@ -159,7 +159,7 @@ Interactively configures the burnrate-copilot statusline widget layout. Reads th
 
 4. **Theme options** (Powerline or Custom + powerline): `default`, `nord`, `dracula`, `catppuccin`, `minimal`
 5. **Preview** — Always shows a text layout preview before asking to confirm.
-6. **Write** — Saves to `~/.copilot/burnrate-copilot/config.json`. Changes take effect on the next turn (no restart).
+6. **Write** — Saves to `~/.copilot/plugin-data/burnrate-copilot/config.json`. Changes take effect on the next turn (no restart).
 
 ### Available widgets
 
@@ -198,7 +198,7 @@ Interactively configures the burnrate-copilot statusline widget layout. Reads th
 
 ### What it does
 
-Configures GitHub Copilot CLI to use the burnrate-copilot statusline script. Unlike burnrate-claude (which auto-configures on first SessionStart), burnrate-copilot requires manual setup — this command is the primary installation mechanism.
+Configures GitHub Copilot CLI to use the burnrate-copilot statusline script. burnrate-copilot auto-configures on first SessionStart via `ensureStatusLineConfig()`; this command is an optional manual override for reconfiguration or troubleshooting.
 
 ### Invocation
 
@@ -219,7 +219,7 @@ Configures GitHub Copilot CLI to use the burnrate-copilot statusline script. Unl
 9. **Write default `config.json`** — If `config.json` does not yet exist, writes a Standard-preset default. Existing configs are untouched.
 10. **Print summary** — Lists all changes made; reminds the user to restart Copilot CLI.
 
-> **Difference from burnrate-claude:** burnrate-claude auto-configures `settings.json` via the SessionStart hook (`statusline-config.js`) — no manual setup is normally required. burnrate-claude's `/burnrate-setup` skill is a diagnostic/troubleshooter, not an installer. burnrate-copilot's `/burnrate:setup` is the primary installation command.
+> **Difference from burnrate-claude:** both plugins auto-configure `settings.json` via their SessionStart hooks. burnrate-claude's `/burnrate-setup` skill is a diagnostic/troubleshooter, and burnrate-copilot's `/burnrate:setup` is an optional manual override for reconfiguration or troubleshooting.
 
 ---
 

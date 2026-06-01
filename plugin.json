@@ -1,9 +1,9 @@
 {
   "name": "burnrate-copilot",
-  "description": "Real-time cost and context display for GitHub Copilot CLI. Shows session cost, MTD total, context window usage, tool/agent activity, model, and git status in the statusline.",
+  "description": "Real-time cost and context display for GitHub Copilot CLI. Shows per-session token spend, month-to-date total, context window usage, model, git branch, and Jira; directly in the statusline, updated every turn.",
   "version": "0.1.0",
   "author": {
-    "name": "bripley"
+    "name": "Ben Ripley"
   },
   "license": "MIT",
   "keywords": ["hud", "statusline", "cost", "tokens", "context", "git"],

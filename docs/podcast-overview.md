@@ -118,7 +118,7 @@ The output is prioritized — the most impactful recommendation comes first with
 
 Both plugins take a deliberately minimal approach to data storage.
 
-All data is local. The session files, the monthly JSONL records, and the configuration all live in a subdirectory of the user's AI tool config directory — `~/.copilot/burnrate-copilot/` for the Copilot plugin and `~/.claude/burnrate-claude/` for the Claude plugin. Nothing is sent to any server. The plugins make no network calls of any kind.
+All data is local. The session files, the monthly JSONL records, and the configuration all live in a subdirectory of the user's AI tool config directory — `~/.copilot/plugin-data/burnrate-copilot/` for the Copilot plugin and `~/.claude/burnrate-claude/` for the Claude plugin. Nothing is sent to any server. The plugins make no network calls of any kind.
 
 Session files are ephemeral — they exist only during an active session and are deleted when the session ends cleanly. What persists long-term is only the JSONL records, which contain the final aggregated cost and attribution data for each completed session. No token-by-token history is stored.
 

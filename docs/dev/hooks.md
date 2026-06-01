@@ -44,7 +44,7 @@ All hooks are registered in `hooks.json` at the plugin root:
 ```
 
 **What it does:**
-1. Creates session file at `~/.copilot/burnrate-copilot/sessions/<id>.json`
+1. Creates session file at `~/.copilot/plugin-data/burnrate-copilot/sessions/<id>.json`
 2. Initializes zero `snapshot` (baseline for token delta)
 3. Initializes `model_tokens: {}` for multi-model tracking
 4. Captures `git_branch` via `git branch --show-current`

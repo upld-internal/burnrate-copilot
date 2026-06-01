@@ -69,7 +69,7 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
 
   const ourScript    = path.join(pluginRoot, 'scripts', 'statusline.js');
   const settingsPath = path.join(copilotDir, 'settings.json');
-  const hudDataDir   = dataDir || path.join(copilotDir, 'burnrate-copilot');
+  const hudDataDir   = dataDir || path.join(copilotDir, 'plugin-data', 'burnrate-copilot');
 
   // ---------------------------------------------------------------------------
   // Read current settings.json (or start empty)

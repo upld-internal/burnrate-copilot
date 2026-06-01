@@ -20,6 +20,20 @@ const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
 const { ensureStatusLineConfig } = require('./statusline-config');
 
+// One-time migration: move data from old path (~/.copilot/burnrate-copilot/)
+// to standard plugin-data path (~/.copilot/plugin-data/burnrate-copilot/).
+(function migrateDataDir() {
+  const copilotDir = getCopilotConfigDir();
+  const oldDir = path.join(copilotDir, 'burnrate-copilot');
+  const newDir = path.join(copilotDir, 'plugin-data', 'burnrate-copilot');
+  try {
+    if (fs.existsSync(oldDir) && !fs.existsSync(newDir)) {
+      fs.mkdirSync(path.join(copilotDir, 'plugin-data'), { recursive: true });
+      fs.renameSync(oldDir, newDir);
+    }
+  } catch (_) {}
+})();
+
 // Compute final cost for orphan recovery.
 // Strategy 1: last_known_nano_aiu → authoritative AI Credits billing
 // Strategy 2: last_known_cost     → compositor-computed cost from last statusline turn

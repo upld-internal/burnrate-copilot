@@ -1,6 +1,6 @@
 # Burnrate
 
-Real-time cost and context display for GitHub Copilot CLI. Shows per-session token spend, month-to-date total, context window usage, model, and git branch; directly in the statusline, updated every turn.
+Real-time cost and context display for GitHub Copilot CLI. Shows per-session token spend, month-to-date total, context window usage, model, git branch, and Jira; directly in the statusline, updated every turn.
 
 ![](docs/images/Statusline.png)
 
@@ -95,13 +95,13 @@ Cost in USD = `total_nano_aiu / 100_000_000_000`. This is GitHub's own authorita
 
 1. **SessionStart hook** — writes a session file capturing model, project, git branch, and a zero-baseline token snapshot
 2. **statusLine command** — on every turn, reads `ai_used.total_nano_aiu` for authoritative cost, writes `last_known_cost` and `last_known_nano_aiu` back to the session file, renders the display
-3. **SessionEnd hook** — reads `last_known_nano_aiu`, computes final cost, appends a record to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`, deletes the session file
+3. **SessionEnd hook** — reads `last_known_nano_aiu`, computes final cost, appends a record to `~/.copilot/plugin-data/burnrate-copilot/monthly/YYYY-MM.jsonl`, deletes the session file
 4. **Orphan recovery** — on next SessionStart, scans for session files left behind by Ctrl+C exits or crashes; recovers cost from `last_known_nano_aiu` and archives them to the JSONL
 
 All data is local. Plugin data folder structure:
 
 ```
-~/.copilot/burnrate-copilot/
+~/.copilot/plugin-data/burnrate-copilot/
   config.json               ← widget layout and theme
   sessions/<id>.json        ← per-session state (deleted at clean exit)
   monthly/YYYY-MM.jsonl     ← completed session records

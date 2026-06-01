@@ -65,7 +65,7 @@ burnrate-copilot is a GitHub Copilot CLI plugin that:
 ### Data directory layout
 
 ```
-~/.copilot/burnrate-copilot/
+~/.copilot/plugin-data/burnrate-copilot/
 ├── config.json             # User display configuration (widgets, theme)
 ├── sessions/<id>.json      # Live session state (deleted at clean exit)
 ├── monthly/YYYY-MM.jsonl   # Completed session records (append-only)

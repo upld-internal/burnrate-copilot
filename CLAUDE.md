@@ -112,7 +112,7 @@ SessionEnd stdin provides: `session_id`. (No cost or token data — same limitat
 
 ## Session file schema
 
-Write to `~/.copilot/burnrate-copilot/sessions/<session_id>.json`:
+Write to `~/.copilot/plugin-data/burnrate-copilot/sessions/<session_id>.json`:
 
 ```json
 {
@@ -129,7 +129,7 @@ On each statusline turn, the compositor writes `last_known_nano_aiu`, `last_know
 
 ## Monthly JSONL schema (shared with burnrate-claude)
 
-Append to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`:
+Append to `~/.copilot/plugin-data/burnrate-copilot/monthly/YYYY-MM.jsonl`:
 
 ```json
 {"id":"session-abc123","date":"2026-05-13","start_month":"2026-05","cost_usd":0.082341,"model":"claude-sonnet-4.6","project":"my-app","project_id":"-Users-you-projects-my-app"}
@@ -139,10 +139,10 @@ This schema is identical to burnrate-claude's JSONL schema, enabling a future un
 
 ## Data directory
 
-All plugin data lives in `~/.copilot/burnrate-copilot/`:
+All plugin data lives in `~/.copilot/plugin-data/burnrate-copilot/`:
 
 ```
-~/.copilot/burnrate-copilot/
+~/.copilot/plugin-data/burnrate-copilot/
   sessions/<id>.json        ← per-session state (deleted at clean SessionEnd)
   monthly/YYYY-MM.jsonl     ← completed session records
 ```

@@ -27,7 +27,7 @@ The statusline is burnrate-copilot's primary user-facing output. It renders in t
 
 ## Configuration
 
-**File:** `~/.copilot/burnrate-copilot/config.json`
+**File:** `~/.copilot/plugin-data/burnrate-copilot/config.json`
 
 ```json
 {

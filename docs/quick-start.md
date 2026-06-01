@@ -1,6 +1,6 @@
 # burnrate-copilot — Quick Start
 
-**burnrate-copilot** is a GitHub Copilot CLI plugin that makes your AI spend visible in real time. It shows per-session cost and a month-to-date total directly in the statusline footer — updated every turn — and stores everything locally with no external calls.
+Real-time cost and context display for GitHub Copilot CLI. Shows per-session token spend, month-to-date total, context window usage, model, git branch, and Jira; directly in the statusline, updated every turn.
 
 ![](images/Statusline.png)
 
@@ -8,8 +8,8 @@
 
 ## Requirements
 
-- GitHub Copilot CLI (v1.0.56 or higher)
-- Node.js ≥ 18 on your PATH (most developers already have this)
+- GitHub Copilot CLI (v1.0.56 or higher). Use `/update` to get latest.
+- Node.js ≥ 18 on your PATH (most will already have this)
 
 ---
 
@@ -29,7 +29,7 @@ The plugin auto-configures itself on the first session start. It writes the `sta
 
 **3. (Optional) Customize your layout**
 
-Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build a custom widget layout. Configuration is saved to `~/.copilot/burnrate-copilot/config.json`. You can also modify this file directly.
+Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build a custom widget layout. Configuration is saved to `~/.copilot/plugin-data/burnrate-copilot/config.json`. You can also modify this file directly.
 
 ---
 
@@ -37,12 +37,12 @@ Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build 
 
 | Segment | Description |
 |---|---|
-| `Session: $0.08` | Cost for the current session |
-| `May: $6.21 (~$41/mo)` | MTD total across all completed sessions + linear projection |
+| `Sonnet 4.6 · high` | Active model and effort |
+| `Ctx: 48.2K / 160K (30%)` | Context window utilization (used / total) & percent |
+| `main ✎` | Git branch & dirty indicator (uncommitted local changes) |
+| `Session: $11.13 (2h 4m)` | Cost for the current session & elapsed time |
+| `Jun $11.13 (~$323/mo)` | MTD total across all completed sessions + linear projection |
 | `8m` | Session elapsed time |
-| `Sonnet 4.6` | Active model |
-| `28%` | Context window utilization (used / total) |
-| `main ✎` | Git branch + indicator when there are uncommitted changes |
 
 The Jira ticket widget (`JIRA-4821`) also appears when your branch follows a `[PROJ-NNN]` naming convention — see [Jira Integration](#jira-integration) below.
 
@@ -54,7 +54,7 @@ All skills are invoked inside the Copilot CLI chat. The `/burnrate:` prefix is t
 
 ### `/burnrate:burnrate-cost-summary`
 
-Monthly spend report grouped by project, model, and optionally Jira ticket. Reads from `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`.
+Monthly spend report grouped by project, model, and optionally Jira ticket. Reads from `~/.copilot/plugin-data/burnrate-copilot/monthly/YYYY-MM.jsonl`.
 
 ```
 /burnrate:burnrate-cost-summary              ← current month
@@ -90,7 +90,7 @@ Packages your session data, config, and debug log into a zip file for bug report
 
 ### `/burnrate:configure`
 
-Interactive statusline configurator. Choose from Minimal, Standard, Full, or Powerline presets, or assemble a custom layout widget by widget. Writes to `~/.copilot/burnrate-copilot/config.json`.
+Interactive statusline configurator. Choose from Minimal, Standard, Full, or Powerline presets, or assemble a custom layout widget by widget. Writes to `~/.copilot/plugin-data/burnrate-copilot/config.json`.
 
 ---
 
@@ -102,14 +102,14 @@ Manually (re-)configures the `statusLine` entry in `~/.copilot/settings.json` to
 
 ## Jira Integration
 
-When you work on a branch named after a Jira ticket (e.g., `feature/PLAT-4821-new-auth`), burnrate-copilot automatically attributes session cost to that ticket. The attribution flows through to `/burnrate:burnrate-cost-summary` and the monthly JSONL, enabling per-ticket cost reporting.
+When you work on a branch named after a Jira ticket (e.g., `feature/JIRA-4821-new-auth`), burnrate-copilot automatically attributes session cost to that ticket. The attribution flows through to `/burnrate:burnrate-cost-summary` and the monthly JSONL, enabling per-ticket cost reporting.
 
-**Optional config** in `~/.copilot/burnrate-copilot/config.json`:
+**Optional config** in `~/.copilot/plugin-data/burnrate-copilot/config.json`:
 
 ```json
 {
   "jira": {
-    "project_keys": ["PLAT", "ENG", "INFRA"]
+    "project_keys": ["JIRA", "ENG", "INFRA"]
   }
 }
 ```
@@ -130,10 +130,10 @@ To show the active ticket in the statusline, add the `jira_ticket` widget to you
 
 ## Data directory
 
-All plugin data lives in `~/.copilot/burnrate-copilot/`. Nothing is written outside this directory and nothing is sent over the network.
+All plugin data lives in `~/.copilot/plugin-data/burnrate-copilot/`. Nothing is written outside this directory and nothing is sent over the network.
 
 ```
-~/.copilot/burnrate-copilot/
+~/.copilot/plugin-data/burnrate-copilot/
   config.json               ← widget layout and theme configuration
   sessions/<id>.json        ← per-session state (deleted at clean SessionEnd)
   monthly/YYYY-MM.jsonl     ← completed session records (one line per session)
@@ -169,7 +169,7 @@ The statusline never crashes or shows blank. If something goes wrong:
 If you see `? session`, check that `sessions/` contains a file for the current session ID:
 
 ```bash
-ls ~/.copilot/burnrate-copilot/sessions/
+ls ~/.copilot/plugin-data/burnrate-copilot/sessions/
 ```
 
 ---

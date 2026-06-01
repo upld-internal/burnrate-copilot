@@ -17,11 +17,11 @@ const { spawnSync } = require('child_process');
 // ---------------------------------------------------------------------------
 
 let tmpHome;
-let tmpDataDir;  // tmpHome/burnrate-copilot/
+let tmpDataDir;  // tmpHome/plugin-data/burnrate-copilot/
 
 before(() => {
   tmpHome    = fs.mkdtempSync(path.join(os.tmpdir(), 'burnrate-copilot-test-'));
-  tmpDataDir = path.join(tmpHome, 'burnrate-copilot');
+  tmpDataDir = path.join(tmpHome, 'plugin-data', 'burnrate-copilot');
   fs.mkdirSync(path.join(tmpDataDir, 'sessions'), { recursive: true });
   fs.mkdirSync(path.join(tmpDataDir, 'monthly'),  { recursive: true });
 });

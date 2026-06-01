@@ -4,7 +4,7 @@
   "description": "Real-time cost and context display for GitHub Copilot CLI",
   "license": "MIT",
   "keywords": ["copilot-cli", "statusline", "hud", "cost", "tokens", "github-copilot"],
-  "author": "bripley",
+  "author": "Ben Ripley",
   "engines": {
     "node": ">=18.0.0"
   },
