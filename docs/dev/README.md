@@ -15,6 +15,7 @@
 | [Hook Scripts](./hooks.md) | Each hook handler: what it does, when it fires, what it writes |
 | [Monthly Records](./monthly-records.md) | JSONL schema, fields, and query patterns |
 | [Data Points & Optimize Relevance](./data-points.md) | Every tracked field with optimize skill applicability |
+| [Skills & Commands Reference](./skills.md) | All five commands: invocation, workflow, script behavior, widget catalog |
 | [Copilot CLI Internals](./copilot-internals.md) | Experimental mode, feature flags, plugin architecture |
 
 ---
