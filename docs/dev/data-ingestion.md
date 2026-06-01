@@ -100,9 +100,16 @@ The authoritative record of everything that happened in a session. Append-only J
 | `total_cache_read_tokens` | Cumulative cache hits |
 | `total_cache_write_tokens` | Cumulative cache storage |
 | `model.id` | The **currently active** model (may change mid-session) |
-| `used_percentage` | Context window fill level (0–100) |
+| `used_percentage` | Current context / full `context_window_size` (0–100) |
+| `current_context_tokens` | **Exact** current active context size in tokens |
+| `current_context_used_percentage` | `current_context_tokens / displayed_context_limit` — **what Copilot's own UI shows** |
+| `displayed_context_limit` | Effective context limit enforced by Copilot (typically 80% of model max) |
+| `remaining_tokens` | Exact remaining token budget (pre-computed) |
+| `remaining_percentage` | `100 - used_percentage` (pre-computed) |
 | `total_premium_requests` | Fractional premium request count |
 | `last_call_input_tokens` | Per-turn delta (this turn only) |
+
+**Why `current_context_used_percentage` differs from `used_percentage`:** `used_percentage` is relative to the full model context window (e.g. 200K). `current_context_used_percentage` is relative to `displayed_context_limit` (e.g. 160K) — the effective cap Copilot enforces. The latter matches what users see in Copilot's own interface and warns earlier.
 
 **Key field:** `ai_used.total_nano_aiu` — GitHub's authoritative billing figure. Cost in USD = `nano_aiu / 100_000_000_000`. No pricing table needed.
 

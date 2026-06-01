@@ -32,11 +32,19 @@ function fmtTokens(n) {
 }
 
 // context_window — context usage percentage, bar, or token count.
-// opts.format:     "percent" (default) | "bar" | "tokens"
+// opts.format:     "percent" (default) | "bar" | "tokens" | "full"
 // opts.show_label: boolean (default true)
+//
+// Prefers Copilot's pre-calculated fields (align with Copilot's own UI):
+//   current_context_used_percentage — % against displayed_context_limit (what Copilot shows)
+//   current_context_tokens          — exact current context size
+//   displayed_context_limit         — effective context limit (typically 80% of model max)
+// Falls back to used_percentage / context_window_size for older CLI versions.
 function context_window(stdinData, sessionData, opts) {
   const ctx = stdinData.context_window || {};
-  const pct = ctx.used_percentage;
+
+  // Prefer current_context_used_percentage (Copilot's own UI metric) over used_percentage
+  const pct = ctx.current_context_used_percentage ?? ctx.used_percentage;
   if (pct == null) return null;
 
   const showLabel = opts.show_label !== false;
@@ -52,8 +60,9 @@ function context_window(stdinData, sessionData, opts) {
   }
 
   if (format === 'tokens') {
-    const max  = ctx.context_window_size || null;
-    const used = max != null ? Math.round(max * pct / 100) : null;
+    // Use pre-computed fields directly; fall back to back-calculation if unavailable
+    const used = ctx.current_context_tokens ?? (ctx.context_window_size != null ? Math.round(ctx.context_window_size * (ctx.used_percentage ?? 0) / 100) : null);
+    const max  = ctx.displayed_context_limit ?? ctx.context_window_size ?? null;
     if (max != null && used != null) {
       const value = opts._powerline
         ? `${fmtTokens(used)} / ${fmtTokens(max)}`
@@ -65,15 +74,15 @@ function context_window(stdinData, sessionData, opts) {
   }
 
   if (format === 'full') {
-    const max  = ctx.context_window_size || null;
-    const used = max != null ? Math.round(max * pct / 100) : null;
+    const used = ctx.current_context_tokens ?? (ctx.context_window_size != null ? Math.round(ctx.context_window_size * (ctx.used_percentage ?? 0) / 100) : null);
+    const max  = ctx.displayed_context_limit ?? ctx.context_window_size ?? null;
     if (max != null && used != null) {
       const value = opts._powerline
         ? `${fmtTokens(used)} / ${fmtTokens(max)} (${pct}%)`
         : `${c}${B}${fmtTokens(used)}${R}${D} / ${fmtTokens(max)}${R} ${c}${B}(${pct}%)${R}`;
       return withLabel('Ctx', value, showLabel, opts._powerline);
     }
-    // Fallback to percent when window size is unavailable
+    // Fallback to percent when token fields are unavailable
     const value = opts._powerline ? `${pct}%` : `${c}${B}${pct}%${R}`;
     return withLabel('Ctx', value, showLabel, opts._powerline);
   }
