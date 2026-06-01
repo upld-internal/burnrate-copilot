@@ -78,15 +78,13 @@ On every turn, Copilot runs the `statusLine` command and pipes a JSON object to 
 }
 ```
 
-**Critical difference from Claude Code:** There is no `cost.total_cost_usd` field. Copilot does not provide a pre-computed USD amount. Cost must be computed from the four token types in `context_window`.
+**Key field:** `ai_used.total_nano_aiu` — GitHub's authoritative billing figure added June 2026. Cost in USD = `nano_aiu / 100_000_000_000`. No pricing table or token math needed. This is the same figure that appears on the GitHub billing dashboard.
 
-Claude Code cache field names vs Copilot cache field names:
+Cache field names for reference:
 | | Claude Code | Copilot CLI |
 |---|---|---|
 | Cache writes | `cache_creation_input_tokens` | `total_cache_write_tokens` |
 | Cache reads | `cache_read_input_tokens` | `total_cache_read_tokens` |
-
-The `computeSessionCost` function in `~/Projects/cost-display/scripts/pricing.js` uses Claude's field names. Write a Copilot-specific variant using Copilot's field names.
 
 ## Hook system
 
@@ -119,21 +117,15 @@ Write to `~/.copilot/burnrate-copilot/sessions/<session_id>.json`:
 ```json
 {
   "session_id": "session-abc123",
-  "started_at": "2026-05-13T10:00:00Z",
-  "start_month": "2026-05",
+  "started_at": "2026-06-01T10:00:00Z",
+  "start_month": "2026-06",
   "model_id": "claude-sonnet-4.6",
   "project": "my-app",
-  "project_id": "-Users-you-projects-my-app",
-  "snapshot": {
-    "total_input_tokens": 0,
-    "total_output_tokens": 0,
-    "total_cache_write_tokens": 0,
-    "total_cache_read_tokens": 0
-  }
+  "project_id": "-Users-you-projects-my-app"
 }
 ```
 
-The `snapshot` is a zero baseline (tokens start at 0 each session). On each statusline turn, the compositor computes cost as (current totals − snapshot). Write `last_known_cost`, `last_known_model`, `last_known_at` back to the session file on every turn — these are used by SessionEnd and orphan recovery.
+On each statusline turn, the compositor writes `last_known_nano_aiu`, `last_known_cost`, `last_known_model`, `last_known_at`, and `last_known_tokens` back to the session file. These are used by SessionEnd and orphan recovery. `last_known_nano_aiu` is the primary cost source; `last_known_cost` is the pre-computed USD value.
 
 ## Monthly JSONL schema (shared with burnrate-claude)
 
@@ -151,11 +143,6 @@ All plugin data lives in `~/.copilot/burnrate-copilot/`:
 
 ```
 ~/.copilot/burnrate-copilot/
-  pricing.json              ← model pricing table (input/output/cache rates)
   sessions/<id>.json        ← per-session state (deleted at clean SessionEnd)
   monthly/YYYY-MM.jsonl     ← completed session records
 ```
-
-## Pricing table
-
-`pricing.json` uses the same schema as burnrate-claude but with Copilot model IDs and GitHub Copilot AI Credits rates. Model IDs in Copilot stdin use the format `claude-sonnet-4.6` (without the `us.anthropic.` Bedrock prefix).

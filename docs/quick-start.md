@@ -6,7 +6,7 @@
 $0.08 session  |  May: $6.21 (~$41/mo)  |  claude-sonnet-4.6  |  28%  |  8m  |  main ✎
 ```
 
-The plugin computes cost from the token breakdown Copilot CLI pipes to the statusline on every turn, multiplies by the current GitHub AI Credits rates, and accumulates completed sessions into a monthly JSONL log. No network calls, no telemetry, nothing leaves your machine.
+The plugin reads GitHub's authoritative `ai_used.total_nano_aiu` billing field from the statusline stdin on every turn. No token math, no rates table — cost is `nanoAiu / 100,000,000,000` USD.
 
 ![](images/Statusline.png)
 
@@ -49,7 +49,7 @@ Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build 
 
 | Segment | Description |
 |---|---|
-| `$0.08 session` | Cost for the current session, computed from token deltas × pricing |
+| `$0.08 session` | Cost for the current session from GitHub's AI Credits billing (`ai_used.total_nano_aiu`) |
 | `May: $6.21 (~$41/mo)` | Month-to-date total across all completed sessions + linear projection |
 | `claude-sonnet-4.6` | Active model ID |
 | `28%` | Context window utilization (used / total) |
@@ -146,29 +146,10 @@ All plugin data lives in `~/.copilot/burnrate-copilot/`. Nothing is written outs
 
 ```
 ~/.copilot/burnrate-copilot/
-  pricing.json              ← model pricing table (override rates here)
   config.json               ← widget layout and theme configuration
   sessions/<id>.json        ← per-session state (deleted at clean SessionEnd)
   monthly/YYYY-MM.jsonl     ← completed session records (one line per session)
   debug/hooks.jsonl         ← hook debug log (when COPILOT_HUD_DEBUG=1)
-```
-
----
-
-## Pricing maintenance
-
-Model pricing is sourced from [GitHub's official billing docs](https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing) and stored in `pricing.json`. It does not update automatically.
-
-```bash
-node scripts/update-pricing.js          # diff local vs current GitHub docs
-node scripts/update-pricing.js --apply  # write changes to pricing.json
-```
-
-To verify which model IDs are active on your plan:
-
-```bash
-bash scripts/verify-model-ids.sh          # scan historical sessions
-bash scripts/verify-model-ids.sh --test   # also send a live test prompt per model
 ```
 
 ---
@@ -193,9 +174,8 @@ The statusline never crashes or shows blank. If something goes wrong:
 | Condition | Display |
 |---|---|
 | Normal operation | `$0.08 session \| May: $6.21 (~$41/mo)` |
-| No session file yet | `? session \| May: $6.21` |
+| No session file yet | `$0.00 session \| May: $6.21` |
 | Monthly file unreadable | `$0.08 session \| May: ?` |
-| Pricing not found for model | Session cost shows `?` |
 | Stdin parse failure | `[burnrate error]` |
 
 If you see `? session`, check that `sessions/` contains a file for the current session ID:

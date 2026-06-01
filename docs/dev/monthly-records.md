@@ -22,74 +22,45 @@ Records are appended to the file matching `start_month`. A session that starts i
 ```json
 {
   "id": "session-uuid",
-  "date": "2026-05-20",
-  "start_month": "2026-05",
+  "date": "2026-06-01",
+  "start_month": "2026-06",
 
-  "cost_usd": 14.438927,
+  "cost_usd": 0.069879750,
   "cost_pending": false,
-  "cost_method": "multi_model",
+  "cost_method": "ai_credits",
 
   "model": "claude-sonnet-4.6",
   "project": "my-app",
   "project_id": "-Users-bripley-Projects-my-app",
 
   "final_tokens": {
-    "total_input_tokens": 3867120,
-    "total_output_tokens": 28931,
-    "total_cache_write_tokens": 256942,
-    "total_cache_read_tokens": 3576001
+    "total_input_tokens": 85386,
+    "total_output_tokens": 98,
+    "total_cache_write_tokens": 12397,
+    "total_cache_read_tokens": 72980
   },
 
-  "model_metrics": {
-    "claude-sonnet-4.6": {
-      "cost": 12.45,
-      "hasPricing": true,
-      "tokens": { "input": 3725610, "output": 25630, "cache_write": 256942, "cache_read": 3467457 },
-      "requests": 50
-    },
-    "gpt-5.5": {
-      "cost": 1.99,
-      "hasPricing": true,
-      "tokens": { "input": 141510, "output": 3301, "cache_write": 0, "cache_read": 108544 },
-      "requests": 5
-    }
-  },
-
-  "subagents_detail": [
-    { "name": "explore", "model": "claude-haiku-4.5", "tokens": 500000, "cost_usd": 0.62, "duration_ms": 60000, "tool_calls": 20 },
-    { "name": "gsd-executor", "model": "claude-sonnet-4.6", "tokens": 3000000, "cost_usd": 9.43, "duration_ms": 400000, "tool_calls": 80 }
-  ],
-
-  "compaction_cost": {
-    "count": 2,
-    "total_cost_usd": 0.98,
-    "compactions": [
-      { "model": "claude-sonnet-4.6", "input_tokens": 131504, "output_tokens": 2706, "cost_usd": 0.47, "duration_ms": 8500 }
-    ]
-  },
-
-  "jira_costs": { "PROJ-123": 10.25, "PROJ-456": 4.19 },
+  "jira_costs": { "PROJ-123": 0.05, "PROJ-456": 0.02 },
   "jira_key": "PROJ-123",
   "jira_source": "branch",
   "jira_keys_seen": ["PROJ-123", "PROJ-456"],
 
-  "turn_count": 29,
-  "tool_counts": { "bash": 60, "view": 18, "edit": 12, "create": 5 },
-  "ext_counts": { ".js": 10, ".md": 5, ".json": 2 },
-  "subagent_count": 3,
-  "subagent_types": { "explore": 2, "general-purpose": 1 },
+  "turn_count": 5,
+  "tool_counts": { "bash": 12, "view": 8, "edit": 4 },
+  "ext_counts": { ".js": 3, ".md": 1 },
+  "subagent_count": 1,
+  "subagent_types": { "explore": 1 },
   "turn_interval_p50_ms": 45000,
-  "turn_interval_max_ms": 300000,
-  "turn_interval_count": 28,
-  "compaction_count": 2,
+  "turn_interval_max_ms": 120000,
+  "turn_interval_count": 4,
+  "compaction_count": 0,
   "git_branch": "feature/auth",
-  "prompt_count": 29,
+  "prompt_count": 5,
   "prompt_length_p50_bytes": 312,
-  "prompt_length_max_bytes": 4820,
-  "web_search_requests": 3,
-  "web_fetch_requests": 1,
+  "prompt_length_max_bytes": 820,
+  "web_search_requests": 1,
   "tool_duration_p50_ms": 145,
-  "tool_duration_max_ms": 8200,
+  "tool_duration_max_ms": 2200,
 
   "turn_tokens": [
     { "turn": 1, "input": 1024,  "output": 312, "cache_write": 0,   "cache_read": 0     },
@@ -112,8 +83,8 @@ Records are appended to the file matching `start_month`. A session that starts i
 | `date` | string | ISO date when session ended |
 | `start_month` | string | `YYYY-MM` — determines which file this record lives in |
 | `cost_usd` | number | Total session cost in USD |
-| `cost_pending` | boolean | `true` if cost could not be computed (missing pricing) |
-| `cost_method` | string | How cost was computed: `multi_model`, `model_tokens`, `single_model`, `last_known` |
+| `cost_pending` | boolean | `true` if no cost data was available (no-turn session) |
+| `cost_method` | string | How cost was computed: `ai_credits`, `last_known`, `none` |
 | `model` | string | Last-known model ID (e.g., `claude-sonnet-4.6`) |
 
 ### Project & Location
@@ -129,22 +100,6 @@ Records are appended to the file matching `start_month`. A session that starts i
 | Field | Type | Description |
 |-------|------|-------------|
 | `final_tokens` | object | Raw cumulative token totals at session end |
-| `model_metrics` | object | Per-model cost breakdown (from Strategy 1 or 2) |
-
-### Subagent Data
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `subagents_detail` | array | Per-subagent cost/token/duration breakdown (from events.jsonl) |
-| `subagent_count` | number | Total subagents spawned |
-| `subagent_types` | object | Map of agent type → count |
-
-### Compaction Data
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `compaction_cost` | object | Per-compaction breakdown (informational, already included in cost_usd) |
-| `compaction_count` | number | Number of compactions in the session |
 
 ### Jira Attribution
 
@@ -203,25 +158,16 @@ for (const line of lines.filter(Boolean)) {
 }
 ```
 
-### Find sessions with high subagent cost
+### Find expensive sessions
 
 ```javascript
-const expensive = records.filter(r =>
-  r.subagents_detail && r.subagents_detail.some(s => s.cost_usd > 5)
-);
+const expensive = records.filter(r => r.cost_usd > 1.00);
 ```
 
-### Model mix analysis
+### Filter by cost method
 
 ```javascript
-const modelCosts = {};
-for (const r of records) {
-  if (r.model_metrics) {
-    for (const [model, data] of Object.entries(r.model_metrics)) {
-      modelCosts[model] = (modelCosts[model] || 0) + data.cost;
-    }
-  }
-}
+const orphans = records.filter(r => r.cost_method === 'last_known');
 ```
 
 ---
@@ -229,11 +175,11 @@ for (const r of records) {
 ## Notes
 
 - Fields are omitted (not set to null) when data is unavailable. Always check existence before access.
-- `cost_method: "multi_model"` records have `model_metrics`. Other methods may not.
-- `subagents_detail` is only present when events.jsonl contains `subagent.completed` events.
-- `compaction_cost` is only present when the session had compactions with `compactionTokensUsed` data.
+- `cost_method: "ai_credits"` is the normal case for sessions since the June 2026 AI Credits billing transition.
+- `cost_method: "last_known"` occurs when a session exits without a final statusline fire (e.g. Ctrl+C before first turn completes).
+- `cost_method: "none"` occurs for zero-turn sessions (cost is $0, which is correct — nothing was billed).
 - `web_search_requests` and `web_fetch_requests` are only written when > 0.
 - `prompt_count`/`prompt_length_*` are only written when at least one non-empty prompt was submitted.
 - `tool_duration_p50_ms`/`tool_duration_max_ms` are only written when at least one tool round-trip completed.
 - `turn_tokens` is only written when at least one StatusLine fire registered a non-zero token delta. Capped at the last 100 turns.
-- `recovered: true` records may have less accurate cost (depend on whatever data was in the session file at crash time).
+- `recovered: true` records may have less precise cost (depends on the session file state at crash time).

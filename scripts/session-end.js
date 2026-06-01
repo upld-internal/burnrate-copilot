@@ -2,88 +2,34 @@
 'use strict';
 // session-end.js — Copilot CLI SessionEnd hook.
 // Reads the session file and appends a record to the monthly JSONL file.
-// cost_usd is 0 until pricing is resolved in Phase 6.
-// final_tokens is preserved so cost can be recomputed retroactively.
+// Cost is derived from last_known_nano_aiu (written by compositor every turn).
+// final_tokens is preserved for cache efficiency analysis.
 //
 // SessionEnd stdin schema (Copilot): only session_id / sessionId is provided.
-// All cost/token data comes from the session file (written by statusline.js
-// on every turn via last_known_tokens).
+// All cost data comes from the session file (written by statusline.js on every turn).
 
 const fs   = require('fs');
 const path = require('path');
 const { getDataDir } = require('./paths');
-const { loadPricing, computeCost, computeSessionCost } = require('./pricing');
-const { computeMultiModelCostForSession, parseSubagentCompletions, parseCompactionCosts, parseShutdownEnriched, loadPricingTable } = require('./events-parser');
+const { parseShutdownEnriched } = require('./events-parser');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
 
 const dataDir = getDataDir();
 
-// Compute final cost — tries multi-model (events.jsonl) first, falls back to single-model.
-// Returns { cost, model_metrics, cost_method }
-function computeFinalCostWithMetrics(session, sessionId, modelId, dataDir) {
-  // Strategy 1: Multi-model cost from events.jsonl session.shutdown.modelMetrics
-  // This is the most accurate method — per-model rates applied to per-model tokens.
-  try {
-    const pricingTable = loadPricingTable(dataDir, __dirname);
-    const result = computeMultiModelCostForSession(sessionId, pricingTable);
-    if (result && result.total > 0) {
-      return {
-        cost: result.total,
-        model_metrics: result.perModel,
-        cost_method: 'multi_model',
-      };
-    }
-  } catch (_) {}
-
-  // Strategy 2: model_tokens from session file (real-time per-model tracking)
-  // Available after Ctrl+C since compositor writes model_tokens every turn.
-  if (session.model_tokens && Object.keys(session.model_tokens).length) {
-    try {
-      const pricingTable = loadPricingTable(dataDir, __dirname);
-      let total = 0;
-      let hasPricing = false;
-      const perModel = {};
-      for (const [mid, tokens] of Object.entries(session.model_tokens)) {
-        const mp = pricingTable[mid];
-        if (mp) {
-          hasPricing = true;
-          const cost = computeCost(tokens.input || 0, tokens.output || 0, tokens.cache_write || 0, tokens.cache_read || 0, mp);
-          total += cost;
-          perModel[mid] = { cost, hasPricing: true, tokens };
-        } else {
-          perModel[mid] = { cost: 0, hasPricing: false, tokens };
-        }
-      }
-      if (hasPricing && total > 0) {
-        return {
-          cost: total,
-          model_metrics: perModel,
-          cost_method: 'model_tokens',
-        };
-      }
-    } catch (_) {}
+// Compute final cost from session file.
+// Strategy 1: last_known_nano_aiu → authoritative AI Credits billing
+// Strategy 2: last_known_cost     → compositor-computed cost from last statusline turn
+function computeFinalCost(session) {
+  const nanoAiu = session.last_known_nano_aiu;
+  if (typeof nanoAiu === 'number' && nanoAiu > 0) {
+    return {
+      cost: nanoAiu / 100_000_000_000,
+      cost_method: 'ai_credits',
+    };
   }
-
-  // Strategy 3: Single-model pricing from last_known_tokens (fallback)
-  // Used when both events.jsonl and model_tokens are unavailable
-  const tokens = session.last_known_tokens;
-  const snap   = session.snapshot;
-  if (tokens && snap) {
-    const pricing = loadPricing(modelId, dataDir, __dirname);
-    if (pricing) {
-      return {
-        cost: computeSessionCost(tokens, snap, pricing),
-        model_metrics: null,
-        cost_method: 'single_model',
-      };
-    }
-  }
-
-  // Strategy 4: Use last_known_cost from compositor (last resort)
   return {
     cost: session.last_known_cost || 0,
-    model_metrics: null,
     cost_method: session.last_known_cost ? 'last_known' : 'none',
   };
 }
@@ -114,8 +60,7 @@ process.stdin.on('end', () => {
     fs.mkdirSync(monthlyDir, { recursive: true });
     const monthlyFile = path.join(monthlyDir, startMonth + '.jsonl');
 
-    // Compute cost — prefers multi-model (events.jsonl) over single-model
-    const costResult = computeFinalCostWithMetrics(session, sessionId, modelId, dataDir);
+    const costResult = computeFinalCost(session);
 
     const record = {
       id:           sessionId,
@@ -128,12 +73,9 @@ process.stdin.on('end', () => {
       project:      session.last_known_project    || session.project    || undefined,
       project_id:   session.last_known_project_id || session.project_id || undefined,
       final_tokens: session.last_known_tokens     || undefined,
-      model_metrics: costResult.model_metrics     || undefined,
     };
 
     // Jira attribution — include per-ticket cost breakdown when tracked.
-    // Fall back to a single-key record when jira_costs map is absent but
-    // last_known_jira_key was set (e.g. only one ticket the whole session).
     const jiraCosts = normalizeJiraCosts(session.jira_costs);
     if (!Object.keys(jiraCosts).length && session.last_known_jira_key && record.cost_usd > 0) {
       jiraCosts[session.last_known_jira_key] = Math.round(record.cost_usd * 1e6) / 1e6;
@@ -151,20 +93,6 @@ process.stdin.on('end', () => {
 
     // Telemetry fields — turn counts, tool usage, file extensions, timing
     Object.assign(record, buildTelemetryFields(session));
-
-    // Subagent cost attribution — per-agent breakdown from events.jsonl
-    try {
-      const pricingTable = loadPricingTable(dataDir, __dirname);
-      const subagentsDetail = parseSubagentCompletions(sessionId, pricingTable);
-      if (subagentsDetail && subagentsDetail.length > 0) {
-        record.subagents_detail = subagentsDetail;
-      }
-      // Compaction cost data
-      const compactionData = parseCompactionCosts(sessionId, pricingTable);
-      if (compactionData) {
-        record.compaction_cost = compactionData;
-      }
-    } catch (_) {}
 
     // Enriched fields from session.shutdown — files, reasoning, context breakdown, etc.
     try {

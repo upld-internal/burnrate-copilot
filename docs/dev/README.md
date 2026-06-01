@@ -10,7 +10,7 @@
 |------|-------------|
 | [Architecture Overview](#architecture-overview) | High-level system design and data flow |
 | [Data Ingestion](./data-ingestion.md) | All data sources: hooks, events.jsonl, statusline stdin |
-| [Cost Calculation](./cost-calculation.md) | How tokens become dollars: pricing, multi-model, fallbacks |
+| [Cost Calculation](./cost-calculation.md) | How AI Credits billing works: nano-AIU to USD, fallbacks |
 | [Statusline & Widgets](./statusline.md) | Custom statusline renderer, widget catalog, configuration |
 | [Hook Scripts](./hooks.md) | Each hook handler: what it does, when it fires, what it writes |
 | [Monthly Records](./monthly-records.md) | JSONL schema, fields, and query patterns |
@@ -67,7 +67,6 @@ burnrate-copilot is a GitHub Copilot CLI plugin that:
 ```
 ~/.copilot/burnrate-copilot/
 ├── config.json             # User display configuration (widgets, theme)
-├── pricing.json            # Model pricing table (user override)
 ├── sessions/<id>.json      # Live session state (deleted at clean exit)
 ├── monthly/YYYY-MM.jsonl   # Completed session records (append-only)
 └── debug/
@@ -80,10 +79,9 @@ burnrate-copilot is a GitHub Copilot CLI plugin that:
 ## Key Design Principles
 
 1. **Never crash Copilot.** All hook scripts and the statusline catch errors silently. A broken plugin must never block the user's workflow.
-2. **Graceful degradation.** Cost calculation has a 4-level fallback chain. If the best data source is unavailable, the next-best is used automatically.
-3. **No network calls.** All data is local. Pricing is bundled in `pricing.json`.
-4. **Cumulative tokens.** Copilot CLI's `context_window.total_*_tokens` are session-lifetime cumulative values that include subagent usage and survive compaction. Cost is computed as `(current - snapshot) × rate`.
-5. **Multi-model accuracy.** Sessions can use multiple models (parent + subagents). Per-model token tracking via `model_tokens` map provides accurate cost even when models differ by 5×.
+2. **Graceful degradation.** Cost falls back from `last_known_nano_aiu` to `last_known_cost`. Both survive Ctrl+C.
+3. **No network calls.** All data is local. Cost comes from GitHub's own billing field in the statusline stdin.
+4. **Authoritative billing.** Cost is read directly from `ai_used.total_nano_aiu` — GitHub's own billing figure. No token math, no per-model rate tables.
 
 ---
 
@@ -94,8 +92,8 @@ burnrate-copilot/
 ├── scripts/
 │   ├── statusline.js          # Entry point: Copilot calls this every turn
 │   ├── compositor.js          # Renders all widgets, manages session state
-│   ├── pricing.js             # loadPricing, computeCost, getMtdAndProjected
-│   ├── events-parser.js       # Parse events.jsonl (multi-model, subagents, compaction)
+│   ├── pricing.js             # getMtdAndProjected (reads monthly JSONL)
+│   ├── events-parser.js       # Parse events.jsonl (enriched fields from shutdown)
 │   ├── session-start.js       # SessionStart hook handler
 │   ├── session-end.js         # SessionEnd hook handler (writes monthly JSONL)
 │   ├── user-prompt.js         # UserPromptSubmitted hook
@@ -122,7 +120,6 @@ burnrate-copilot/
 │       └── custom.js          # custom_text, custom_symbol, custom_command, separator, newline
 ├── hooks.json                 # Hook registrations (Copilot reads this)
 ├── plugin.json                # Plugin metadata
-├── pricing.json               # Bundled pricing table (22 models)
 ├── skills/                    # Copilot skills (/burnrate:*)
 ├── commands/                  # CLI commands
 ├── tests/                     # Node.js test runner tests

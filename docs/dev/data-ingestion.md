@@ -104,7 +104,7 @@ The authoritative record of everything that happened in a session. Append-only J
 | `total_premium_requests` | Fractional premium request count |
 | `last_call_input_tokens` | Per-turn delta (this turn only) |
 
-**Critical difference from Claude Code:** There is no `cost.total_cost_usd` field. Cost must be computed from the four token types × pricing rates.
+**Key field:** `ai_used.total_nano_aiu` — GitHub's authoritative billing figure. Cost in USD = `nano_aiu / 100_000_000_000`. No pricing table needed.
 
 **Critical fact:** Token totals are cumulative across compactions. They never reset. Our delta calculation `(current - snapshot)` is always correct.
 

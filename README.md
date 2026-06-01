@@ -76,35 +76,32 @@ Shows:
 
 ## How it works
 
-Copilot CLI does not provide a pre-computed USD cost in its statusline payload — unlike Claude Code, which exposes `cost.total_cost_usd` directly. Instead, Copilot exposes a full token breakdown:
+Copilot CLI provides cost data directly via its AI Credits billing system. The statusline payload includes:
 
 ```json
 {
-  "context_window": {
-    "total_input_tokens": 24100,
-    "total_output_tokens": 8420,
-    "total_cache_read_tokens": 5200,
-    "total_cache_write_tokens": 1100
+  "ai_used": {
+    "total_nano_aiu": 6987975000,
+    "formatted": "6.99"
   }
 }
 ```
 
-This plugin computes cost from these four token types using a local pricing table (`pricing.json`) sourced from [GitHub's official billing docs](https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing). This is actually more transparent than the Claude approach — every token type and its cost is visible.
+Cost in USD = `total_nano_aiu / 100_000_000_000`. This is GitHub's own authoritative billing figure — the same number that appears on your GitHub billing dashboard. No pricing table or token math needed.
 
 ---
 
 ## Architecture
 
 1. **SessionStart hook** — writes a session file capturing model, project, git branch, and a zero-baseline token snapshot
-2. **statusLine command** — on every turn, computes cost from (current tokens − baseline), writes `last_known_cost` and `last_known_tokens` back to the session file, renders the display
-3. **SessionEnd hook** — reads `last_known_tokens`, computes final cost, appends a record to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`, deletes the session file
-4. **Orphan recovery** — on next SessionStart, scans for session files left behind by Ctrl+C exits or crashes; recovers cost from `last_known_tokens` and archives them to the JSONL
+2. **statusLine command** — on every turn, reads `ai_used.total_nano_aiu` for authoritative cost, writes `last_known_cost` and `last_known_nano_aiu` back to the session file, renders the display
+3. **SessionEnd hook** — reads `last_known_nano_aiu`, computes final cost, appends a record to `~/.copilot/burnrate-copilot/monthly/YYYY-MM.jsonl`, deletes the session file
+4. **Orphan recovery** — on next SessionStart, scans for session files left behind by Ctrl+C exits or crashes; recovers cost from `last_known_nano_aiu` and archives them to the JSONL
 
 All data is local. Plugin data folder structure:
 
 ```
 ~/.copilot/burnrate-copilot/
-  pricing.json              ← model pricing table
   config.json               ← widget layout and theme
   sessions/<id>.json        ← per-session state (deleted at clean exit)
   monthly/YYYY-MM.jsonl     ← completed session records
@@ -122,9 +119,8 @@ The plugin is written in plain Node.js with no runtime dependencies. Key files:
 | `scripts/compositor.js` | Loads session data, computes cost delta, assembles widget data |
 | `scripts/session-start.js` | SessionStart hook + orphan recovery |
 | `scripts/session-end.js` | SessionEnd hook — final cost computation + JSONL append |
-| `scripts/pricing.js` | `loadPricing`, `computeSessionCost`, `getMtdAndProjected` |
+| `scripts/pricing.js` | `getMtdAndProjected` — reads monthly JSONL, sums past session costs |
 | `scripts/widgets/` | Individual display widgets (cost, context, git, session, jira, tools) |
-| `pricing.json` | Model rates — update with `node scripts/update-pricing.js --apply` |
-| `tests/` | Test suite — run with `node tests/<file>.test.js` |
+| `tests/` | Test suite — run with `node --test tests/*.test.js` |
 
 To test locally, set `COPILOT_CONFIG_DIR` to a temp directory so test data doesn't touch your real session history.

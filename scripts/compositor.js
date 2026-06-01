@@ -7,15 +7,15 @@
 // DEFAULT_CONFIG when absent or malformed). Loads session data once and
 // passes it to all widgets. Renders in plain or powerline mode.
 //
-// Every turn: writes last_known_tokens back to the session file so that
-// cost can be computed retroactively when Phase 6 implements pricing.
+// Every turn: writes last_known_nano_aiu, last_known_cost, last_known_tokens,
+// and metadata back to the session file so SessionEnd and orphan recovery
+// always have accurate data available.
 
 const fs   = require('fs');
 const path = require('path');
 
 const { getTheme, setBg, setFg, PL_RIGHT, R } = require('./themes');
-const { loadPricing, computeCost, computeSessionCost, getMtdAndProjected } = require('./pricing');
-const { loadPricingTable } = require('./events-parser');
+const { getMtdAndProjected } = require('./pricing');
 const { detectJiraKey } = require('./jira-detector');
 const { applyJiraDelta, round6 } = require('./jira-attribution');
 
@@ -32,7 +32,7 @@ const WIDGETS = {
 
 // Default config — rendered when config.json is absent or malformed.
 // Shows model, context fill, token totals, inference speed, premium requests,
-// and session duration. Cost widgets are omitted until Phase 6 resolves pricing.
+// and session cost/duration.
 const DEFAULT_CONFIG = {
   powerline: false,
   theme: 'default',
@@ -195,27 +195,24 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
   }
 
   // AI Credits (Copilot billing June 2026+): 1 credit = 1,000,000,000 nano-AIU = $0.01 USD.
-  // When present this is authoritative — no pricing table needed.
+  // ai_used.total_nano_aiu is the authoritative session-cumulative cost source.
   const aiUsed   = stdinData.ai_used || {};
-  const nanoAiu  = typeof aiUsed.total_nano_aiu === 'number' ? aiUsed.total_nano_aiu : 0;
+  const nanoAiu  = typeof aiUsed.total_nano_aiu === 'number' ? aiUsed.total_nano_aiu : -1;
+  sd.hasPricing  = nanoAiu >= 0; // show $0.00 immediately, not "?"
   if (nanoAiu > 0) {
     sd.sessionCost = nanoAiu / 100_000_000_000;
-    sd.hasPricing  = true;
   }
 
-  // Token-based pricing (fallback for older CLI versions without ai_used).
-  const pricingTable   = loadPricingTable(dataDir, scriptDir);
-  const primaryPricing = loadPricing(sd.modelId, dataDir, scriptDir);
-  if (!sd.hasPricing && primaryPricing && sd.hasSnapshot) {
-    sd.hasPricing = true;
-  }
-
-  // Write last_known_tokens and update model_tokens attribution on every turn.
+  // Write last_known_nano_aiu, last_known_tokens, and metadata to session file every turn.
   if (sessionId) {
     try {
       const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
       if (fs.existsSync(sessionPath)) {
         const sessionRaw = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+
+        if (nanoAiu > 0) {
+          sessionRaw.last_known_nano_aiu = nanoAiu;
+        }
 
         const currentTokens = {
           total_input_tokens:       ctx.total_input_tokens       || 0,
@@ -223,77 +220,9 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
           total_cache_write_tokens: ctx.total_cache_write_tokens || 0,
           total_cache_read_tokens:  ctx.total_cache_read_tokens  || 0,
         };
-
-        if (nanoAiu > 0) {
-          // ai_used is authoritative — store it and skip token-based cost computation.
-          sessionRaw.last_known_nano_aiu = nanoAiu;
-        } else {
-          // Token-based fallback: track per-turn and per-model deltas for pricing.
-          const prev = sessionRaw.last_known_tokens || sessionRaw.snapshot || {
-            total_input_tokens: 0, total_output_tokens: 0,
-            total_cache_write_tokens: 0, total_cache_read_tokens: 0,
-          };
-          const dInput      = Math.max(0, currentTokens.total_input_tokens - (prev.total_input_tokens || 0));
-          const dOutput     = Math.max(0, currentTokens.total_output_tokens - (prev.total_output_tokens || 0));
-          const dCacheWrite = Math.max(0, currentTokens.total_cache_write_tokens - (prev.total_cache_write_tokens || 0));
-          const dCacheRead  = Math.max(0, currentTokens.total_cache_read_tokens - (prev.total_cache_read_tokens || 0));
-
-          // Per-turn token breakdown — accumulate into the current turn's entry (capped at 100).
-          // Multi-fire resilient: if the statusline fires multiple times for the same turn
-          // (same turn_count), the delta is added to the existing entry, not duplicated.
-          if (dInput > 0 || dOutput > 0) {
-            if (!sessionRaw.turn_tokens) sessionRaw.turn_tokens = [];
-            const t    = sessionRaw.turn_count || 0;
-            const last = sessionRaw.turn_tokens[sessionRaw.turn_tokens.length - 1];
-            if (last && last.turn === t) {
-              last.input       += dInput;
-              last.output      += dOutput;
-              last.cache_write += dCacheWrite;
-              last.cache_read  += dCacheRead;
-            } else {
-              sessionRaw.turn_tokens.push({
-                turn: t, input: dInput, output: dOutput,
-                cache_write: dCacheWrite, cache_read: dCacheRead,
-              });
-              if (sessionRaw.turn_tokens.length > 100) sessionRaw.turn_tokens.shift();
-            }
-          }
-
-          // Attribute this turn's delta to the current model
-          if (!sessionRaw.model_tokens) sessionRaw.model_tokens = {};
-          const currentModel = sd.modelId || 'unknown';
-          if (!sessionRaw.model_tokens[currentModel]) {
-            sessionRaw.model_tokens[currentModel] = {
-              input: 0, output: 0, cache_write: 0, cache_read: 0,
-            };
-          }
-          const mt = sessionRaw.model_tokens[currentModel];
-          mt.input       += dInput;
-          mt.output      += dOutput;
-          mt.cache_write += dCacheWrite;
-          mt.cache_read  += dCacheRead;
-
-          // Compute multi-model cost from model_tokens map
-          let multiModelCost = 0;
-          let hasAnyPricing = false;
-          for (const [mid, tokens] of Object.entries(sessionRaw.model_tokens)) {
-            const mp = pricingTable[mid];
-            if (mp) {
-              hasAnyPricing = true;
-              multiModelCost += computeCost(tokens.input, tokens.output, tokens.cache_write, tokens.cache_read, mp);
-            }
-          }
-
-          if (hasAnyPricing) {
-            sd.sessionCost = multiModelCost;
-          } else if (sd.hasPricing) {
-            sd.sessionCost = computeSessionCost(ctx, sd.snapshot, primaryPricing);
-          }
-        }
-
         sessionRaw.last_known_tokens = currentTokens;
-        sessionRaw.last_known_model = sd.modelId || undefined;
-        sessionRaw.last_known_at    = now.toISOString().replace(/\.\d{3}Z$/, 'Z');
+        sessionRaw.last_known_model  = sd.modelId || undefined;
+        sessionRaw.last_known_at     = now.toISOString().replace(/\.\d{3}Z$/, 'Z');
         if (sd.sessionCost > 0) {
           sessionRaw.last_known_cost = sd.sessionCost;
         }

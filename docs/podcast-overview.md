@@ -57,7 +57,7 @@ Understanding the session lifecycle is important for both using the plugin corre
 
 When a session starts, the `sessionStart` hook fires. The plugin writes a JSON session file capturing the session ID, start time, model, current working directory, git branch, and a baseline cost snapshot. On every turn of the session, the statusline command runs, computing the current session cost against that baseline. The result is written back to the session file as `last_known_cost` and `last_known_tokens`, along with a timestamp. These fields serve two purposes: they update the statusline display, and they act as a recovery snapshot in case the session ends abnormally.
 
-At clean session end, the `sessionEnd` hook fires. The plugin reads `last_known_tokens`, computes the final cost using the pricing table, and appends a completed record to the monthly JSONL file. The session file is then deleted.
+At clean session end, the `sessionEnd` hook fires. The plugin reads `last_known_nano_aiu`, computes the final cost using GitHub's AI Credits formula, and appends a completed record to the monthly JSONL file. The session file is then deleted.
 
 The interesting engineering case is what happens when a session ends abnormally — typically a user pressing Ctrl+C. In this case, `sessionEnd` never fires. The session file remains on disk. On the next session start, the `sessionStart` hook scans the sessions directory for files older than two minutes that don't match the current session ID. For each one found, it computes the final cost from `last_known_tokens` and writes a recovery record to the JSONL before deleting the orphaned file. The two-minute grace period prevents incorrectly recovering sessions that may be running concurrently in another terminal.
 
@@ -118,7 +118,7 @@ The output is prioritized — the most impactful recommendation comes first with
 
 Both plugins take a deliberately minimal approach to data storage.
 
-All data is local. The session files, the monthly JSONL records, the pricing table, and the configuration all live in a subdirectory of the user's AI tool config directory — `~/.copilot/burnrate-copilot/` for the Copilot plugin and `~/.claude/burnrate-claude/` for the Claude plugin. Nothing is sent to any server. The plugins make no network calls except when the user explicitly runs the pricing update script, which fetches only GitHub's public documentation page.
+All data is local. The session files, the monthly JSONL records, and the configuration all live in a subdirectory of the user's AI tool config directory — `~/.copilot/burnrate-copilot/` for the Copilot plugin and `~/.claude/burnrate-claude/` for the Claude plugin. Nothing is sent to any server. The plugins make no network calls of any kind.
 
 Session files are ephemeral — they exist only during an active session and are deleted when the session ends cleanly. What persists long-term is only the JSONL records, which contain the final aggregated cost and attribution data for each completed session. No token-by-token history is stored.
 
@@ -140,7 +140,7 @@ The key architectural components are the same in both plugins:
 
 **session-end.js** — handles the sessionEnd hook. Computes final cost, appends the JSONL record, deletes the session file.
 
-**pricing.js** — cost computation functions: `loadPricing` (reads the pricing table with fallback), `computeSessionCost` (applies the four-token formula), and `getMtdAndProjected` (sums the JSONL and computes the projection).
+**pricing.js** — MTD computation: `getMtdAndProjected` sums the monthly JSONL and computes the projected monthly spend.
 
 **widgets/** — individual display components. Each widget receives the compositor's data object and returns a formatted string. Widgets include: cost, context window, git, session (elapsed time), Jira ticket, tools (recent tool activity), and a custom widget for passthrough of an existing statusline command.
 

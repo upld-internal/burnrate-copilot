@@ -156,16 +156,7 @@ if (configData) {
   warnings.push('config.json not found (user is using default layout)');
 }
 
-// 4. pricing.json (model pricing table, for cost computation audit)
-const pricingData = readFileSafe(path.join(dataDir, 'pricing.json'))
-  || readFileSafe(path.join(__dirname, '../../../pricing.json'));
-if (pricingData) {
-  entries.push({ name: 'pricing.json', data: pricingData });
-} else {
-  warnings.push('pricing.json not found');
-}
-
-// 5. settings.json — redact any token/secret keys
+// 4. settings.json — redact any token/secret keys
 const settingsPath = path.join(copilotConfigDir, 'settings.json');
 const settingsRaw  = readFileSafe(settingsPath);
 if (settingsRaw) {

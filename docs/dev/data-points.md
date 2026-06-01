@@ -11,9 +11,9 @@ The **Optimize column** marks data points the `/burnrate:burnrate-optimize` skil
 ### `cost_usd`
 | | |
 |---|---|
-| **Source** | Token delta × pricing from `pricing.json`; written as `last_known_cost` each turn, committed to JSONL at SessionEnd or crash recovery |
+| **Source** | `ai_used.total_nano_aiu` from StatusLine stdin (GitHub's authoritative billing figure); written as `last_known_cost` each turn, committed to JSONL at SessionEnd or crash recovery |
 | **Hook** | StatusLine (every turn), SessionEnd, SessionStart (crash recovery) |
-| **What it captures** | Estimated session cost in USD using Anthropic direct-API rates for the active model. Computed from the four token fields in `context_window` minus the session baseline snapshot. |
+| **What it captures** | Session cost in USD from GitHub's AI Credits billing. Formula: `nano_aiu / 100_000_000_000`. This is the same figure that appears on the GitHub billing dashboard. |
 | **Insights** | Session cost, project cost, month-to-date total, projected monthly spend. The primary financial metric. |
 | **Optimize relevance** | ✅ Core input. High-cost sessions and projects are the top candidates for optimization recommendations. |
 

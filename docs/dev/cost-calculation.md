@@ -1,123 +1,64 @@
 # Cost Calculation
 
-How burnrate-copilot turns raw token counts into USD cost estimates.
+How burnrate-copilot computes USD cost from GitHub Copilot's AI Credits billing data.
 
 ---
 
 ## The Formula
 
 ```
-cost_usd = (input_tokens / 1M × input_rate)
-         + (output_tokens / 1M × output_rate)
-         + (cache_write_tokens / 1M × cache_write_rate)
-         + (cache_read_tokens / 1M × cache_read_rate)
+cost_usd = total_nano_aiu / 100,000,000,000
 ```
 
-Applied per-model when multi-model data is available.
+Where `total_nano_aiu` is GitHub's authoritative billing field from the statusline stdin (`ai_used.total_nano_aiu`), representing nano-AI-Usage-Units for the current session.
 
----
+**Conversion:** 1 AI credit = 1,000,000,000 nano-AIU = $0.01 USD
 
-## Pricing Table
-
-**Source:** `pricing.json` at repo root (bundled) or `~/.copilot/burnrate-copilot/pricing.json` (user override, takes precedence).
-
-**Rates:** GitHub Copilot AI Credits per 1M tokens (1 credit = $0.01 USD). Effective June 2026.
-
-Example entries:
-
-| Model | Input | Output | Cache Write | Cache Read |
-|-------|------:|-------:|------------:|-----------:|
-| claude-haiku-4.5 | $1.00 | $5.00 | $1.25 | $0.10 |
-| claude-sonnet-4.6 | $3.00 | $15.00 | $3.75 | $0.30 |
-| claude-opus-4.7 | $5.00 | $25.00 | $6.25 | $0.50 |
-| gpt-5.5 | $5.00 | $30.00 | — | $0.50 |
-| gpt-5.4-mini | $0.40 | $1.60 | — | $0.04 |
-| gpt-4.1 | $2.00 | $8.00 | — | $0.50 |
-
-OpenAI/Google models have `cache_write: 0` (only Anthropic charges for prompt caching storage).
-
-### Staleness Warning
-
-If `pricing.json._meta.last_verified` is >60 days old, a warning is emitted to stderr (never to stdout/statusline).
+This is a session-cumulative value (monotonically increasing). No token math, no rates table, no approximation — GitHub bills by AI credits and that's what we show.
 
 ---
 
 ## Real-Time Cost (Statusline — Every Turn)
 
-The compositor (`scripts/compositor.js`) computes cost on every turn using the **model_tokens map**:
+The compositor (`scripts/compositor.js`) extracts cost directly from `ai_used.total_nano_aiu` on every turn:
 
-### How It Works
-
-1. **Snapshot baseline:** `session-start.js` writes `snapshot: { all zeros }` to the session file.
-2. **Each turn:** The statusline receives cumulative `total_*_tokens` from Copilot.
-3. **Delta calculation:** `delta = current_tokens - previous_turn_tokens` (clamped to ≥0).
-4. **Model attribution:** Delta is attributed to `model.id` from the current stdin.
-5. **Per-model accumulation:** `model_tokens[modelId] += delta` stored in session file.
-6. **Cost computation:** For each model in `model_tokens`, apply that model's rates, sum all.
-
-```
-model_tokens = {
-  "claude-sonnet-4.6": { input: 5000000, output: 40000, cache_write: 100000, cache_read: 4500000 },
-  "gpt-5.3-codex":     { input: 500000,  output: 5000,  cache_write: 0,      cache_read: 0 }
-}
+```js
+const nanoAiu = stdinData.ai_used?.total_nano_aiu;  // e.g. 6987975000
+const costUsd = nanoAiu / 100_000_000_000;           // → $0.0699
 ```
 
-### Why model_tokens, Not Single-Model?
+The result is written to `session.last_known_nano_aiu` and `session.last_known_cost` in the session file every turn.
 
-Sessions use multiple models (parent + subagents). A single model's rate applied to all tokens causes up to **65% error** on individual sessions. The `model_tokens` map tracks per-model deltas across turns.
-
-**Limitation:** The statusline only knows the *currently active* model (`model.id`). Subagent tokens flow into the cumulative totals but are attributed to whatever model is "current" at that turn. This is approximate but much better than single-model pricing. The authoritative per-model breakdown comes from `session.shutdown.modelMetrics` at session end.
+Token counts (`last_known_tokens`) are also preserved for cache efficiency analysis in `/burnrate-optimize`.
 
 ---
 
-## Final Cost (Session End — 4-Level Fallback)
+## Final Cost (Session End — 2-Level Fallback)
 
-When a session ends, `session-end.js` computes the definitive cost using a fallback chain:
+When a session ends, `session-end.js` uses:
 
-### Strategy 1: Multi-Model (events.jsonl)
-
-```
-parseShutdownMetrics(sessionId) → modelMetrics
-computeMultiModelCost(modelMetrics, pricingTable) → { total, perModel }
-```
-
-- **Source:** `session.shutdown.modelMetrics` in events.jsonl
-- **Accuracy:** Authoritative — exact per-model tokens from Copilot's own accounting
-- **Availability:** Only on normal session exit (session.shutdown event present)
-- **Field:** `cost_method: "multi_model"`
-
-### Strategy 2: model_tokens (Session File)
+### Strategy 1: AI Credits (ai_credits)
 
 ```
-session.model_tokens → per-model totals from statusline tracking
+session.last_known_nano_aiu / 100_000_000_000
 ```
 
-- **Source:** Session file updated every statusline turn
-- **Accuracy:** Good — real per-model deltas, but model attribution is approximate for subagent tokens
-- **Availability:** Survives Ctrl+C (last turn's data persists)
-- **Field:** `cost_method: "model_tokens"`
+- **Source:** Last statusline turn's `ai_used.total_nano_aiu`, stored in session file
+- **Accuracy:** Authoritative — GitHub's own billing figure
+- **Availability:** Available after any statusline turn
+- **Field:** `cost_method: "ai_credits"`
 
-### Strategy 3: Single-Model (Aggregate)
-
-```
-session.last_known_tokens × pricing[session.last_known_model]
-```
-
-- **Source:** Aggregate token totals + last known model
-- **Accuracy:** Approximate — applies one model's rate to all tokens
-- **Availability:** Available if any statusline turn ran
-- **Field:** `cost_method: "single_model"`
-
-### Strategy 4: Last Known Cost (Cached)
+### Strategy 2: Last Known Cost (last_known)
 
 ```
 session.last_known_cost
 ```
 
 - **Source:** Cached cost from the last statusline computation
-- **Accuracy:** Whatever the statusline last computed
-- **Availability:** Available if any statusline turn ran
+- **Availability:** Available after any statusline turn
 - **Field:** `cost_method: "last_known"`
+
+Zero-turn sessions (user opens Copilot then immediately Ctrl+C before any statusline fires) correctly produce `cost_usd: 0`.
 
 ---
 
@@ -126,24 +67,9 @@ session.last_known_cost
 If `sessionEnd` never fires (crash, Ctrl+C, system kill), session files become "orphans." On the next `sessionStart`, orphan recovery runs:
 
 1. Scans `sessions/` for files not matching the current session
-2. For each orphan, attempts cost computation using the same 4-level fallback
+2. For each orphan, attempts cost using the same 2-level fallback
 3. Writes a monthly JSONL record with `"recovered": true`
 4. Deletes the orphan session file
-
----
-
-## What's Included in modelMetrics
-
-Verified empirically across 19+ sessions:
-
-| Source | Included in modelMetrics? |
-|--------|:------------------------:|
-| Parent agent tokens | ✅ |
-| Subagent tokens | ✅ |
-| Compaction API call tokens | ✅ |
-| Tool execution tokens | ✅ |
-
-**Key conclusion:** `modelMetrics` is the single source of truth. Compaction costs and subagent costs are NOT additive — they're already inside the total. The `compaction_cost` and `subagents_detail` fields in monthly JSONL are informational breakdowns showing *where* cost went, not additional charges.
 
 ---
 

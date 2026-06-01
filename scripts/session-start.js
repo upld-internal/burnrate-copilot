@@ -16,55 +16,23 @@ const fs   = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { getDataDir, getCopilotConfigDir } = require('./paths');
-const { loadPricing, computeSessionCost } = require('./pricing');
-const { computeMultiModelCostForSession, loadPricingTable } = require('./events-parser');
 const { normalizeJiraCosts, selectPrimaryJiraKey } = require('./jira-attribution');
 const { buildTelemetryFields, logHookDebug } = require('./session-file');
 const { ensureStatusLineConfig } = require('./statusline-config');
 
-function computeFinalCost(session, modelId) {
-  // Try multi-model cost from events.jsonl first (most accurate).
-  // For orphan recovery, session.shutdown may or may not be present —
-  // it fires before sessionEnd hook but Ctrl+C may prevent both.
-  const sessionId = session.session_id;
-  if (sessionId) {
-    try {
-      const pricingTable = loadPricingTable(dataDir, __dirname);
-      const result = computeMultiModelCostForSession(sessionId, pricingTable);
-      if (result && result.total > 0) return result.total;
-    } catch (_) {}
-  }
-
-  // Try model_tokens from session file (per-model real-time tracking)
-  // This is available even after Ctrl+C since compositor writes it every turn.
-  if (session.model_tokens && Object.keys(session.model_tokens).length) {
-    try {
-      const pricingTable = loadPricingTable(dataDir, __dirname);
-      let total = 0;
-      let hasPricing = false;
-      for (const [mid, tokens] of Object.entries(session.model_tokens)) {
-        const mp = pricingTable[mid];
-        if (mp) {
-          hasPricing = true;
-          const { computeCost } = require('./pricing');
-          total += computeCost(tokens.input || 0, tokens.output || 0, tokens.cache_write || 0, tokens.cache_read || 0, mp);
-        }
-      }
-      if (hasPricing && total > 0) return total;
-    } catch (_) {}
-  }
-
-  // Fallback: single-model pricing from last_known_tokens
-  const tokens = session.last_known_tokens;
-  const snap   = session.snapshot;
-  if (tokens && snap) {
-    const pricing = loadPricing(modelId, dataDir, __dirname);
-    if (pricing) return computeSessionCost(tokens, snap, pricing);
+// Compute final cost for orphan recovery.
+// Strategy 1: last_known_nano_aiu → authoritative AI Credits billing
+// Strategy 2: last_known_cost     → compositor-computed cost from last statusline turn
+function computeFinalCost(session) {
+  const nanoAiu = session.last_known_nano_aiu;
+  if (typeof nanoAiu === 'number' && nanoAiu > 0) {
+    return nanoAiu / 100_000_000_000;
   }
   return session.last_known_cost || 0;
 }
 
 const dataDir = getDataDir();
+
 
 // ---------------------------------------------------------------------------
 // Orphan recovery
@@ -126,7 +94,7 @@ function recoverOrphanedSessions(currentSessionId) {
         id:           session.session_id,
         date:         new Date().toISOString().slice(0, 10),
         start_month:  startMonth,
-        cost_usd:     computeFinalCost(session, modelId),
+        cost_usd:     computeFinalCost(session),
         cost_pending: false,
         model:        modelId,
         project:      session.last_known_project    || session.project    || undefined,
@@ -220,7 +188,6 @@ process.stdin.on('end', () => {
         total_cache_write_tokens: 0,
         total_cache_read_tokens:  0,
       },
-      model_tokens: {},
     };
 
     const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
