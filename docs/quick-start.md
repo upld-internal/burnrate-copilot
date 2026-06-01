@@ -2,38 +2,26 @@
 
 **burnrate-copilot** is a GitHub Copilot CLI plugin that makes your AI spend visible in real time. It shows per-session cost and a month-to-date total directly in the statusline footer — updated every turn — and stores everything locally with no external calls.
 
-```
-$0.08 session  |  May: $6.21 (~$41/mo)  |  claude-sonnet-4.6  |  28%  |  8m  |  main ✎
-```
-
-The plugin reads GitHub's authoritative `ai_used.total_nano_aiu` billing field from the statusline stdin on every turn. No token math, no rates table — cost is `nanoAiu / 100,000,000,000` USD.
-
 ![](images/Statusline.png)
 
 ---
 
 ## Requirements
 
-- GitHub Copilot CLI (standalone or via `gh copilot`)
-- Node.js ≥ 18 on your `PATH`
-- macOS or Linux (Windows support planned)
-- A GitHub SSH key configured for the `upld-internal` org (required for installation — see below)
+- GitHub Copilot CLI (v1.0.56 or higher)
+- Node.js ≥ 18 on your PATH (most developers already have this)
 
 ---
 
 ## Installation
 
-**1. Install via SSH**
+**1. Install the plugin**
 
 In the Copilot CLI chat:
 
 ```
-/plugin install git@github.com:upld-internal/burnrate-copilot.git
+/plugin install https://github.com/upld-internal/burnrate-copilot.git
 ```
-
-HTTPS installation is blocked by SAML SSO on the `upld-internal` org. SSH is the correct path.
-
-> **Need a GitHub SSH key?** [Set one up here](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) — it takes 5 minutes and eliminates passwords for all future GitHub interactions.
 
 **2. Start a new session**
 
@@ -41,7 +29,7 @@ The plugin auto-configures itself on the first session start. It writes the `sta
 
 **3. (Optional) Customize your layout**
 
-Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build a custom widget layout. Configuration is saved to `~/.copilot/burnrate-copilot/config.json`.
+Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build a custom widget layout. Configuration is saved to `~/.copilot/burnrate-copilot/config.json`. You can also modify this file directly.
 
 ---
 
@@ -49,14 +37,14 @@ Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build 
 
 | Segment | Description |
 |---|---|
-| `$0.08 session` | Cost for the current session from GitHub's AI Credits billing (`ai_used.total_nano_aiu`) |
-| `May: $6.21 (~$41/mo)` | Month-to-date total across all completed sessions + linear projection |
-| `claude-sonnet-4.6` | Active model ID |
-| `28%` | Context window utilization (used / total) |
+| `Session: $0.08` | Cost for the current session |
+| `May: $6.21 (~$41/mo)` | MTD total across all completed sessions + linear projection |
 | `8m` | Session elapsed time |
+| `Sonnet 4.6` | Active model |
+| `28%` | Context window utilization (used / total) |
 | `main ✎` | Git branch + indicator when there are uncommitted changes |
 
-The Jira ticket widget (`PLAT-4821`) also appears when your branch follows a `[PROJECT-NNN]` naming convention — see [Jira Integration](#jira-integration) below.
+The Jira ticket widget (`JIRA-4821`) also appears when your branch follows a `[PROJ-NNN]` naming convention — see [Jira Integration](#jira-integration) below.
 
 ---
 

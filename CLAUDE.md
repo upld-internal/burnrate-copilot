@@ -7,7 +7,7 @@
 In the Copilot CLI chat:
 
 ```
-/plugin install git@github.com:upld-internal/burnrate-copilot.git
+/plugin install https://github.com/upld-internal/burnrate-copilot.git
 ```
 
 The installer:
@@ -21,7 +21,7 @@ The installer:
      "installed_at": "<ISO timestamp>",
      "enabled": true,
      "cache_path": "/Users/you/.copilot/installed-plugins/_direct/<slug>",
-     "source": { "source": "url", "url": "git@github.com:upld-internal/burnrate-copilot.git" }
+     "source": { "source": "url", "url": "https://github.com/upld-internal/burnrate-copilot.git" }
    }
    ```
 3. Writes the `statusLine` key to **`~/.copilot/settings.json`** (user settings file):
