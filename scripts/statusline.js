@@ -19,9 +19,8 @@ const { getDataDir } = require('./paths');
 const dataDir = getDataDir();
 
 // DEBUG: set COPILOT_HUD_DEBUG=1 to append full stdin to dataDir/stdin-debug.jsonl
-//        set COPILOT_HUD_DEBUG=last to overwrite dataDir/stdin-last.json with only the most recent call
-const DEBUG      = process.env.COPILOT_HUD_DEBUG === '1';
-const DEBUG_LAST = process.env.COPILOT_HUD_DEBUG === 'last';
+// stdin-last.json is always written (single overwrite) for easy schema inspection.
+const DEBUG = process.env.COPILOT_HUD_DEBUG === '1';
 
 let raw = '';
 process.stdin.setEncoding('utf8');
@@ -44,12 +43,11 @@ process.stdin.on('end', () => {
     } catch (_) {}
   }
 
-  if (DEBUG_LAST) {
-    try {
-      const logPath = path.join(dataDir, 'stdin-last.json');
-      fs.writeFileSync(logPath, JSON.stringify({ ts: new Date().toISOString(), data }, null, 2) + '\n');
-    } catch (_) {}
-  }
+  // Always write last stdin for schema inspection (single file, always overwritten).
+  try {
+    fs.writeFileSync(path.join(dataDir, 'stdin-last.json'),
+      JSON.stringify({ ts: new Date().toISOString(), data }, null, 2) + '\n');
+  } catch (_) {}
 
   try {
     const output = render(data, dataDir, __dirname);
