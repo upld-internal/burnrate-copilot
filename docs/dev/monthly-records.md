@@ -91,6 +91,11 @@ Records are appended to the file matching `start_month`. A session that starts i
   "tool_duration_p50_ms": 145,
   "tool_duration_max_ms": 8200,
 
+  "turn_tokens": [
+    { "turn": 1, "input": 1024,  "output": 312, "cache_write": 0,   "cache_read": 0     },
+    { "turn": 2, "input": 18430, "output": 890, "cache_write": 1024, "cache_read": 16000 }
+  ],
+
   "recovered": false
 }
 ```
@@ -167,6 +172,7 @@ Records are appended to the file matching `start_month`. A session that starts i
 | `web_fetch_requests` | number | Web fetch tool calls (omitted when 0) |
 | `tool_duration_p50_ms` | number | Median tool execution time across all tools (ms) |
 | `tool_duration_max_ms` | number | Slowest tool execution time (ms) |
+| `turn_tokens` | array | Per-turn token breakdown: `{ turn, input, output, cache_write, cache_read }`, capped at 100 entries (omitted if no tokens exchanged) |
 
 ### Recovery
 
@@ -229,4 +235,5 @@ for (const r of records) {
 - `web_search_requests` and `web_fetch_requests` are only written when > 0.
 - `prompt_count`/`prompt_length_*` are only written when at least one non-empty prompt was submitted.
 - `tool_duration_p50_ms`/`tool_duration_max_ms` are only written when at least one tool round-trip completed.
+- `turn_tokens` is only written when at least one StatusLine fire registered a non-zero token delta. Capped at the last 100 turns.
 - `recovered: true` records may have less accurate cost (depend on whatever data was in the session file at crash time).

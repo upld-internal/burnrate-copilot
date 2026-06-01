@@ -150,6 +150,11 @@ function buildTelemetryFields(session) {
   if (session.web_search_requests > 0) f.web_search_requests = session.web_search_requests;
   if (session.web_fetch_requests  > 0) f.web_fetch_requests  = session.web_fetch_requests;
 
+  // Per-turn token breakdown (capped at 100 turns during accumulation)
+  if (Array.isArray(session.turn_tokens) && session.turn_tokens.length) {
+    f.turn_tokens = session.turn_tokens;
+  }
+
   // Tool duration stats (all tools combined, same as burnrate-claude)
   const toolDurations = session.tool_durations_ms;
   if (Array.isArray(toolDurations) && toolDurations.length) {

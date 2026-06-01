@@ -227,6 +227,27 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
         const dCacheWrite = Math.max(0, currentTokens.total_cache_write_tokens - (prev.total_cache_write_tokens || 0));
         const dCacheRead  = Math.max(0, currentTokens.total_cache_read_tokens - (prev.total_cache_read_tokens || 0));
 
+        // Per-turn token breakdown — accumulate into the current turn's entry (capped at 100).
+        // Multi-fire resilient: if the statusline fires multiple times for the same turn
+        // (same turn_count), the delta is added to the existing entry, not duplicated.
+        if (dInput > 0 || dOutput > 0) {
+          if (!sessionRaw.turn_tokens) sessionRaw.turn_tokens = [];
+          const t    = sessionRaw.turn_count || 0;
+          const last = sessionRaw.turn_tokens[sessionRaw.turn_tokens.length - 1];
+          if (last && last.turn === t) {
+            last.input       += dInput;
+            last.output      += dOutput;
+            last.cache_write += dCacheWrite;
+            last.cache_read  += dCacheRead;
+          } else {
+            sessionRaw.turn_tokens.push({
+              turn: t, input: dInput, output: dOutput,
+              cache_write: dCacheWrite, cache_read: dCacheRead,
+            });
+            if (sessionRaw.turn_tokens.length > 100) sessionRaw.turn_tokens.shift();
+          }
+        }
+
         // Attribute this turn's delta to the current model
         if (!sessionRaw.model_tokens) sessionRaw.model_tokens = {};
         const currentModel = sd.modelId || 'unknown';

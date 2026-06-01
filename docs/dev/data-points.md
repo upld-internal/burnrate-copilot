@@ -165,3 +165,14 @@ The **Optimize column** marks data points the `/burnrate:burnrate-optimize` skil
 | **Hook** | preToolUse (start), postToolUse (end) |
 | **What it captures** | P50 and max execution time across all tool calls in the session (ms). FIFO queuing handles parallel same-name tools without clobbering. |
 | **Optimize relevance** | ✅ High `tool_duration_max_ms` with slow bash commands suggests long-running test or build steps that may benefit from caching or faster alternatives. |
+
+---
+
+### `turn_tokens`
+| | |
+|---|---|
+| **Source** | StatusLine compositor (`compositor.js`) — accumulates per-turn input/output/cache deltas from cumulative `context_window` tokens into `session.turn_tokens[]` on every StatusLine fire. Multi-fire resilient: if the compositor fires multiple times within the same turn (same `turn_count`), the delta is accumulated into the existing entry. Array capped at 100 entries. Written to JSONL by `buildTelemetryFields` at session-end. |
+| **Hook** | StatusLine |
+| **What it captures** | Per-turn token breakdown: `{ turn, input, output, cache_write, cache_read }` for each of the last ≤100 turns. The `turn` field matches the `turn_count` at time of the call. Omitted from JSONL when no tokens were exchanged. |
+| **Optimize relevance** | ✅ Identifies outlier turns with unusually high input or output tokens. Cross-referencing with tool activity can reveal which specific operations (long file reads, large code generations) drive cost spikes. |
+
