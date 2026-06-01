@@ -18,8 +18,10 @@ const { getDataDir } = require('./paths');
 
 const dataDir = getDataDir();
 
-// DEBUG: set COPILOT_HUD_DEBUG=1 to log full stdin to dataDir/stdin-debug.jsonl
-const DEBUG = process.env.COPILOT_HUD_DEBUG === '1';
+// DEBUG: set COPILOT_HUD_DEBUG=1 to append full stdin to dataDir/stdin-debug.jsonl
+//        set COPILOT_HUD_DEBUG=last to overwrite dataDir/stdin-last.json with only the most recent call
+const DEBUG      = process.env.COPILOT_HUD_DEBUG === '1';
+const DEBUG_LAST = process.env.COPILOT_HUD_DEBUG === 'last';
 
 let raw = '';
 process.stdin.setEncoding('utf8');
@@ -39,6 +41,13 @@ process.stdin.on('end', () => {
     try {
       const logPath = path.join(dataDir, 'stdin-debug.jsonl');
       fs.appendFileSync(logPath, JSON.stringify({ ts: new Date().toISOString(), data }) + '\n');
+    } catch (_) {}
+  }
+
+  if (DEBUG_LAST) {
+    try {
+      const logPath = path.join(dataDir, 'stdin-last.json');
+      fs.writeFileSync(logPath, JSON.stringify({ ts: new Date().toISOString(), data }, null, 2) + '\n');
     } catch (_) {}
   }
 
