@@ -23,9 +23,11 @@ In the Copilot CLI chat:
 /plugin install https://github.com/upld-internal/burnrate-copilot.git
 ```
 
-**2. Start a new session**
+**2. Restart Copilot CLI**
 
-The plugin auto-configures itself on the first session start. It writes the `statusLine` entry to `~/.copilot/settings.json` and the statusline will appear from the first turn.
+The plugin configures itself automatically on the first session start. **Start a new session twice** — the statusline writes its configuration on your first session and becomes active from the second onward.
+
+If the statusline still doesn't appear after restarting, run `/burnrate:setup` to configure it manually.
 
 **3. (Optional) Customize your layout**
 

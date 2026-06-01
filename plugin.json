@@ -9,5 +9,6 @@
   "keywords": ["hud", "statusline", "cost", "tokens", "context", "git"],
   "category": "productivity",
   "commands": "commands/",
-  "hooks": "hooks.json"
+  "hooks": "hooks.json",
+  "postInstallMessage": "✓ burnrate-copilot installed.\n\nRestart Copilot CLI — the statusline will activate automatically on your next session.\n\nIf it doesn't appear, run /burnrate:setup to configure manually."
 }

@@ -16,17 +16,18 @@ Call this `COPILOT_DIR`.
 
 Check for the plugin in this order (stop at the first one where `scripts/statusline.js` exists as a file):
 
-1. `$COPILOT_DIR/installed-plugins/local/burnrate-copilot/scripts/statusline.js`
-2. `$COPILOT_DIR/installed-plugins/burnrate-copilot/scripts/statusline.js`
+1. Read `$COPILOT_DIR/config.json` and look for an entry in `installedPlugins` where `name === "burnrate-copilot"`. If found, use its `cache_path` field as the plugin root. Check if `<cache_path>/scripts/statusline.js` exists.
+2. `$COPILOT_DIR/installed-plugins/local/burnrate-copilot/scripts/statusline.js`
+3. `$COPILOT_DIR/installed-plugins/burnrate-copilot/scripts/statusline.js`
+4. Any `$COPILOT_DIR/installed-plugins/_direct/*/scripts/statusline.js` (glob — for URL installs via `/plugin install https://...`)
 
-Print which path was found and whether it was a local or marketplace install.
+Print which path was found and how the plugin was installed (URL install, local symlink, or marketplace).
 
-If neither path contains the file, tell the user:
+If no path contains the file, tell the user:
 
-> burnrate-copilot is not installed. To install locally, run:
+> burnrate-copilot is not installed. Install it with:
 > ```
-> mkdir -p ~/.copilot/installed-plugins/local
-> ln -sf /path/to/burnrate-copilot ~/.copilot/installed-plugins/local/burnrate-copilot
+> /plugin install https://github.com/upld-internal/burnrate-copilot.git
 > ```
 
 Then stop.
