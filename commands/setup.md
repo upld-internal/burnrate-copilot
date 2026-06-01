@@ -32,14 +32,14 @@ If no path contains the file, tell the user:
 
 Then stop.
 
-### 3. Make the statusline script executable
+### 3. Make the statusline script executable (Unix only, best-effort)
 
-Run:
+On macOS/Linux, attempt to run:
 ```bash
 chmod +x <found-path>/scripts/statusline.js
 ```
 
-If this fails, report the error and stop.
+If this fails (e.g. on Windows), skip silently and continue.
 
 ### 4. Read `settings.json`
 
@@ -63,13 +63,12 @@ Ask the user: **"Replace this with the burnrate-copilot statusline? (yes/no)"**
 ```json
 "statusLine": {
   "type": "command",
-  "command": "<full absolute path to statusline.js>"
+  "command": "node <full absolute path to statusline.js>"
 }
 ```
 
-> **Important:** The `command` must be the **full executable path** to `statusline.js`,
-> not a shell command like `node /path/script.js`. The script already has a
-> `#!/usr/bin/env node` shebang and will be made executable in step 3.
+> **Note:** The command is always prefixed with `node` for cross-platform compatibility
+> (Windows does not support the `#!/usr/bin/env node` shebang).
 
 ### 6. Ensure `footer.showCustom` is not disabled
 
@@ -118,7 +117,7 @@ Check whether `$COPILOT_DIR/burnrate-copilot/config.json` already exists.
 
   Config file:   ~/.copilot/settings.json
   Plugin path:   <path>
-  Command:       <statusline.js path>
+  Command:       node <statusline.js path>
 
 Restart GitHub Copilot CLI for changes to take effect.
 Run /burnrate:configure to customise the widget layout.
