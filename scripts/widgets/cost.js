@@ -69,7 +69,7 @@ function session_credits(stdinData, sessionData, opts) {
   const value   = opts._powerline
     ? `${fmtCredits(credits)} cr`
     : `${c}${B}${fmtCredits(credits)}${R} ${D}cr${R}`;
-  return withLabel('Creds', value, showLabel, opts._powerline);
+  return withLabel('Credits', value, showLabel, opts._powerline);
 }
 
 // mtd_credits — month-to-date cost in AI Credits with optional projection.
