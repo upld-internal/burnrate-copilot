@@ -67,8 +67,8 @@ function session_credits(stdinData, sessionData, opts) {
   const credits = (sessionData.sessionCost || 0) * 100;
   const c       = credits < 100 ? '' : credits < 500 ? YL : RD;
   const value   = opts._powerline
-    ? `${fmtCredits(credits)} cr`
-    : `${c}${B}${fmtCredits(credits)}${R} ${D}cr${R}`;
+    ? `${fmtCredits(credits)}`
+    : `${c}${B}${fmtCredits(credits)}${R}`;
   return withLabel('Credits', value, showLabel, opts._powerline);
 }
 
@@ -84,15 +84,15 @@ function mtd_credits(stdinData, sessionData, opts) {
 
   if (opts._powerline) {
     if (showProjected && sessionData.projected > 0) {
-      return `${name} ${amt} cr (~${Math.round(sessionData.projected * 100)}/mo)`;
+      return `${name} ${amt} (~${Math.round(sessionData.projected * 100)}/mo)`;
     }
-    return `${name} ${amt} cr`;
+    return `${name} ${amt}`;
   }
 
   if (showProjected && sessionData.projected > 0) {
-    return `${D}${name}${R} ${B}${amt}${R} ${D}cr${R} ${D}(~${Math.round(sessionData.projected * 100)}/mo)${R}`;
+    return `${D}${name}${R} ${B}${amt}${R} ${D}(~${Math.round(sessionData.projected * 100)}/mo)${R}`;
   }
-  return `${D}${name}${R} ${B}${amt}${R} ${D}cr${R}`;
+  return `${D}${name}${R} ${B}${amt}${R}`;
 }
 
 module.exports = { session_cost, mtd_cost, session_credits, mtd_credits };
