@@ -74,7 +74,8 @@ All hooks are registered in `hooks.json` at the plugin root:
 1. Increments `turn_count` in session file
 2. Records timestamp in `turn_intervals[]` array (for P50/max interval computation)
 3. Stores `last_prompt_at` timestamp
-4. Updates `hud-state.json` with `lastPrompt` and `lastPromptTime`
+4. Appends `prompt.length` to `session.prompt_lengths[]` (for prompt length stats)
+5. Updates `hud-state.json` with `lastPrompt` and `lastPromptTime`
 
 ---
 
@@ -98,7 +99,10 @@ All hooks are registered in `hooks.json` at the plugin root:
 1. Accumulates `tool_counts` in session file (tool name → call count)
 2. Detects `task` tool calls to track subagent spawning (`subagent_count`, `subagent_types`)
 3. Extracts agent type from task tool args for `subagent_types` map
-4. Updates `hud-state.json` with `recentTools[]` (status: "running")
+4. For `edit`/`create` tools: extracts file extension, increments `ext_counts` map
+5. Increments `web_search_requests` / `web_fetch_requests` for web tool calls
+6. Pushes a FIFO start-time entry to `session.tool_start_times[toolName][]` for duration tracking
+7. Updates `hud-state.json` with `recentTools[]` (status: "running")
 
 **Note:** When `subagentStart` hook fires for the same agent, `pre-tool-use.js` skips redundant tracking to avoid double-counting.
 
@@ -126,7 +130,7 @@ All hooks are registered in `hooks.json` at the plugin root:
 ```
 
 **What it does:**
-1. For `edit`/`create` tools: extracts file extension, increments `ext_counts` map
+1. Pops the oldest entry from `session.tool_start_times[toolName][]` (FIFO) and computes `duration = timestamp - startTime`; appends to `session.tool_durations_ms[]`. Durations > 5 min are discarded (stale state guard).
 2. Updates `hud-state.json` tool status (success/failure/denied)
 3. Records tool target (file path or command) for `tool_activity` widget
 
@@ -220,7 +224,7 @@ All hooks are registered in `hooks.json` at the plugin root:
 2. Computes final cost via 4-level fallback (see [Cost Calculation](./cost-calculation.md))
 3. Parses events.jsonl for `subagents_detail` and `compaction_cost`
 4. Detects Jira attribution from session state
-5. Builds telemetry fields (turn_count, tool_counts, ext_counts, intervals, etc.)
+5. Builds telemetry fields (turn_count, tool_counts, ext_counts, turn_intervals, prompt stats, web counts, tool duration stats, turn_tokens)
 6. Appends complete JSONL record to `monthly/YYYY-MM.jsonl`
 7. Deletes the session file (no longer needed)
 8. Sets `sessionActive: false` in `hud-state.json`

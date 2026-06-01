@@ -8,8 +8,20 @@ The statusline is burnrate-copilot's primary user-facing output. It renders in t
 
 1. Copilot CLI calls `statusline.js` (configured via `~/.copilot/settings.json`).
 2. `statusline.js` reads JSON from stdin, passes it to `compositor.js`.
-3. The compositor loads config, session data, and pricing. It updates the session file (cost, model_tokens, Jira attribution). Then it renders widgets in sequence.
+3. The compositor loads config, session data, and pricing. It updates the session file (cost, model_tokens, Jira attribution, turn_tokens). Then it renders widgets in sequence.
 4. Output goes to stdout — Copilot displays it in the footer.
+
+### What the compositor writes to the session file (every turn)
+
+| Field | Purpose |
+|-------|---------|
+| `last_known_tokens` | Cumulative token snapshot for the next delta computation |
+| `last_known_model` | Model ID in use this turn |
+| `last_known_cost` | Running session cost estimate |
+| `last_known_at` | ISO timestamp of last compositor write |
+| `model_tokens` | Per-model token accumulator for multi-model cost attribution |
+| `turn_tokens` | Per-turn token breakdown array (capped at 100 entries) |
+| `jira_costs` | Jira cost attribution delta for the active ticket |
 
 ---
 
