@@ -10,6 +10,21 @@ Real-time cost and context display for GitHub Copilot CLI. Shows per-session tok
 
 - GitHub Copilot CLI (v1.0.56 or higher). Use `/update` to get latest.
 - Node.js ≥ 18 on your PATH (most will already have this)
+- **GitHub CLI (`gh`)** — required for monthly quota display. Install and authenticate before installing the plugin.
+
+**Mac:**
+```bash
+brew install gh
+gh auth login
+```
+
+**Windows:**
+```bash
+winget install --id GitHub.cli
+gh auth login
+```
+
+If Homebrew is not installed on Mac: https://brew.sh
 
 ---
 
