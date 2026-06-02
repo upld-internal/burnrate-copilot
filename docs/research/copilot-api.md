@@ -1,4 +1,4 @@
-# GitHub Copilot Internal API Research
+# Internal API Research
 
 Discovered by reverse-engineering the Copilot CLI app bundle at
 `~/Library/Caches/copilot/pkg/darwin-arm64/<version>/app.js` and confirmed
