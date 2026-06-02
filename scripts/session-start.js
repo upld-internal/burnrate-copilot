@@ -47,6 +47,14 @@ function computeFinalCost(session) {
 
 const dataDir = getDataDir();
 
+// Diagnostic: write a startup marker so we can confirm the script is being invoked.
+try {
+  fs.mkdirSync(path.join(dataDir, 'debug'), { recursive: true });
+  fs.appendFileSync(
+    path.join(dataDir, 'debug', 'startup.log'),
+    new Date().toISOString() + ' session-start.js invoked, PLUGIN_ROOT=' + (process.env.PLUGIN_ROOT || '(unset)') + '\n'
+  );
+} catch (_) {}
 
 // ---------------------------------------------------------------------------
 // Orphan recovery
