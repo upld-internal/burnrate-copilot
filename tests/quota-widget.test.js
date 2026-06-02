@@ -147,9 +147,11 @@ describe('overage_status', () => {
 
 describe('mtd_cost with quota', () => {
   test('uses API cache when hasQuota is true', () => {
-    // used = (3000 - 252.6) / 100 = $27.47
+    // used = (3000 - 252.6) / 100 = $27.47, entitlement = $30, pct = 92%
     const result = strip(mtd_cost(stdinData, sd(), plainOpts));
     assert.ok(result.includes('$27.47'), `expected $27.47 in: ${result}`);
+    assert.ok(result.includes('/ $30'), `expected entitlement in: ${result}`);
+    assert.ok(result.includes('(92%)'), `expected percentage in: ${result}`);
   });
 
   test('includes linear projection', () => {
