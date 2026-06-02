@@ -254,6 +254,12 @@ try {
       }, STATE_FILE);
     } catch (_) {}
 
-  } catch (_) {
-    // Never crash Copilot startup
+  } catch (e) {
+    try {
+      const _os = require('os'), _path = require('path');
+      require('fs').appendFileSync(
+        _path.join(_os.tmpdir(), 'burnrate-session-start.log'),
+        new Date().toISOString() + ' ERROR: ' + e.message + '\n' + e.stack + '\n'
+      );
+    } catch (_) {}
   }
