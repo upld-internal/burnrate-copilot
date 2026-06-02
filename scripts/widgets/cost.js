@@ -77,7 +77,7 @@ function mtd_cost(stdinData, sessionData, opts) {
     }
     if (proj) {
       const c = projColor(proj, entitlementUsd);
-      return `${D}${name}${R} ${B}${tilde}$${amt}${R} ${c}${D}(~$${Math.round(proj)}/mo)${R}`;
+      return `${D}${name}${R} ${B}${tilde}$${amt}${R} ${c}${c ? B : D}(~$${Math.round(proj)}/mo)${R}`;
     }
     return `${D}${name}${R} ${B}${tilde}$${amt}${R}`;
   }
@@ -134,7 +134,7 @@ function mtd_credits(stdinData, sessionData, opts) {
     }
     if (proj) {
       const c = projColor(proj, entitlementCr);
-      return `${D}${name}${R} ${B}${tilde}${amt}${R} ${c}${D}(~${Math.round(proj)}/mo)${R}`;
+      return `${D}${name}${R} ${B}${tilde}${amt}${R} ${c}${c ? B : D}(~${Math.round(proj)}/mo)${R}`;
     }
     return `${D}${name}${R} ${B}${tilde}${amt}${R}`;
   }
