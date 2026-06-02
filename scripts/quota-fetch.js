@@ -11,7 +11,6 @@
 //   COPILOT_HOME                — override ~/.copilot location (used by tests)
 
 const fs   = require('fs');
-const os   = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { getDataDir } = require('./paths');
@@ -26,32 +25,6 @@ const {
 
 const QUOTA_URL = 'https://api.github.com/copilot_internal/user';
 
-// readTokenFromHostsYml — reads the GitHub OAuth token directly from the
-// GitHub CLI hosts.yml config file. This works even when `gh` is not in PATH
-// or not authenticated in the current process environment, because Copilot CLI
-// uses the same token file that `gh` writes.
-function readTokenFromHostsYml() {
-  const candidates = [
-    // GitHub CLI default locations
-    path.join(os.homedir(), '.config', 'gh', 'hosts.yml'),
-    // Windows: %APPDATA%\GitHub CLI\hosts.yml
-    process.env.APPDATA
-      ? path.join(process.env.APPDATA, 'GitHub CLI', 'hosts.yml')
-      : null,
-  ].filter(Boolean);
-
-  for (const p of candidates) {
-    try {
-      const raw = fs.readFileSync(p, 'utf8');
-      // hosts.yml format:
-      //   github.com:
-      //       oauth_token: ghp_xxxx
-      const m = raw.match(/oauth_token:\s*(\S+)/);
-      if (m && m[1]) return m[1].trim();
-    } catch (_) {}
-  }
-  return null;
-}
 
 async function main() {
   const dataDir = getDataDir();
@@ -95,10 +68,6 @@ async function main() {
       } catch (e) {
         log('token: gh auth token failed — ' + e.message);
       }
-    }
-    if (!token) {
-      token = readTokenFromHostsYml();
-      if (token) log('token: hosts.yml (' + token.slice(0, 4) + '...)');
     }
     if (!token) {
       log('no token available — exit without failure');
