@@ -214,7 +214,7 @@ try {
     // it once on the next render turn (hook stdout is discarded by Copilot).
     try {
       const notification = ensureStatusLineConfig(
-        process.env.PLUGIN_ROOT,
+        process.env.PLUGIN_ROOT || path.dirname(__dirname),
         getCopilotConfigDir(),
         dataDir
       );

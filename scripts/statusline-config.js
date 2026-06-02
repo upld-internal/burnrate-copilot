@@ -68,7 +68,7 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
   if (!pluginRoot || !copilotDir) return null;
 
   const ourScript    = path.join(pluginRoot, 'scripts', 'statusline.js');
-  const ourCommand   = 'node ' + ourScript;
+  const ourCommand   = 'node "' + ourScript + '"';
   const settingsPath = path.join(copilotDir, 'settings.json');
   const hudDataDir   = dataDir || path.join(copilotDir, 'plugin-data', 'burnrate-copilot');
 
@@ -106,9 +106,8 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
     ? existing.command : null;
 
   if (currentCmd) {
-    // Strip a leading "node " prefix before comparing paths — the command may
-    // have been written with or without the prefix across versions.
-    const normalizedCmd = currentCmd.replace(/^node\s+/i, '');
+    // Strip a leading "node " prefix and surrounding quotes before comparing paths.
+    const normalizedCmd = currentCmd.replace(/^node\s+/i, '').replace(/^"|"$/g, '');
     if (sameFile(normalizedCmd, ourScript)) {
       return null; // already configured — idempotent no-op
     }
