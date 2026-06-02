@@ -223,8 +223,7 @@ try {
         const { spawn } = require('child_process');
         const child = spawn(process.execPath,
           [path.join(__dirname, 'quota-fetch.js')],
-          { detached: true, stdio: 'ignore', env: process.env,
-            shell: process.platform === 'win32' });
+          { detached: true, stdio: 'ignore', env: process.env, windowsHide: true });
         child.unref();
       }
     } catch (_) {}
