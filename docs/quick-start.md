@@ -31,7 +31,23 @@ If the statusline still doesn't appear after restarting, run `/burnrate:setup` t
 
 **3. (Optional) Customize your layout**
 
-Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build a custom widget layout. Configuration is saved to `~/.copilot/plugin-data/burnrate-copilot/config.json`. You can also modify this file directly.
+Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build a custom widget layout. Configuration is saved to `~/.copilot/plugin-data/burnrate-copilot/config.json`. You can also modify this file directly — see [Configuring widgets](#configuring-widgets) below.
+
+### Update to New Plugin Version
+
+To download the latest plugin version, in the Copilot CLI chat:
+
+```
+/plugin update burnrate-copilot
+```
+
+### Uninstall
+
+To un-install, in the Copilot CLI chat:
+
+```
+/plugin uninstall burnrate-copilot
+```
 
 ---
 
@@ -99,6 +115,43 @@ Interactive statusline configurator. Choose from Minimal, Standard, Full, or Pow
 ### `/burnrate:setup`
 
 Manually (re-)configures the `statusLine` entry in `~/.copilot/settings.json` to point at the plugin script. Run this if auto-configure didn't fire on first start.
+
+---
+
+## Configuring widgets
+
+The statusline layout is controlled by `~/.copilot/plugin-data/burnrate-copilot/config.json`.
+
+**Interactive setup** — run inside the Copilot CLI chat:
+
+```
+/burnrate:configure
+```
+
+Pick a preset (Minimal, Standard, Full, Powerline) or assemble a custom layout widget by widget.
+
+**Manual editing** — open `config.json` directly and modify the `segments` array. Each entry names a widget and sets its options:
+
+```json
+{
+  "powerline": false,
+  "theme": "default",
+  "segments": [
+    { "widget": "model_name", "short": true },
+    { "widget": "separator" },
+    { "widget": "context_window", "format": "full" },
+    { "widget": "separator" },
+    { "widget": "session_cost" },
+    { "widget": "newline" },
+    { "widget": "git_branch" },
+    { "widget": "git_status" }
+  ]
+}
+```
+
+Use `{ "widget": "newline" }` to split the statusline across multiple rows. Set `"powerline": true` (requires a [Nerd Font](https://www.nerdfonts.com/)) to replace separators with arrow glyphs and add segment background colors from the selected theme (`default`, `minimal`, `nord`, `dracula`, `catppuccin`).
+
+For a full reference of all widgets, options, Powerline mode, and themes, see **[docs/user/widgets.md](user/widgets.md)**.
 
 ---
 

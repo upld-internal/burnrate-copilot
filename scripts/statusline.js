@@ -49,6 +49,22 @@ let raw = fs.readFileSync(0, 'utf8');
   try {
     const output = render(data, dataDir, __dirname);
     process.stdout.write(output + '\n');
+
+    // Spawn background quota refresh if cache is stale and circuit is closed.
+    // Must happen after stdout write so it never adds latency to the render.
+    try {
+      const { readQuotaCache, readQuotaState, shouldRefresh, writeQuotaState } = require('./quota-api');
+      const cacheResult = readQuotaCache(dataDir);
+      const state = readQuotaState(dataDir);
+      if (shouldRefresh(cacheResult, state)) {
+        writeQuotaState(dataDir, { ...state, refresh_pending_since: new Date().toISOString() });
+        const { spawn } = require('child_process');
+        const child = spawn(process.execPath,
+          [path.join(__dirname, 'quota-fetch.js')],
+          { detached: true, stdio: 'ignore', env: process.env });
+        child.unref();
+      }
+    } catch (_) {}
   } catch (_) {
     process.stdout.write('[burnrate-copilot error]\n');
   }

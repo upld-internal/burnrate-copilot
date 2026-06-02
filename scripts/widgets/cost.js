@@ -35,22 +35,31 @@ function session_cost(stdinData, sessionData, opts) {
 }
 
 // mtd_cost — month-to-date cost in USD with optional projection.
+// Primary source: API quota cache (sd.hasQuota). Fallback: JSONL sum.
 // opts.show_projected: boolean (default true)
 function mtd_cost(stdinData, sessionData, opts) {
-  if (!sessionData.hasPricing) return null;
+  if (!sessionData.hasPricing && !sessionData.hasQuota) return null;
 
   const name = MONTH_NAMES[new Date().getUTCMonth()];
   const showProjected = opts.show_projected !== false;
+
+  if (sessionData.hasQuota) {
+    const used  = (sessionData.quotaEntitlement - sessionData.quotaRemaining) / 100;
+    const amt   = used.toFixed(2);
+    const tilde = sessionData.quotaStale ? '~' : '';
+    if (opts._powerline) return `${name} ${tilde}$${amt}`;
+    return `${D}${name}${R} ${B}${tilde}$${amt}${R}`;
+  }
+
+  // Fallback: JSONL sum path (unchanged)
   const mtd  = sessionData.mtd || 0;
   const amt  = mtd.toFixed(2);
-
   if (opts._powerline) {
     if (showProjected && sessionData.projected > 0) {
       return `${name} $${amt} (~$${Math.round(sessionData.projected)}/mo)`;
     }
     return `${name} $${amt}`;
   }
-
   if (showProjected && sessionData.projected > 0) {
     return `${D}${name}${R} ${B}$${amt}${R} ${D}(~$${Math.round(sessionData.projected)}/mo)${R}`;
   }
@@ -73,26 +82,103 @@ function session_credits(stdinData, sessionData, opts) {
 }
 
 // mtd_credits — month-to-date cost in AI Credits with optional projection.
+// Primary source: API quota cache (sd.hasQuota). Fallback: JSONL sum.
 // opts.show_projected: boolean (default true)
 function mtd_credits(stdinData, sessionData, opts) {
-  if (!sessionData.hasPricing) return null;
+  if (!sessionData.hasPricing && !sessionData.hasQuota) return null;
 
-  const name          = MONTH_NAMES[new Date().getUTCMonth()];
+  const name = MONTH_NAMES[new Date().getUTCMonth()];
   const showProjected = opts.show_projected !== false;
-  const credits       = (sessionData.mtd || 0) * 100;
-  const amt           = fmtCredits(credits);
 
+  if (sessionData.hasQuota) {
+    const used  = sessionData.quotaEntitlement - sessionData.quotaRemaining;
+    const amt   = fmtCredits(used);
+    const tilde = sessionData.quotaStale ? '~' : '';
+    if (opts._powerline) return `${name} ${tilde}${amt}`;
+    return `${D}${name}${R} ${B}${tilde}${amt}${R}`;
+  }
+
+  // Fallback: JSONL sum path (unchanged)
+  const credits = (sessionData.mtd || 0) * 100;
+  const amt     = fmtCredits(credits);
   if (opts._powerline) {
     if (showProjected && sessionData.projected > 0) {
       return `${name} ${amt} (~${Math.round(sessionData.projected * 100)}/mo)`;
     }
     return `${name} ${amt}`;
   }
-
   if (showProjected && sessionData.projected > 0) {
     return `${D}${name}${R} ${B}${amt}${R} ${D}(~${Math.round(sessionData.projected * 100)}/mo)${R}`;
   }
   return `${D}${name}${R} ${B}${amt}${R}`;
 }
 
-module.exports = { session_cost, mtd_cost, session_credits, mtd_credits };
+// ---------------------------------------------------------------------------
+// New quota widgets
+// ---------------------------------------------------------------------------
+
+// quota_remaining — credits remaining this billing period.
+// Stale cache values are prefixed with tilde.
+// opts.show_reset_date: boolean (default true)
+// opts.show_label: boolean (default false)
+function quota_remaining(stdinData, sessionData, opts) {
+  if (!sessionData.hasQuota) return null;
+
+  const showResetDate = opts.show_reset_date !== false;
+  const showLabel     = opts.show_label === true;
+  const tilde         = sessionData.quotaStale ? '~' : '';
+  const remaining     = Math.round(sessionData.quotaRemaining * 10) / 10;
+
+  let resetStr = '';
+  if (showResetDate && sessionData.quotaResetDate) {
+    try {
+      const d = new Date(sessionData.quotaResetDate);
+      resetStr = ` · resets ${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}`;
+    } catch (_) {}
+  }
+
+  const core = `${tilde}${remaining} left${resetStr}`;
+  if (opts._powerline) return showLabel ? `Quota: ${core}` : core;
+
+  const colored = `${B}${tilde}${remaining}${R} left${resetStr}`;
+  return showLabel ? `Quota: ${colored}` : colored;
+}
+
+// quota_used — used-vs-entitlement display.
+// opts.show_label: boolean (default false)
+function quota_used(stdinData, sessionData, opts) {
+  if (!sessionData.hasQuota) return null;
+
+  const showLabel  = opts.show_label === true;
+  const used       = Math.round((sessionData.quotaEntitlement - sessionData.quotaRemaining) * 10) / 10;
+  const total      = sessionData.quotaEntitlement;
+  const pctUsed    = (100 - (sessionData.quotaPercent || 0)).toFixed(1);
+
+  const core = opts._powerline
+    ? `${used}/${total}`
+    : `${B}${used}/${total}${R} ${D}(${pctUsed}%)${R}`;
+
+  return showLabel ? `Used: ${core}` : core;
+}
+
+// overage_status — only shown when overage_count > 0.
+// opts.show_label: boolean (default false)
+function overage_status(stdinData, sessionData, opts) {
+  if (!sessionData.hasQuota) return null;
+  if (!sessionData.quotaOverage || sessionData.quotaOverage <= 0) return null;
+
+  const showLabel = opts.show_label === true;
+  const count     = sessionData.quotaOverage;
+  const core      = opts._powerline ? `+${count} over` : `${RD}+${count} overage${R}`;
+  return showLabel ? `Overage: ${core}` : core;
+}
+
+module.exports = {
+  session_cost,
+  mtd_cost,
+  session_credits,
+  mtd_credits,
+  quota_remaining,
+  quota_used,
+  overage_status,
+};

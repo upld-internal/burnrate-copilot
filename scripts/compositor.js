@@ -128,6 +128,7 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
     recentTools:          [],
     agents:               [],
     lastPrompt:           null,
+    hasQuota:             false,
   };
 
   // Load session snapshot. If the file is missing (e.g. orphan-recovery deleted it
@@ -179,6 +180,37 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
     } catch (_) {}
   }
 
+  // Read quota from cache (synchronous, ~0ms). Falls back to last_known_quota
+  // stored in the session file so the first turn after a restart shows data.
+  try {
+    const { readQuotaCache } = require('./quota-api');
+    const { data: qd, stale } = readQuotaCache(dataDir);
+
+    // Resolve last_known_quota from session file if cache miss.
+    let sessionLastQuota = null;
+    if (!qd && sessionId) {
+      try {
+        const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
+        if (fs.existsSync(sessionPath)) {
+          const raw = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+          sessionLastQuota = raw.last_known_quota || null;
+        }
+      } catch (_) {}
+    }
+
+    const quota = qd || sessionLastQuota || null;
+    if (quota) {
+      sd.quotaRemaining   = quota.quota_remaining;
+      sd.quotaEntitlement = quota.entitlement;
+      sd.quotaPercent     = quota.percent_remaining;
+      sd.quotaResetDate   = quota.quota_reset_date_utc;
+      sd.quotaOverage     = quota.overage_count ?? 0;
+      sd.quotaOverageOk   = quota.overage_permitted ?? false;
+      sd.quotaStale       = stale || !qd;
+      sd.hasQuota         = true;
+    }
+  } catch (_) {}
+
   // Detect Jira key from git branch — runs independently of session file state
   // so the widget appears immediately (no one-turn delay from read/write cycle).
   if (sessionId && stdinData.cwd) {
@@ -225,6 +257,19 @@ function loadSessionData(stdinData, dataDir, scriptDir, config) {
         sessionRaw.last_known_at     = now.toISOString().replace(/\.\d{3}Z$/, 'Z');
         if (sd.sessionCost > 0) {
           sessionRaw.last_known_cost = sd.sessionCost;
+        }
+
+        if (sd.hasQuota) {
+          sessionRaw.last_known_quota = {
+            entitlement:          sd.quotaEntitlement,
+            remaining:            Math.floor(sd.quotaRemaining),
+            quota_remaining:      sd.quotaRemaining,
+            percent_remaining:    sd.quotaPercent,
+            overage_permitted:    sd.quotaOverageOk,
+            overage_count:        sd.quotaOverage,
+            quota_reset_date_utc: sd.quotaResetDate,
+            captured_at:          now.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+          };
         }
 
         // Attribute cost delta to active Jira key (or unattributed bucket).

@@ -213,6 +213,21 @@ try {
     const sessionPath = path.join(dataDir, 'sessions', sessionId + '.json');
     fs.writeFileSync(sessionPath, JSON.stringify(sessionFile, null, 2));
 
+    // Trigger quota fetch so the first statusline turn has fresh data.
+    try {
+      const { readQuotaCache, readQuotaState, shouldRefresh, writeQuotaState } = require('./quota-api');
+      const cacheResult = readQuotaCache(dataDir);
+      const qState = readQuotaState(dataDir);
+      if (shouldRefresh(cacheResult, qState)) {
+        writeQuotaState(dataDir, { ...qState, refresh_pending_since: new Date().toISOString() });
+        const { spawn } = require('child_process');
+        const child = spawn(process.execPath,
+          [path.join(__dirname, 'quota-fetch.js')],
+          { detached: true, stdio: 'ignore', env: process.env });
+        child.unref();
+      }
+    } catch (_) {}
+
     // Log to debug file after session file is written so session_after is captured
     logHookDebug('sessionStart', data, sessionId);
 
