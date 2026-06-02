@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 'use strict';
 // session-start.js — Copilot CLI SessionStart hook.
-
-// Diagnostic: runs before any other require() so even a bad require is captured.
-// Writes to os.tmpdir() as a guaranteed-writable fallback on all platforms.
-try {
-  const _fs = require('fs'), _os = require('os'), _path = require('path');
-  const _line = new Date().toISOString() + ' session-start.js invoked PLUGIN_ROOT=' + (process.env.PLUGIN_ROOT || '(unset)') + '\n';
-  _fs.appendFileSync(_path.join(_os.tmpdir(), 'burnrate-session-start.log'), _line);
-} catch (_) {}
+// Captures a zero-baseline token snapshot at session open.
+// Also recovers orphaned sessions from prior crashes.
+// Copilot CLI pipes session JSON to stdin when this hook fires.
+//
+// SessionStart stdin schema (Copilot):
+//   sessionId     — camelCase (unlike statusLine which uses session_id)
+//   session_id    — also present in some versions; we handle both
+//   model.id      — model identifier string
+//   model.display_name — human-readable model name
+//   cwd           — current working directory
 
 const fs   = require('fs');
 const path = require('path');
@@ -153,23 +155,10 @@ function recoverOrphanedSessions(currentSessionId) {
 // ---------------------------------------------------------------------------
 
 let raw;
-try { raw = fs.readFileSync(0, 'utf8'); } catch (e) {
-  try {
-    const _os = require('os'), _path = require('path');
-    fs.appendFileSync(_path.join(_os.tmpdir(), 'burnrate-session-start.log'),
-      new Date().toISOString() + ' readFileSync(0) threw: ' + e.message + '\n');
-  } catch (_) {}
-  process.exit(0);
-}
+try { raw = fs.readFileSync(0, 'utf8'); } catch (_) { process.exit(0); }
 try {
     fs.mkdirSync(path.join(dataDir, 'sessions'), { recursive: true });
     fs.mkdirSync(path.join(dataDir, 'monthly'),  { recursive: true });
-
-    try {
-      const _os = require('os'), _path = require('path');
-      fs.appendFileSync(_path.join(_os.tmpdir(), 'burnrate-session-start.log'),
-        new Date().toISOString() + ' raw length=' + (raw ? raw.trim().length : 'null') + ' raw=' + JSON.stringify((raw || '').trim().slice(0, 120)) + '\n');
-    } catch (_) {}
 
     raw = raw.trim();
     if (!raw) process.exit(0);
@@ -267,12 +256,6 @@ try {
       }, STATE_FILE);
     } catch (_) {}
 
-  } catch (e) {
-    try {
-      const _os = require('os'), _path = require('path');
-      require('fs').appendFileSync(
-        _path.join(_os.tmpdir(), 'burnrate-session-start.log'),
-        new Date().toISOString() + ' ERROR: ' + e.message + '\n' + e.stack + '\n'
-      );
-    } catch (_) {}
+  } catch (_) {
+    // Never crash Copilot startup
   }
