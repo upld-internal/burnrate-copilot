@@ -152,6 +152,42 @@ describe('mtd_cost with quota', () => {
     assert.ok(result.includes('$27.47'), `expected $27.47 in: ${result}`);
   });
 
+  test('includes linear projection', () => {
+    const result = strip(mtd_cost(stdinData, sd(), plainOpts));
+    assert.ok(result.includes('/mo)'), `expected projection in: ${result}`);
+  });
+
+  test('show_projected: false — omits projection', () => {
+    const result = strip(mtd_cost(stdinData, sd(), { _powerline: false, show_projected: false }));
+    assert.ok(!result.includes('/mo)'));
+  });
+
+  test('projection > 90% of entitlement — yellow-orange color code present', () => {
+    // entitlement = 3000cr → $30. 91% = $27.3, proj at day 2 of 30 would be very high
+    // Force a scenario: used = $27, entitlement = $30 → proj ≈ $27*(30/2) = $405 > 100%
+    // Use quotaRemaining so used = (3000 - 2730) / 100 = $2.70 on day 2 of 30
+    // Actually easier: just use a small remaining to push proj > 90%
+    // used = $27.47, day 2 of 30 → proj = 27.47 * 15 = $412 > $30 → red
+    // Use entitlement=100cr($1), remaining=9cr → used=$0.91, proj at day2/30 = $13.65 > $1
+    const result = mtd_cost(stdinData, sd({
+      quotaEntitlement: 100,
+      quotaRemaining:   9,  // used = $0.91, > 90% of $1
+    }), plainOpts);
+    // Should contain YL (\x1b[38;5;214m) or RD (\x1b[31m)
+    const hasWarning = result.includes('\x1b[38;5;214m') || result.includes('\x1b[31m');
+    assert.ok(hasWarning, `expected warning color in: ${JSON.stringify(result)}`);
+  });
+
+  test('projection <= 90% of entitlement — no warning color', () => {
+    // used = $1, entitlement = $300 ($30000cr) → proj well under 90%
+    const result = mtd_cost(stdinData, sd({
+      quotaEntitlement: 30000,
+      quotaRemaining:   29900, // used = $1
+    }), plainOpts);
+    const hasWarning = result.includes('\x1b[38;5;214m') || result.includes('\x1b[31m');
+    assert.ok(!hasWarning, `unexpected warning color in: ${JSON.stringify(result)}`);
+  });
+
   test('stale cache — tilde prefix', () => {
     const result = strip(mtd_cost(stdinData, sd({ quotaStale: true }), plainOpts));
     assert.ok(result.includes('~$'), `expected ~$ prefix in: ${result}`);
@@ -176,6 +212,16 @@ describe('mtd_credits with quota', () => {
     // used = 3000 - 252.6 = 2747.4
     const result = strip(mtd_credits(stdinData, sd(), plainOpts));
     assert.ok(result.includes('2747'), `expected credits value in: ${result}`);
+  });
+
+  test('includes linear projection', () => {
+    const result = strip(mtd_credits(stdinData, sd(), plainOpts));
+    assert.ok(result.includes('/mo)'), `expected projection in: ${result}`);
+  });
+
+  test('show_projected: false — omits projection', () => {
+    const result = strip(mtd_credits(stdinData, sd(), { _powerline: false, show_projected: false }));
+    assert.ok(!result.includes('/mo)'));
   });
 
   test('stale cache — tilde prefix', () => {

@@ -12,6 +12,27 @@ const { R, B, D, YL, RD, withLabel } = require('../themes');
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+// projectFromMtd — linear projection of a MTD value to full-month total.
+// Returns null when there is nothing meaningful to show (day 1, or mtd is 0).
+function projectFromMtd(mtd) {
+  if (!mtd || mtd <= 0) return null;
+  const now         = new Date();
+  const dayOfMonth  = now.getUTCDate();
+  const daysInMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0)).getUTCDate();
+  return (mtd / Math.max(1, dayOfMonth)) * daysInMonth;
+}
+
+// projColor — ANSI color for a projected value relative to the monthly entitlement.
+// proj and entitlement must be in the same unit (both USD or both credits).
+// > 100% of entitlement → red, > 90% → yellow-orange, otherwise no color.
+function projColor(proj, entitlement) {
+  if (!entitlement || entitlement <= 0) return '';
+  const ratio = proj / entitlement;
+  if (ratio > 1.0) return RD;
+  if (ratio > 0.9) return YL;
+  return '';
+}
+
 // fmtCredits — format an AI credit value to match the Copilot footer style.
 // < 10: two decimal places ("9.22"), < 100: one decimal ("13.8"), >= 100: none ("142").
 function fmtCredits(n) {
@@ -44,10 +65,20 @@ function mtd_cost(stdinData, sessionData, opts) {
   const showProjected = opts.show_projected !== false;
 
   if (sessionData.hasQuota) {
+    const entitlementUsd = (sessionData.quotaEntitlement || 0) / 100;
     const used  = (sessionData.quotaEntitlement - sessionData.quotaRemaining) / 100;
     const amt   = used.toFixed(2);
     const tilde = sessionData.quotaStale ? '~' : '';
-    if (opts._powerline) return `${name} ${tilde}$${amt}`;
+    const proj  = showProjected ? projectFromMtd(used) : null;
+    if (opts._powerline) {
+      return proj
+        ? `${name} ${tilde}$${amt} (~$${Math.round(proj)}/mo)`
+        : `${name} ${tilde}$${amt}`;
+    }
+    if (proj) {
+      const c = projColor(proj, entitlementUsd);
+      return `${D}${name}${R} ${B}${tilde}$${amt}${R} ${c}${D}(~$${Math.round(proj)}/mo)${R}`;
+    }
     return `${D}${name}${R} ${B}${tilde}$${amt}${R}`;
   }
 
@@ -91,10 +122,20 @@ function mtd_credits(stdinData, sessionData, opts) {
   const showProjected = opts.show_projected !== false;
 
   if (sessionData.hasQuota) {
-    const used  = sessionData.quotaEntitlement - sessionData.quotaRemaining;
+    const entitlementCr = sessionData.quotaEntitlement || 0;
+    const used  = entitlementCr - sessionData.quotaRemaining;
     const amt   = fmtCredits(used);
     const tilde = sessionData.quotaStale ? '~' : '';
-    if (opts._powerline) return `${name} ${tilde}${amt}`;
+    const proj  = showProjected ? projectFromMtd(used) : null;
+    if (opts._powerline) {
+      return proj
+        ? `${name} ${tilde}${amt} (~${Math.round(proj)}/mo)`
+        : `${name} ${tilde}${amt}`;
+    }
+    if (proj) {
+      const c = projColor(proj, entitlementCr);
+      return `${D}${name}${R} ${B}${tilde}${amt}${R} ${c}${D}(~${Math.round(proj)}/mo)${R}`;
+    }
     return `${D}${name}${R} ${B}${tilde}${amt}${R}`;
   }
 
