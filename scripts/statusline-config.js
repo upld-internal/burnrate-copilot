@@ -68,7 +68,9 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
   if (!pluginRoot || !copilotDir) return null;
 
   const ourScript    = path.join(pluginRoot, 'scripts', 'statusline.js');
-  const ourCommand   = 'node "' + ourScript + '"';
+  const ourCommand   = ourScript.includes(' ')
+    ? 'node "' + ourScript + '"'
+    : 'node ' + ourScript;
   const settingsPath = path.join(copilotDir, 'settings.json');
   const hudDataDir   = dataDir || path.join(copilotDir, 'plugin-data', 'burnrate-copilot');
 
