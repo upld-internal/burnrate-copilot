@@ -61,6 +61,7 @@ async function main() {
       try {
         token = execFileSync('gh', ['auth', 'token'], {
           timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'],
+          shell: process.platform === 'win32',
         }).toString().trim();
         log('token: gh auth token (' + token.slice(0, 4) + '...)');
       } catch (e) {
