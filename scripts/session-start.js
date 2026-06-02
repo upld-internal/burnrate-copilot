@@ -153,10 +153,23 @@ function recoverOrphanedSessions(currentSessionId) {
 // ---------------------------------------------------------------------------
 
 let raw;
-try { raw = fs.readFileSync(0, 'utf8'); } catch (_) { process.exit(0); }
+try { raw = fs.readFileSync(0, 'utf8'); } catch (e) {
+  try {
+    const _os = require('os'), _path = require('path');
+    fs.appendFileSync(_path.join(_os.tmpdir(), 'burnrate-session-start.log'),
+      new Date().toISOString() + ' readFileSync(0) threw: ' + e.message + '\n');
+  } catch (_) {}
+  process.exit(0);
+}
 try {
     fs.mkdirSync(path.join(dataDir, 'sessions'), { recursive: true });
     fs.mkdirSync(path.join(dataDir, 'monthly'),  { recursive: true });
+
+    try {
+      const _os = require('os'), _path = require('path');
+      fs.appendFileSync(_path.join(_os.tmpdir(), 'burnrate-session-start.log'),
+        new Date().toISOString() + ' raw length=' + (raw ? raw.trim().length : 'null') + ' raw=' + JSON.stringify((raw || '').trim().slice(0, 120)) + '\n');
+    } catch (_) {}
 
     raw = raw.trim();
     if (!raw) process.exit(0);
