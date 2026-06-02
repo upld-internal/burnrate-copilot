@@ -146,11 +146,7 @@ function recoverOrphanedSessions(currentSessionId) {
 // Main
 // ---------------------------------------------------------------------------
 
-let raw = '';
-process.stdin.setEncoding('utf8');
-setTimeout(() => process.exit(0), 4000).unref(); // safety: exit if stdin never closes (Windows)
-process.stdin.on('data', chunk => { raw += chunk; });
-process.stdin.on('end', () => {
+let raw = fs.readFileSync(0, 'utf8');
   try {
     fs.mkdirSync(path.join(dataDir, 'sessions'), { recursive: true });
     fs.mkdirSync(path.join(dataDir, 'monthly'),  { recursive: true });
@@ -254,4 +250,3 @@ process.stdin.on('end', () => {
   } catch (_) {
     // Never crash Copilot startup
   }
-});

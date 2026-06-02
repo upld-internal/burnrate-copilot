@@ -22,11 +22,7 @@ const dataDir = getDataDir();
 // stdin-last.json is always written (single overwrite) for easy schema inspection.
 const DEBUG = process.env.COPILOT_HUD_DEBUG === '1';
 
-let raw = '';
-process.stdin.setEncoding('utf8');
-setTimeout(() => { process.stdout.write('\n'); process.exit(0); }, 4000).unref(); // safety: exit if stdin never closes (Windows)
-process.stdin.on('data', chunk => { raw += chunk; });
-process.stdin.on('end', () => {
+let raw = fs.readFileSync(0, 'utf8');
   let data;
   try {
     raw = raw.trim();
@@ -56,4 +52,3 @@ process.stdin.on('end', () => {
   } catch (_) {
     process.stdout.write('[burnrate-copilot error]\n');
   }
-});

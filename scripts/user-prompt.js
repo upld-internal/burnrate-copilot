@@ -10,11 +10,7 @@
 const { withStateLock, readState, STATE_FILE } = require('./state');
 const { updateSession, logHookDebug } = require('./session-file');
 
-let raw = '';
-process.stdin.setEncoding('utf8');
-setTimeout(() => process.exit(0), 4000).unref(); // safety: exit if stdin never closes (Windows)
-process.stdin.on('data', chunk => { raw += chunk; });
-process.stdin.on('end', () => {
+let raw = require('fs').readFileSync(0, 'utf8');
   try {
     raw = raw.trim();
     if (!raw) process.exit(0);
@@ -66,4 +62,3 @@ process.stdin.on('end', () => {
   } catch (_) {}
 
   process.exit(0);
-});
