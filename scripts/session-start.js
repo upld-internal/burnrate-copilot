@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 'use strict';
 // session-start.js — Copilot CLI SessionStart hook.
-// Captures a zero-baseline token snapshot at session open.
-// Also recovers orphaned sessions from prior crashes.
-// Copilot CLI pipes session JSON to stdin when this hook fires.
-//
-// SessionStart stdin schema (Copilot):
-//   sessionId     — camelCase (unlike statusLine which uses session_id)
-//   session_id    — also present in some versions; we handle both
-//   model.id      — model identifier string
-//   model.display_name — human-readable model name
-//   cwd           — current working directory
+
+// Diagnostic: runs before any other require() so even a bad require is captured.
+// Writes to os.tmpdir() as a guaranteed-writable fallback on all platforms.
+try {
+  const _fs = require('fs'), _os = require('os'), _path = require('path');
+  const _line = new Date().toISOString() + ' session-start.js invoked PLUGIN_ROOT=' + (process.env.PLUGIN_ROOT || '(unset)') + '\n';
+  _fs.appendFileSync(_path.join(_os.tmpdir(), 'burnrate-session-start.log'), _line);
+} catch (_) {}
 
 const fs   = require('fs');
 const path = require('path');

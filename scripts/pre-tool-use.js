@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 'use strict';
-// pre-tool-use.js — PreToolUse hook: marks tools as "running" in hud-state.json.
-// Detects agent spawns via the `task` tool.
-// Called by Copilot CLI before each tool invocation.
-//
-// Stdin schema:
-//   toolName:  string  — tool being called
-//   toolArgs:  object  — tool arguments (path, command, etc.)
-//   timestamp: number  — unix ms timestamp
+// pre-tool-use.js — PreToolUse hook.
+
+// Diagnostic: same as session-start.js, writes to os.tmpdir().
+try {
+  const _fs = require('fs'), _os = require('os'), _path = require('path');
+  const _line = new Date().toISOString() + ' pre-tool-use.js invoked PLUGIN_ROOT=' + (process.env.PLUGIN_ROOT || '(unset)') + '\n';
+  _fs.appendFileSync(_path.join(_os.tmpdir(), 'burnrate-pre-tool-use.log'), _line);
+} catch (_) {}
 
 const path = require('path');
 const { withStateLock, readState, STATE_FILE, MAX_RECENT_TOOLS } = require('./state');
