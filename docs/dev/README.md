@@ -1,3 +1,9 @@
+---
+title: Developer Guide
+nav_order: 3
+has_children: true
+---
+
 # burnrate-copilot — Developer Guide
 
 > Real-time cost tracking, usage analytics, and workflow tooling for GitHub Copilot CLI.

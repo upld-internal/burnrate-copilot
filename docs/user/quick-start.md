@@ -1,3 +1,9 @@
+---
+title: Quick Start
+parent: User Guide
+nav_order: 1
+---
+
 # burnrate-copilot — Quick Start
 
 Real-time cost and context display for GitHub Copilot CLI. Shows per-session token spend, month-to-date total, context window usage, model, git branch, and Jira; directly in the statusline, updated every turn.

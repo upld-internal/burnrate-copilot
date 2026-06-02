@@ -1,3 +1,9 @@
+---
+title: Data Points
+parent: Developer Guide
+nav_order: 7
+---
+
 # burnrate-copilot — Data Points
 
 This document catalogs every data point captured by burnrate-copilot — what it is, where it comes from, what it enables, and whether it is useful input for the optimize skill.

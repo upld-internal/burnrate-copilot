@@ -1,3 +1,9 @@
+---
+title: Hook Scripts
+parent: Developer Guide
+nav_order: 5
+---
+
 # Hook Scripts
 
 Each hook fires at a specific point in the Copilot CLI session lifecycle. Hook scripts receive JSON on stdin, must write nothing to stdout, and must exit within 5 seconds.

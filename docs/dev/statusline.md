@@ -1,3 +1,9 @@
+---
+title: Statusline & Widgets
+parent: Developer Guide
+nav_order: 4
+---
+
 # Statusline & Widgets
 
 The statusline is burnrate-copilot's primary user-facing output. It renders in the Copilot CLI footer on every turn.

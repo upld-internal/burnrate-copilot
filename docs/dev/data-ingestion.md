@@ -1,3 +1,9 @@
+---
+title: Data Ingestion
+parent: Developer Guide
+nav_order: 1
+---
+
 # Data Ingestion
 
 All data consumed by burnrate-copilot comes from four sources, listed from richest to simplest.

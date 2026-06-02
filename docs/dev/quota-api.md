@@ -1,3 +1,9 @@
+---
+title: Quota API
+parent: Developer Guide
+nav_order: 3
+---
+
 # Quota API
 
 burnrate-copilot fetches monthly quota data from GitHub's internal Copilot API and uses it as the primary source for MTD cost and credit displays.

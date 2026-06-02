@@ -1,3 +1,9 @@
+---
+title: Skills & Commands
+parent: Developer Guide
+nav_order: 8
+---
+
 # burnrate-copilot — Skills and Commands Reference
 
 burnrate-copilot exposes user-facing functionality through two mechanisms: **commands** (Copilot CLI slash commands) and **skills** (companion Node.js scripts invoked by commands). Both live in the plugin root.

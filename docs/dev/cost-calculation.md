@@ -1,3 +1,9 @@
+---
+title: Cost Calculation
+parent: Developer Guide
+nav_order: 2
+---
+
 # Cost Calculation
 
 How burnrate-copilot computes USD cost from GitHub Copilot's billing data.

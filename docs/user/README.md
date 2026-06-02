@@ -1,3 +1,9 @@
+---
+title: User Guide
+nav_order: 2
+has_children: true
+---
+
 # burnrate-copilot — User Guide
 
 Real-time cost and context display for GitHub Copilot CLI.

@@ -1,3 +1,9 @@
+---
+title: Widget Reference
+parent: User Guide
+nav_order: 2
+---
+
 # Widget Configuration
 
 burnrate-copilot's statusline is assembled from a list of widgets defined in your config file. You can rearrange them, tune each one's options, and choose between plain and Powerline-styled rendering.

@@ -1,3 +1,9 @@
+---
+title: Monthly Records
+parent: Developer Guide
+nav_order: 6
+---
+
 # Monthly Records (JSONL Schema)
 
 Completed sessions are stored as one JSON line per session in `~/.copilot/plugin-data/burnrate-copilot/monthly/YYYY-MM.jsonl`.

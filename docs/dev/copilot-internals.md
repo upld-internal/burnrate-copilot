@@ -1,3 +1,9 @@
+---
+title: Copilot CLI Internals
+parent: Developer Guide
+nav_order: 9
+---
+
 # Copilot CLI — Implementation Notes
 
 > **Why this file exists:** The `STATUS_LINE`, hooks, and plugin features are all
