@@ -146,8 +146,9 @@ function recoverOrphanedSessions(currentSessionId) {
 // Main
 // ---------------------------------------------------------------------------
 
-let raw = fs.readFileSync(0, 'utf8');
-  try {
+let raw;
+try { raw = fs.readFileSync(0, 'utf8'); } catch (_) { process.exit(0); }
+try {
     fs.mkdirSync(path.join(dataDir, 'sessions'), { recursive: true });
     fs.mkdirSync(path.join(dataDir, 'monthly'),  { recursive: true });
 

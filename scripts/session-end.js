@@ -34,8 +34,9 @@ function computeFinalCost(session) {
   };
 }
 
-let raw = fs.readFileSync(0, 'utf8');
-  try {
+let raw;
+try { raw = fs.readFileSync(0, 'utf8'); } catch (_) { process.exit(0); }
+try {
     raw = raw.trim();
     if (!raw) process.exit(0);
 

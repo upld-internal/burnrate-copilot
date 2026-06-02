@@ -46,8 +46,9 @@ function extractTarget(toolName, toolArgs) {
   }
 }
 
-let raw = require('fs').readFileSync(0, 'utf8');
-  try {
+let raw;
+try { raw = require('fs').readFileSync(0, 'utf8'); } catch (_) { process.exit(0); }
+try {
     raw = raw.trim();
     if (!raw) process.exit(0);
 
