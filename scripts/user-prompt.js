@@ -12,6 +12,7 @@ const { updateSession, logHookDebug } = require('./session-file');
 
 let raw = '';
 process.stdin.setEncoding('utf8');
+setTimeout(() => process.exit(0), 4000).unref(); // safety: exit if stdin never closes (Windows)
 process.stdin.on('data', chunk => { raw += chunk; });
 process.stdin.on('end', () => {
   try {

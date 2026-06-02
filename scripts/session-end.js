@@ -36,6 +36,7 @@ function computeFinalCost(session) {
 
 let raw = '';
 process.stdin.setEncoding('utf8');
+setTimeout(() => process.exit(0), 4000).unref(); // safety: exit if stdin never closes (Windows)
 process.stdin.on('data', chunk => { raw += chunk; });
 process.stdin.on('end', () => {
   try {
@@ -43,7 +44,6 @@ process.stdin.on('end', () => {
     if (!raw) process.exit(0);
 
     const data = JSON.parse(raw);
-
     const sessionId = (data.sessionId || data.session_id || '').trim();
     if (!sessionId) process.exit(0);
 

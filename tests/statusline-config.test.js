@@ -52,7 +52,7 @@ test('No existing settings.json → creates file with statusLine entry, returns 
     assert.equal(settings.statusLine.type, 'command');
     assert.equal(
       settings.statusLine.command,
-      path.join(pluginRoot, 'scripts', 'statusline.js')
+      'node ' + path.join(pluginRoot, 'scripts', 'statusline.js')
     );
   } finally {
     rmDir(copilotDir);
@@ -115,11 +115,11 @@ test('Different command present → migrates to custom_command, replaces statusL
     assert.ok(result !== null, 'should return a notification string');
     assert.ok(result.includes('updated') || result.includes('statusLine'), 'notification describes the change');
 
-    // settings.json should now point to our script
+    // settings.json should now point to our script (with node prefix)
     const updated = readSettings(copilotDir);
     assert.equal(
       updated.statusLine.command,
-      path.join(pluginRoot, 'scripts', 'statusline.js')
+      'node ' + path.join(pluginRoot, 'scripts', 'statusline.js')
     );
     assert.equal(updated.experimental, true, 'other settings preserved');
 
@@ -135,6 +135,36 @@ test('Different command present → migrates to custom_command, replaces statusL
     rmDir(pluginRoot);
   }
 });
+
+test('Already pointing to our script WITH node prefix → returns null (idempotent no-op)', () => {
+  const copilotDir = mkTmpDir();
+  const pluginRoot = mkTmpDir();
+
+  const scriptsDir = path.join(pluginRoot, 'scripts');
+  fs.mkdirSync(scriptsDir);
+  const ourScript = path.join(scriptsDir, 'statusline.js');
+  fs.writeFileSync(ourScript, '#!/usr/bin/env node\n');
+
+  // Write settings.json with node-prefixed command (as written by current setup)
+  const settings = { statusLine: { type: 'command', command: 'node ' + ourScript } };
+  fs.writeFileSync(
+    path.join(copilotDir, 'settings.json'),
+    JSON.stringify(settings, null, 2)
+  );
+
+  try {
+    const result = ensureStatusLineConfig(pluginRoot, copilotDir);
+    assert.equal(result, null, 'should return null when already configured with node prefix');
+
+    // settings.json should be unchanged
+    const reread = readSettings(copilotDir);
+    assert.equal(reread.statusLine.command, 'node ' + ourScript);
+  } finally {
+    rmDir(copilotDir);
+    rmDir(pluginRoot);
+  }
+});
+
 
 test('Malformed settings.json → returns null (does not throw or corrupt)', () => {
   const copilotDir = mkTmpDir();

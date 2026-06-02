@@ -68,6 +68,7 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
   if (!pluginRoot || !copilotDir) return null;
 
   const ourScript    = path.join(pluginRoot, 'scripts', 'statusline.js');
+  const ourCommand   = 'node ' + ourScript;
   const settingsPath = path.join(copilotDir, 'settings.json');
   const hudDataDir   = dataDir || path.join(copilotDir, 'plugin-data', 'burnrate-copilot');
 
@@ -105,7 +106,10 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
     ? existing.command : null;
 
   if (currentCmd) {
-    if (sameFile(currentCmd, ourScript)) {
+    // Strip a leading "node " prefix before comparing paths — the command may
+    // have been written with or without the prefix across versions.
+    const normalizedCmd = currentCmd.replace(/^node\s+/i, '');
+    if (sameFile(normalizedCmd, ourScript)) {
       return null; // already configured — idempotent no-op
     }
 
@@ -135,7 +139,7 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
       // Migration failure is non-fatal — still replace the statusLine
     }
 
-    settings.statusLine = { type: 'command', command: ourScript };
+    settings.statusLine = { type: 'command', command: ourCommand };
     try {
       writeJSON(settingsPath, settings);
     } catch (_) {
@@ -145,14 +149,14 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
     return (
       `burnrate: statusLine updated (previous command preserved as custom_command widget)\n` +
       `  old: ${currentCmd}\n` +
-      `  new: ${ourScript}`
+      `  new: ${ourCommand}`
     );
   }
 
   // ---------------------------------------------------------------------------
   // No statusLine configured — add it
   // ---------------------------------------------------------------------------
-  settings.statusLine = { type: 'command', command: ourScript };
+  settings.statusLine = { type: 'command', command: ourCommand };
   try {
     if (!fileExists) {
       // Create directory if needed (should already exist but be safe)
@@ -163,7 +167,7 @@ function ensureStatusLineConfig(pluginRoot, copilotDir, dataDir) {
     return null;
   }
 
-  return `burnrate: statusLine auto-configured → ${ourScript}`;
+  return `burnrate: statusLine auto-configured → ${ourCommand}`;
 }
 
 module.exports = { ensureStatusLineConfig };

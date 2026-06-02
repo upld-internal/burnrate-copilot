@@ -24,6 +24,7 @@ const DEBUG = process.env.COPILOT_HUD_DEBUG === '1';
 
 let raw = '';
 process.stdin.setEncoding('utf8');
+setTimeout(() => { process.stdout.write('\n'); process.exit(0); }, 4000).unref(); // safety: exit if stdin never closes (Windows)
 process.stdin.on('data', chunk => { raw += chunk; });
 process.stdin.on('end', () => {
   let data;
