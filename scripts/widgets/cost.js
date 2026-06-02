@@ -123,20 +123,18 @@ function mtd_credits(stdinData, sessionData, opts) {
 
   if (sessionData.hasQuota) {
     const entitlementCr = sessionData.quotaEntitlement || 0;
-    const used  = entitlementCr - sessionData.quotaRemaining;
-    const amt   = fmtCredits(used);
-    const tilde = sessionData.quotaStale ? '~' : '';
-    const proj  = showProjected ? projectFromMtd(used) : null;
+    const used   = entitlementCr - sessionData.quotaRemaining;
+    const amt    = fmtCredits(used);
+    const tilde  = sessionData.quotaStale ? '~' : '';
+    const proj   = showProjected ? projectFromMtd(used) : null;
+    const pct    = entitlementCr > 0 ? Math.round(used / entitlementCr * 100) : 0;
     if (opts._powerline) {
-      return proj
-        ? `${name} ${tilde}${amt} (~${Math.round(proj)}/mo)`
-        : `${name} ${tilde}${amt}`;
+      const base = `${name} ${tilde}${amt}/${entitlementCr} (${pct}%)`;
+      return proj ? `${base} (~${Math.round(proj)}/mo)` : base;
     }
-    if (proj) {
-      const c = projColor(proj, entitlementCr);
-      return `${D}${name}${R} ${B}${tilde}${amt}${R} ${c}${c ? B : D}(~${Math.round(proj)}/mo)${R}`;
-    }
-    return `${D}${name}${R} ${B}${tilde}${amt}${R}`;
+    const c = proj ? projColor(proj, entitlementCr) : '';
+    const projStr = proj ? ` ${c}${c ? B : D}(~${Math.round(proj)}/mo)${R}` : '';
+    return `${D}${name}${R} ${B}${tilde}${amt}${R}${D} / ${entitlementCr}${R} ${B}(${pct}%)${R}${projStr}`;
   }
 
   // Fallback: JSONL sum path (unchanged)

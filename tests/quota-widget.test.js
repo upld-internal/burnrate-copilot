@@ -203,9 +203,11 @@ describe('mtd_cost with quota', () => {
 
 describe('mtd_credits with quota', () => {
   test('uses API cache when hasQuota is true', () => {
-    // used = 3000 - 252.6 = 2747.4
+    // used = 3000 - 252.6 = 2747.4 → pct = round(2747.4/3000*100) = 92%
     const result = strip(mtd_credits(stdinData, sd(), plainOpts));
     assert.ok(result.includes('2747'), `expected credits value in: ${result}`);
+    assert.ok(result.includes('/ 3000'), `expected entitlement in: ${result}`);
+    assert.ok(result.includes('(92%)'), `expected percentage in: ${result}`);
   });
 
   test('includes linear projection', () => {

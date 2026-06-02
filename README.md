@@ -18,7 +18,7 @@ The goal is behavioral: when cost is visible in real time, you make different de
 
 ## Installation
 
-See [`docs/quick-start.md`](docs/quick-start.md) for full installation details, requirements, and configuration.
+See [`docs/user/quick-start.md`](docs/user/quick-start.md) for full installation details, requirements, and configuration.
 
 ---
 
@@ -76,7 +76,7 @@ Shows:
 
 ## How it works
 
-Copilot CLI provides cost data directly via its AI Credits billing system. The statusline payload includes:
+**Session cost** comes directly from the statusline payload that Copilot pipes to the plugin on every turn:
 
 ```json
 {
@@ -89,23 +89,36 @@ Copilot CLI provides cost data directly via its AI Credits billing system. The s
 
 Cost in USD = `total_nano_aiu / 100_000_000_000`. This is GitHub's own authoritative billing figure — the same number that appears on your GitHub billing dashboard. No pricing table or token math needed.
 
+**Month-to-date cost** comes from GitHub's internal quota API, fetched in the background every 5 minutes and cached locally. This covers the full billing period regardless of when the plugin was installed. If the API is unavailable, MTD falls back to summing local session records.
+
 ---
 
 ## Architecture
 
-1. **SessionStart hook** — writes a session file capturing model, project, git branch, and a zero-baseline token snapshot
-2. **statusLine command** — on every turn, reads `ai_used.total_nano_aiu` for authoritative cost, writes `last_known_cost` and `last_known_nano_aiu` back to the session file, renders the display
+1. **SessionStart hook** — writes a session file capturing model, project, git branch, and a zero-baseline token snapshot; triggers an initial quota API fetch in the background
+2. **statusLine command** — on every turn, reads `ai_used.total_nano_aiu` for session cost, reads `quota-cache.json` for MTD quota, writes state back to the session file, renders the display; spawns a background quota refresh if the cache is stale
 3. **SessionEnd hook** — reads `last_known_nano_aiu`, computes final cost, appends a record to `~/.copilot/plugin-data/burnrate-copilot/monthly/YYYY-MM.jsonl`, deletes the session file
 4. **Orphan recovery** — on next SessionStart, scans for session files left behind by Ctrl+C exits or crashes; recovers cost from `last_known_nano_aiu` and archives them to the JSONL
 
-All data is local. Plugin data folder structure:
+Plugin data folder structure:
 
 ```
 ~/.copilot/plugin-data/burnrate-copilot/
   config.json               ← widget layout and theme
   sessions/<id>.json        ← per-session state (deleted at clean exit)
   monthly/YYYY-MM.jsonl     ← completed session records
+  quota-cache.json          ← cached monthly quota from GitHub billing API
+  quota-state.json          ← circuit breaker state
 ```
+
+---
+
+## Documentation
+
+| | |
+|---|---|
+| [User Guide](docs/user/README.md) | Installation, configuration, widget reference |
+| [Developer Guide](docs/dev/README.md) | Architecture, data ingestion, cost calculation, quota API, hook scripts |
 
 ---
 

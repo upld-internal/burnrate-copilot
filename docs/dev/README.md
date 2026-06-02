@@ -9,8 +9,9 @@
 | Page | Description |
 |------|-------------|
 | [Architecture Overview](#architecture-overview) | High-level system design and data flow |
-| [Data Ingestion](./data-ingestion.md) | All data sources: hooks, events.jsonl, statusline stdin |
-| [Cost Calculation](./cost-calculation.md) | How AI Credits billing works: nano-AIU to USD, fallbacks |
+| [Data Ingestion](./data-ingestion.md) | All data sources: hooks, events.jsonl, statusline stdin, quota API |
+| [Cost Calculation](./cost-calculation.md) | How AI Credits billing works: nano-AIU to USD, MTD sources, fallbacks |
+| [Quota API](./quota-api.md) | MTD billing from GitHub's internal quota endpoint: cache, circuit breaker, fallback chain |
 | [Statusline & Widgets](./statusline.md) | Custom statusline renderer, widget catalog, configuration |
 | [Hook Scripts](./hooks.md) | Each hook handler: what it does, when it fires, what it writes |
 | [Monthly Records](./monthly-records.md) | JSONL schema, fields, and query patterns |
@@ -69,6 +70,8 @@ burnrate-copilot is a GitHub Copilot CLI plugin that:
 ├── config.json             # User display configuration (widgets, theme)
 ├── sessions/<id>.json      # Live session state (deleted at clean exit)
 ├── monthly/YYYY-MM.jsonl   # Completed session records (append-only)
+├── quota-cache.json        # Cached quota API response (TTL: 5 min)
+├── quota-state.json        # Circuit breaker state for quota API
 └── debug/
     ├── hooks.jsonl         # Hook debug log (COPILOT_HUD_DEBUG=1)
     └── stdin-debug.jsonl   # StatusLine stdin log (COPILOT_HUD_DEBUG=1)
@@ -79,9 +82,9 @@ burnrate-copilot is a GitHub Copilot CLI plugin that:
 ## Key Design Principles
 
 1. **Never crash Copilot.** All hook scripts and the statusline catch errors silently. A broken plugin must never block the user's workflow.
-2. **Graceful degradation.** Cost falls back from `last_known_nano_aiu` to `last_known_cost`. Both survive Ctrl+C.
-3. **No network calls.** All data is local. Cost comes from GitHub's own billing field in the statusline stdin.
-4. **Authoritative billing.** Cost is read directly from `ai_used.total_nano_aiu` — GitHub's own billing figure. No token math, no per-model rate tables.
+2. **Graceful degradation.** Cost falls back from `last_known_nano_aiu` to `last_known_cost`. Both survive Ctrl+C. Quota display falls back from fresh cache → stale cache → session snapshot → hidden.
+3. **Synchronous render path.** `statusline.js → compositor.js → render()` is fully synchronous. All data is read from local files; network requests happen in detached background processes.
+4. **Authoritative billing.** Session cost is read directly from `ai_used.total_nano_aiu` — GitHub's own billing figure. MTD cost is read from the quota API cache. No token math, no per-model rate tables.
 
 ---
 
@@ -109,6 +112,8 @@ burnrate-copilot/
 │   ├── jira-detector.js       # Git branch → Jira key extraction
 │   ├── jira-attribution.js    # Per-turn cost attribution to Jira tickets
 │   ├── statusline-config.js   # Auto-configure settings.json on first run
+│   ├── quota-api.js           # Synchronous quota cache/state utilities (no network)
+│   ├── quota-fetch.js         # Async background fetcher (run as detached child process)
 │   └── widgets/               # One file per widget category
 │       ├── cost.js            # session_cost, mtd_cost
 │       ├── context.js         # context_window, premium_requests, token_breakdown, etc.
@@ -145,6 +150,8 @@ All tests use Node.js built-in test runner (no dependencies). Tests mock the fil
 | `COPILOT_HOME` | Override `~/.copilot` — used by tests and non-standard installs |
 | `COPILOT_HUD_DEBUG` | Set to `1` to enable hook and stdin debug logging |
 | `PLUGIN_ROOT` | Set by Copilot CLI hook executor — absolute path to plugin install |
+| `GH_TOKEN` | GitHub auth token used by `quota-fetch.js` instead of calling `gh auth token` |
+| `COPILOT_QUOTA_MOCK_RESPONSE` | JSON string injected as mock API response in `quota-fetch.js` (skips network) |
 
 ---
 

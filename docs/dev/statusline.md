@@ -20,6 +20,7 @@ The statusline is burnrate-copilot's primary user-facing output. It renders in t
 | `last_known_cost` | Running session cost estimate |
 | `last_known_nano_aiu` | Last known `ai_used.total_nano_aiu` value (for orphan recovery) |
 | `last_known_at` | ISO timestamp of last compositor write |
+| `last_known_quota` | Snapshot of latest quota data (fallback if `quota-cache.json` is missing) |
 | `turn_tokens` | Per-turn token breakdown array (capped at 100 entries) |
 | `jira_costs` | Jira cost attribution delta for the active ticket |
 
@@ -85,11 +86,20 @@ Use `{ "widget": "newline" }` to start a new row. All segments before the newlin
 | Widget | Output Example | Options |
 |--------|---------------|---------|
 | `session_cost` | `Session $4.23` | `show_label` (default true) |
+| `session_credits` | `Credits: 423.10` | `show_label` (default true) |
 | `mtd_cost` | `May $142.50 (~$285/mo)` | `show_projected` (default true) |
+| `mtd_credits` | `Jun 14250 (~28500/mo)` | `show_projected` (default true) |
+| `quota_remaining` | `252 left · resets Jul 1` | `show_reset_date` (default true), `show_label` (default false) |
+| `quota_used` | `2748/3000 (91.6%)` | `show_label` (default false) |
+| `overage_status` | `+3 overage` | `show_label` (default false) — returns null when `overage_count = 0` |
 
 `session_cost` color-codes: default (<$1), yellow ($1–5), red (>$5).
 
-`mtd_cost` shows current month name, MTD total, and projected monthly spend.
+`mtd_cost` primary source is the quota API cache (`(entitlement - quota_remaining) / 100`). Falls back to JSONL sum when cache is absent. Stale cache values are prefixed with `~`.
+
+`quota_remaining` and `quota_used` require the quota API to have fetched at least once. They return `null` (hidden) when no quota data is available. Stale values get a `~` prefix.
+
+`overage_status` is only visible when `overage_count > 0`; returns `null` otherwise.
 
 ---
 

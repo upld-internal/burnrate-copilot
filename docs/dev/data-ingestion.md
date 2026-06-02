@@ -1,6 +1,6 @@
 # Data Ingestion
 
-All data consumed by burnrate-copilot comes from three sources, listed from richest to simplest.
+All data consumed by burnrate-copilot comes from four sources, listed from richest to simplest.
 
 ---
 
@@ -111,7 +111,18 @@ The authoritative record of everything that happened in a session. Append-only J
 
 **Why `current_context_used_percentage` differs from `used_percentage`:** `used_percentage` is relative to the full model context window (e.g. 200K). `current_context_used_percentage` is relative to `displayed_context_limit` (e.g. 160K) — the effective cap Copilot enforces. The latter matches what users see in Copilot's own interface and warns earlier.
 
-**Key field:** `ai_used.total_nano_aiu` — GitHub's authoritative billing figure. Cost in USD = `nano_aiu / 100_000_000_000`. No pricing table needed.
+The statusline stdin example above omits `ai_used` for brevity. The full payload includes:
+
+```json
+{
+  "ai_used": {
+    "total_nano_aiu": 6987975000,
+    "formatted": "6.99"
+  }
+}
+```
+
+**`ai_used.total_nano_aiu`** is GitHub's authoritative billing figure. Cost in USD = `nano_aiu / 100_000_000_000`. This is a session-cumulative value that never resets mid-session.
 
 **Critical fact:** Token totals are cumulative across compactions. They never reset. Our delta calculation `(current - snapshot)` is always correct.
 
@@ -166,3 +177,19 @@ Copilot CLI fires hooks at specific lifecycle points. Each hook receives a JSON 
 | System kill | ❌ | ✅ (if flushed) | ❌ | ❌ |
 
 This is why the fallback chain exists — see [Cost Calculation](./cost-calculation.md).
+
+---
+
+## 4. Quota API (MTD Billing Data)
+
+**Endpoint:** `GET https://api.github.com/copilot_internal/user`
+
+**Auth:** Bearer token via `GH_TOKEN` env or `gh auth token` CLI.
+
+**Cadence:** Fetched in the background every 5 minutes; never on the render path.
+
+This endpoint provides the user's monthly AI credit quota: entitlement, remaining credits, percent remaining, overage status, and reset date. It is the primary source for MTD cost display — covering the full billing period regardless of when the plugin was installed.
+
+Because the endpoint is undocumented, access is wrapped in a circuit breaker (3 failures → 1 hour cooldown) and a persistent cache. The statusline reads from the cache synchronously; the background process that fetches the data is spawned after stdout is written and immediately unref'd.
+
+See [Quota API](./quota-api.md) for the full architecture.

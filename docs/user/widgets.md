@@ -129,7 +129,7 @@ Example output: `Credits: 423.10`
 
 #### `mtd_credits`
 
-Month-to-date cost in AI Credits with optional projection.
+Month-to-date AI Credits used vs. your monthly entitlement, with a percentage and optional projection. The slash and entitlement are dim; the percentage is bold.
 
 ```json
 { "widget": "mtd_credits", "show_projected": true }
@@ -139,7 +139,60 @@ Month-to-date cost in AI Credits with optional projection.
 |---|---|---|---|
 | `show_projected` | boolean | `true` | Append `(~X/mo)` projection |
 
-Example output: `Jun 14250 (~28500/mo)`
+Example output: `Jun 2757 / 3000 (92%) (~41349/mo)`
+
+---
+
+#### `quota_remaining`
+
+AI credits remaining in your monthly quota, sourced from GitHub's billing API. Requires `gh` CLI to be installed and authenticated.
+
+```json
+{ "widget": "quota_remaining", "show_reset_date": true }
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `show_reset_date` | boolean | `true` | Append `· resets MMM D` |
+| `show_label` | boolean | `false` | Prefix with a label |
+
+Example output: `252 left · resets Jul 1`
+
+A `~` prefix indicates the value is from a stale cache (more than 5 minutes old). Hidden when no quota data is available.
+
+---
+
+#### `quota_used`
+
+AI credits used vs. your monthly entitlement, with a percentage.
+
+```json
+{ "widget": "quota_used" }
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `show_label` | boolean | `false` | Prefix with a label |
+
+Example output: `2748/3000 (91.6%)`
+
+Hidden when no quota data is available.
+
+---
+
+#### `overage_status`
+
+Number of overage interactions this month. Only visible when `overage_count > 0`; returns nothing otherwise.
+
+```json
+{ "widget": "overage_status" }
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `show_label` | boolean | `false` | Prefix with a label |
+
+Example output: `+3 overage`
 
 ---
 
@@ -521,6 +574,8 @@ No options.
 ## Powerline mode
 
 Set `"powerline": true` to enable Powerline-styled rendering. Each segment gets a cycling background color and segments are joined by filled arrow glyphs (``) instead of a separator character.
+
+![](../images/Powerline.png)
 
 **Requirements:** a terminal font with Nerd Font glyphs or a Powerline-patched font. Popular choices include [Nerd Fonts](https://www.nerdfonts.com/), FiraCode Nerd Font, or MesloLGS NF (used by powerlevel10k).
 

@@ -2,14 +2,15 @@
 
 Real-time cost and context display for GitHub Copilot CLI. Shows per-session token spend, month-to-date total, context window usage, model, git branch, and Jira; directly in the statusline, updated every turn.
 
-![](images/Statusline.png)
+![](../images/Statusline.png)
 
 ---
 
 ## Requirements
 
-- GitHub Copilot CLI (v1.0.56 or higher). Use `/update` to get latest.
-- Node.js ≥ 18 on your PATH (most will already have this)
+- GitHub Copilot CLI (v1.0.56 or higher). Use `/update` in copilot cli to get latest.
+- Node.js ≥ 18 on your PATH (most will already have this).
+- [Nerd Fonts](https://www.nerdfonts.com/) glyphs recommended.
 - **GitHub CLI (`gh`)** — required for monthly quota display. Install and authenticate before installing the plugin.
 
 **Mac:**
@@ -23,8 +24,6 @@ gh auth login
 winget install --id GitHub.cli
 gh auth login
 ```
-
-If Homebrew is not installed on Mac: https://brew.sh
 
 ---
 
@@ -48,13 +47,18 @@ If the statusline still doesn't appear after restarting, run `/burnrate:setup` t
 
 Use `/burnrate:configure` to choose a preset (Minimal, Standard, Full) or build a custom widget layout. Configuration is saved to `~/.copilot/plugin-data/burnrate-copilot/config.json`. You can also modify this file directly — see [Configuring widgets](#configuring-widgets) below.
 
-### Update to New Plugin Version
+### Update Plugin Version
 
 To download the latest plugin version, in the Copilot CLI chat:
 
 ```
 /plugin update burnrate-copilot
 ```
+
+> [!NOTE]
+> There is a [bug](https://github.com/github/copilot-cli/issues/3627) in the windows version of GitHub Copilot. If you are on windows, before running /plugin update, you will need to remove this folder
+> `%LOCALAPPDATA%\copilot\marketplaces\https---github-com-upld-internal-burnrate-copilot-git`
+
 
 ### Uninstall
 
@@ -166,7 +170,7 @@ Pick a preset (Minimal, Standard, Full, Powerline) or assemble a custom layout w
 
 Use `{ "widget": "newline" }` to split the statusline across multiple rows. Set `"powerline": true` (requires a [Nerd Font](https://www.nerdfonts.com/)) to replace separators with arrow glyphs and add segment background colors from the selected theme (`default`, `minimal`, `nord`, `dracula`, `catppuccin`).
 
-For a full reference of all widgets, options, Powerline mode, and themes, see **[docs/user/widgets.md](user/widgets.md)**.
+For a full reference of all widgets, options, Powerline mode, and themes, see **[widgets.md](widgets.md)**.
 
 ---
 
@@ -200,47 +204,27 @@ To show the active ticket in the statusline, add the `jira_ticket` widget to you
 
 ## Data directory
 
-All plugin data lives in `~/.copilot/plugin-data/burnrate-copilot/`. Nothing is written outside this directory and nothing is sent over the network.
+All plugin data lives in `~/.copilot/plugin-data/burnrate-copilot/`. Nothing is written outside this directory and nothing is sent over the network except the GitHub quota API call (see [How costs are calculated](#how-costs-are-calculated)).
 
 ```
 ~/.copilot/plugin-data/burnrate-copilot/
   config.json               ← widget layout and theme configuration
   sessions/<id>.json        ← per-session state (deleted at clean SessionEnd)
   monthly/YYYY-MM.jsonl     ← completed session records (one line per session)
+  quota-cache.json          ← cached monthly quota from GitHub API (refreshed every 5 min)
+  quota-state.json          ← circuit breaker state
   debug/hooks.jsonl         ← hook debug log (when COPILOT_HUD_DEBUG=1)
 ```
 
 ---
 
-## Debug mode
+## How costs are calculated
 
-Set `COPILOT_HUD_DEBUG=1` to capture full hook payloads to `debug/hooks.jsonl`:
+**Session cost** comes directly from `ai_used.total_nano_aiu` in Copilot's statusline payload — GitHub's own billing figure, updated every turn. No token math or rate tables.
 
-```bash
-COPILOT_HUD_DEBUG=1 gh copilot chat "hello"
-node scripts/show-hook-debug.js
-```
+**Month-to-date cost** comes from GitHub's internal quota API, which returns the same figures shown on your GitHub billing dashboard. The plugin fetches this in the background every 5 minutes and caches it locally. If the API is unavailable, MTD display falls back to summing your local session records.
 
-Useful for verifying field names in Copilot hook payloads when debugging unexpected behavior.
-
----
-
-## Fallback behavior
-
-The statusline never crashes or shows blank. If something goes wrong:
-
-| Condition | Display |
-|---|---|
-| Normal operation | `$0.08 session \| May: $6.21 (~$41/mo)` |
-| No session file yet | `$0.00 session \| May: $6.21` |
-| Monthly file unreadable | `$0.08 session \| May: ?` |
-| Stdin parse failure | `[burnrate error]` |
-
-If you see `? session`, check that `sessions/` contains a file for the current session ID:
-
-```bash
-ls ~/.copilot/plugin-data/burnrate-copilot/sessions/
-```
+The quota API requires the GitHub CLI (`gh`) to be installed and authenticated. If `gh` is not available, the quota display is hidden.
 
 ---
 
@@ -256,4 +240,4 @@ export COPILOT_HOME=/custom/path/.copilot
 
 ## Contributing
 
-The plugin is plain Node.js with no runtime npm dependencies. See [CLAUDE.md](../CLAUDE.md) for architecture details, the stdin JSON schema, and session file schemas. The test suite lives in `tests/` and each file can be run directly with `node tests/<file>.test.js`.
+The plugin is plain Node.js with no runtime npm dependencies. See the [developer docs](../dev/README.md) for architecture details, the stdin JSON schema, and session file schemas. The test suite lives in `tests/` and can be run with `node --test tests/*.test.js`.

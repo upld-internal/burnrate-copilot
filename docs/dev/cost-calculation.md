@@ -1,24 +1,20 @@
 # Cost Calculation
 
-How burnrate-copilot computes USD cost from GitHub Copilot's AI Credits billing data.
+How burnrate-copilot computes USD cost from GitHub Copilot's billing data.
 
 ---
 
-## The Formula
+## Session Cost (Real-Time)
 
 ```
 cost_usd = total_nano_aiu / 100,000,000,000
 ```
 
-Where `total_nano_aiu` is GitHub's authoritative billing field from the statusline stdin (`ai_used.total_nano_aiu`), representing nano-AI-Usage-Units for the current session.
+`total_nano_aiu` is GitHub's authoritative billing field from the statusline stdin (`ai_used.total_nano_aiu`), representing nano-AI-Usage-Units for the current session.
 
 **Conversion:** 1 AI credit = 1,000,000,000 nano-AIU = $0.01 USD
 
 This is a session-cumulative value (monotonically increasing). No token math, no rates table, no approximation — GitHub bills by AI credits and that's what we show.
-
----
-
-## Real-Time Cost (Statusline — Every Turn)
 
 The compositor (`scripts/compositor.js`) extracts cost directly from `ai_used.total_nano_aiu` on every turn:
 
@@ -33,9 +29,37 @@ Token counts (`last_known_tokens`) are also preserved for cache efficiency analy
 
 ---
 
-## Final Cost (Session End — 2-Level Fallback)
+## Month-to-Date Cost (Primary: Quota API)
 
-When a session ends, `session-end.js` uses:
+MTD cost and credits come from the GitHub Copilot quota API as the primary source. This is the same data shown on the GitHub billing dashboard and covers the full billing period regardless of when the plugin was installed.
+
+**Conversion from API response:**
+```
+mtd_credits_used = entitlement - quota_remaining   // e.g. 3000 - 252.6 = 2747.4
+mtd_cost_usd     = mtd_credits_used / 100          // e.g. 2747.4 / 100 = $27.47
+```
+
+The quota cache is refreshed in the background every 5 minutes. See [Quota API](./quota-api.md) for the full architecture including the circuit breaker and fallback chain.
+
+**MTD source priority:**
+
+| Priority | Source | Condition |
+|---|---|---|
+| 1 | Quota API cache (fresh) | `quota-cache.json` present and within TTL |
+| 2 | Quota API cache (stale) | Present but older than TTL — displayed with `~` prefix |
+| 3 | JSONL sum + current session | Cache absent — fallback to existing JSONL sum |
+
+**Fallback formula (JSONL path):**
+```
+projected = (mtd / dayOfMonth) × daysInMonth
+```
+`getMtdAndProjected(monthKey, dataDir)` in `pricing.js` sums all `cost_usd` from the current month's JSONL. This path is only taken when the quota cache is absent.
+
+---
+
+## Final Session Cost (Session End)
+
+When a session ends, `session-end.js` resolves final cost via a 2-level fallback:
 
 ### Strategy 1: AI Credits (ai_credits)
 
@@ -70,15 +94,3 @@ If `sessionEnd` never fires (crash, Ctrl+C, system kill), session files become "
 2. For each orphan, attempts cost using the same 2-level fallback
 3. Writes a monthly JSONL record with `"recovered": true`
 4. Deletes the orphan session file
-
----
-
-## Month-to-Date and Projected
-
-`getMtdAndProjected(monthKey, dataDir)` sums all `cost_usd` from the current month's JSONL, then projects:
-
-```
-projected = (mtd / dayOfMonth) × daysInMonth
-```
-
-Displayed in the `mtd_cost` widget.
