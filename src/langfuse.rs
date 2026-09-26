@@ -22,6 +22,7 @@ use time::format_description::well_known::Rfc3339;
 
 use crate::hook::{HookInput, TraceParent};
 use crate::provider::{PRODUCT, Paths, ProviderError, read_bounded, write_private};
+use crate::turn_io::{self, TurnIo};
 
 pub const HARNESS: &str = "harness";
 pub const COPILOT_HARNESS: &str = "copilot_cli";
@@ -32,8 +33,12 @@ pub const JIRA_KEYS: &str = "jira_keys";
 
 const OTLP_PATH: &str = "/api/public/otel/v1/traces";
 const HTTP_TIMEOUT: Duration = Duration::from_secs(10);
-const REQUEST_LIMIT: usize = 64 * 1024;
+const REQUEST_LIMIT: usize = 1024 * 1024;
+const TRANSCRIPT_WAIT: Duration = Duration::from_secs(5);
 const SPAN_NAME: &str = "burnrate.attribution";
+/// Replaces the default trace name, Copilot's root span `invoke_agent`, to
+/// match Codex's `Codex Turn`.
+pub const TRACE_NAME: &str = "Copilot Turn";
 const SEND_SUBCOMMAND: [&str; 2] = ["langfuse", "send"];
 
 /// Where the metadata span is sent. Credentials stay in memory only.
@@ -164,10 +169,12 @@ pub fn request_body(
     metadata: &BTreeMap<&'static str, String>,
     now_unix_nanos: i128,
 ) -> Value {
-    let attributes: Vec<Value> = metadata
-        .iter()
-        .map(|(key, value)| attribute(&format!("langfuse.trace.metadata.{key}"), value))
-        .collect();
+    let mut attributes = vec![attribute("langfuse.trace.name", TRACE_NAME)];
+    attributes.extend(
+        metadata
+            .iter()
+            .map(|(key, value)| attribute(&format!("langfuse.trace.metadata.{key}"), value)),
+    );
     let span = json!({
         "traceId": hex(&parent.trace_id),
         "spanId": span_id(session_id, parent),
@@ -178,8 +185,11 @@ pub fn request_body(
         "endTimeUnixNano": now_unix_nanos.to_string(),
         "attributes": attributes,
     });
+    // No resource attributes: Langfuse copies the resource of the span that
+    // carries trace metadata onto the trace, which would present Burnrate as
+    // the service that produced Copilot's trace.
     json!({"resourceSpans": [{
-        "resource": {"attributes": [attribute("service.name", PRODUCT)]},
+        "resource": {"attributes": []},
         "scopeSpans": [{
             "scope": {"name": PRODUCT, "version": env!("CARGO_PKG_VERSION")},
             "spans": [span],
@@ -187,11 +197,24 @@ pub fn request_body(
     }]})
 }
 
-/// Handed from the hook to the detached sender on stdin.
+/// Sets the Codex-style trace input and output shown in Langfuse's trace list.
+pub fn add_turn_io(body: &mut Value, turn_io: &TurnIo) {
+    if let Some(attributes) =
+        body["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["attributes"].as_array_mut()
+    {
+        attributes.push(attribute("langfuse.trace.input", &turn_io.input));
+        attributes.push(attribute("langfuse.trace.output", &turn_io.output));
+    }
+}
+
+/// Handed from the hook to the detached sender on stdin. It carries the
+/// transcript path, never transcript text.
 #[derive(Debug, Serialize, Deserialize)]
 struct SendRequest {
     session_id: String,
     body: Value,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    transcript_path: Option<String>,
 }
 
 /// `agentStop`: observe attribution, then hand the span to a detached sender
@@ -219,6 +242,7 @@ pub fn dispatch_agent_stop(paths: &Paths, input: &HookInput) -> Result<(), Provi
             &metadata,
             OffsetDateTime::now_utc().unix_timestamp_nanos(),
         ),
+        transcript_path: input.transcript_path.clone().filter(|_| turn_io::enabled()),
     };
     let bytes = serde_json::to_vec(&request).map_err(|_| ProviderError::InvalidInput)?;
     record_attempt(paths, &input.session_id, "dispatched", None);
@@ -238,7 +262,7 @@ pub fn dispatch_agent_stop(paths: &Paths, input: &HookInput) -> Result<(), Provi
 pub fn send(reader: impl Read) -> Result<(), ProviderError> {
     let paths = Paths::discover()?;
     let bytes = read_bounded(reader, REQUEST_LIMIT)?;
-    let request: SendRequest =
+    let mut request: SendRequest =
         serde_json::from_slice(&bytes).map_err(|_| ProviderError::InvalidInput)?;
     let destination = match Destination::from_environment() {
         Ok(destination) => destination,
@@ -247,6 +271,14 @@ pub fn send(reader: impl Read) -> Result<(), ProviderError> {
             return Ok(());
         }
     };
+    if let Some(path) = &request.transcript_path {
+        let transcript = std::path::Path::new(path);
+        if let Some(turn_io) =
+            turn_io::read_completed(transcript, &request.session_id, TRANSCRIPT_WAIT)
+        {
+            add_turn_io(&mut request.body, &turn_io);
+        }
+    }
     let client = reqwest::blocking::Client::builder()
         .timeout(HTTP_TIMEOUT)
         .redirect(reqwest::redirect::Policy::none())
@@ -396,10 +428,39 @@ mod tests {
         assert_eq!(
             keys,
             [
+                "langfuse.trace.name",
                 "langfuse.trace.metadata.harness",
                 "langfuse.trace.metadata.jira_key"
             ]
         );
+    }
+
+    #[test]
+    fn turn_io_sets_trace_input_and_output_without_a_service_resource() {
+        let metadata = BTreeMap::from([(HARNESS, COPILOT_HARNESS.to_owned())]);
+        let turn_io = TurnIo {
+            input: "question".into(),
+            output: "answer".into(),
+        };
+        let mut body = request_body("session", &parent(), &metadata, 1);
+        add_turn_io(&mut body, &turn_io);
+        assert_eq!(
+            body["resourceSpans"][0]["resource"]["attributes"],
+            json!([])
+        );
+        let attributes = &body["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["attributes"];
+        let value = |key: &str| {
+            attributes
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|attribute| attribute["key"] == key)
+                .map(|attribute| attribute["value"]["stringValue"].clone())
+        };
+        assert_eq!(value("langfuse.trace.input"), Some(json!("question")));
+        assert_eq!(value("langfuse.trace.output"), Some(json!("answer")));
+        let without = request_body("session", &parent(), &metadata, 1);
+        assert!(!without.to_string().contains("langfuse.trace.input"));
     }
 
     fn git(repository: &std::path::Path, args: &[&str]) {

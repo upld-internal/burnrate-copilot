@@ -91,6 +91,21 @@ The end-to-end run above had `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT
 
 Both traces kept the Burnrate top-level metadata. The `burnrate.attribution` span has no input or output by design. Langfuse's cost is its own price-table estimate; Copilot's `github.copilot.nano_aiu` stays nested under `metadata.attributes`.
 
+## Trace list input and output
+
+Langfuse's trace list shows trace-level input and output. Codex's Langfuse plugin sets them explicitly (`setTraceIO`, to the prompt and the final answer). Copilot sets neither, so Copilot rows are blank in the list even with content capture on; the detail view shows the root span's messages. Copilot also sends no user ID, only a hashed `enduser.pseudo.id` under the nested attributes.
+
+`BURNRATE_LANGFUSE_TURN_IO=true` sets `langfuse.trace.input` and `langfuse.trace.output` on the Burnrate span from the session transcript:
+
+- **First attempt** (read in the hook, trace `c9baebdd33469c64cf1e085b3e77eb9d`): the input was correct, but the output was an interim message. The transcript logged the final `assistant.message` at `02:35:39.109` and the `agentStop` `hook.start` at `.114`, and the hook's read missed the last line.
+- **Fixed** (the detached sender waits for the turn's `agentStop` marker, trace `5f4afe0427ebf3dc1bb16c6cb95e5823`): the list showed the prompt as input, and the output `The README contains a single line with the word "hi."`, matching the transcript's final message.
+
+The Burnrate span now sends no resource attributes. Earlier its `service.name=burnrate-copilot` resource was copied onto the trace's `metadata.resourceAttributes`; after the change the trace shows Copilot's `service.name=github-copilot` and `service.version=1.0.88`.
+
+## Trace name
+
+Langfuse names a trace after its root span unless `langfuse.trace.name` is set. Codex's Langfuse plugin sets `Codex Turn`; Copilot's root span is `invoke_agent`. With `langfuse.trace.name=Copilot Turn` on the Burnrate span, trace `e52373d8111d5b290a268f0e237e1501` (session `a0c080eb-10cb-44c6-b825-707b9254a10f`) was listed and opened as `Copilot Turn`, and a traces API filter on `name=Copilot Turn` returned it. The `invoke_agent` observation kept its name, and traces sent earlier keep `invoke_agent`.
+
 ## Open questions
 
 - Does `agentStop` fire exactly once per interactive turn, and does it fire for aborted turns? All runs above were non-interactive, with one turn.

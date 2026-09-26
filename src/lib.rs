@@ -6,6 +6,7 @@ pub mod provider;
 pub mod runtime;
 #[cfg(test)]
 mod test_support;
+pub mod turn_io;
 
 #[cfg(test)]
 mod tests {

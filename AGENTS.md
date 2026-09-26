@@ -10,13 +10,14 @@ Read [README.md](README.md) and [docs/copilot-otel-probe.md](docs/copilot-otel-p
 
 ## Hook and tracing invariants
 
-- Accept bounded Copilot hook JSON on stdin. Keep prompt, tool argument, tool result, and transcript fields out of the deserialization types in `src/hook.rs`, so they are never persisted, exported, or logged. Do not persist tool names.
+- Accept bounded Copilot hook JSON on stdin. Keep prompt, tool argument, and tool result fields out of the deserialization types in `src/hook.rs`, so they are never persisted, exported, or logged. Do not persist tool names.
+- Only the opt-in `BURNRATE_LANGFUSE_TURN_IO=true` path reads conversation text. The detached sender reads the turn's user message and final answer from the session's own transcript after the `agentStop` marker, and sends them as `langfuse.trace.input` and `langfuse.trace.output`. The hook passes only the transcript path. Never write that text to Burnrate storage, state, or diagnostics.
 - Keep event identity idempotent. Copilot tool hooks carry no tool-use ID; the tool event identity is derived from session, hook timestamp, tool name, and trace context.
 - Commit local records before, and independently of, the Langfuse span. The span is sent by a detached `langfuse send` child so the turn is not delayed; a send failure is recorded in local state and never fails the hook.
-- Burnrate never configures, proxies, or re-exports Copilot's native OTel spans. It adds one `burnrate.attribution` span per turn, as a child of the `agentStop` `traceparent`, with only the metadata names in [`trace-metadata.md`](../burnrate-spec/docs/spec/trace-metadata.md) and `harness=copilot_cli`. It sets no session ID; Langfuse derives that from the host's spans.
+- Burnrate never configures, proxies, or re-exports Copilot's native OTel spans. It adds one `burnrate.attribution` span per turn, as a child of the `agentStop` `traceparent`, with only the metadata names in [`trace-metadata.md`](../burnrate-spec/docs/spec/trace-metadata.md), `harness=copilot_cli`, and the trace name `Copilot Turn`. It sets no session ID; Langfuse derives that from the host's spans. It sends no resource attributes, because Langfuse copies them onto the trace and would present Burnrate as the trace's service.
 - Copilot removes `OTEL_*` and `COPILOT_OTEL_*` variables from hook environments. The span destination comes from `LANGFUSE_BASE_URL` (or `LANGFUSE_HOST`), `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_SECRET_KEY`, which must name the same project as the host exporter. Accept only HTTPS without embedded credentials. Never write credentials or headers to disk, diagnostics, or process arguments.
 - Do not interpret a successful hook exit or a `sent` state as proof of ingestion. Read the trace back from Langfuse and check `git_branch`, `git_repository`, and `jira_key`.
-- Base host claims on observed behavior with a recorded Copilot CLI version. Undocumented quota APIs, pricing tables, and transcript scraping are out of scope.
+- Base host claims on observed behavior with a recorded Copilot CLI version. Undocumented quota APIs and pricing tables are out of scope, and the transcript is read only for the opt-in turn input and output.
 
 ## Verification
 

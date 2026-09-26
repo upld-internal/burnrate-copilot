@@ -1,9 +1,10 @@
 //! Copilot CLI hook input.
 //!
 //! Field names were observed from Copilot CLI 1.0.88 plugin hooks (see
-//! `docs/copilot-otel-probe.md`). Prompt, tool argument, tool result, and
-//! transcript fields are deliberately absent from these types so they are
-//! discarded during deserialization and never reach Burnrate records.
+//! `docs/copilot-otel-probe.md`). Prompt, tool argument, and tool result
+//! fields are deliberately absent from these types so they are discarded
+//! during deserialization and never reach Burnrate records. The transcript
+//! path is kept only for the opt-in Langfuse turn input and output.
 
 use std::io::Read;
 
@@ -62,6 +63,8 @@ pub struct HookInput {
     pub tool_name: Option<String>,
     #[serde(default)]
     traceparent: Option<String>,
+    #[serde(default)]
+    pub(crate) transcript_path: Option<String>,
 }
 
 impl HookInput {
@@ -97,6 +100,10 @@ fn validate(input: &HookInput, event: HookEvent) -> Result<(), ProviderError> {
         || !optional(&input.reason)
         || !optional(&input.stop_reason)
         || input.traceparent.as_deref().is_some_and(|v| v.len() > 128)
+        || input
+            .transcript_path
+            .as_deref()
+            .is_some_and(|v| !bounded(v, 4096))
     {
         return Err(ProviderError::InvalidInput);
     }
@@ -202,7 +209,6 @@ mod tests {
                 "PROMPT-CONTENT-MARKER",
                 "TOOL-ARGS-MARKER",
                 "TOOL-RESULT-MARKER",
-                "events.jsonl",
             ] {
                 assert!(!retained.contains(marker), "{name} retained {marker}");
             }

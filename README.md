@@ -14,7 +14,7 @@ Copilot CLI ──OTel export─────────────────
 ```
 
 - **Local records:** `sessionStart`, `postToolUse`, and `sessionEnd` create normalized session and tool events with event-time Git and Jira attribution. Prompt, tool arguments, tool results, and transcripts are discarded when the hook input is read.
-- **Langfuse metadata:** Copilot's exporter sends each turn as a trace, but its Git attributes are not filterable in Langfuse and it sends no Jira key. At `agentStop`, Burnrate sends one `burnrate.attribution` span into that trace, as a child of the turn's root span, with `langfuse.trace.metadata.*` attributes. Langfuse promotes those to top-level, filterable trace metadata. The span is sent from a detached process so the turn is not delayed.
+- **Langfuse metadata:** Copilot's exporter sends each turn as a trace, but its Git attributes are not filterable in Langfuse and it sends no Jira key. At `agentStop`, Burnrate sends one `burnrate.attribution` span into that trace, as a child of the turn's root span, with `langfuse.trace.metadata.*` attributes. It also names the trace `Copilot Turn`, matching Codex's `Codex Turn`, instead of the default `invoke_agent`. Langfuse promotes those to top-level, filterable trace metadata. The span is sent from a detached process so the turn is not delayed.
 
 Details and evidence are in the [Copilot OTel and hook probe](docs/copilot-otel-probe.md) and the [integration specification](../burnrate-spec/docs/spec/copilot-langfuse-attribution.md).
 
@@ -33,9 +33,10 @@ export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true   # prompts, resp
 export LANGFUSE_BASE_URL="https://<langfuse-host>"
 export LANGFUSE_PUBLIC_KEY="pk-lf-..."
 export LANGFUSE_SECRET_KEY="sk-lf-..."
+export BURNRATE_LANGFUSE_TURN_IO=true   # prompt and final answer in the trace list
 ```
 
-The team configuration keeps content capture on. Without `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`, trace and observation input and output stay empty. With it, Copilot sends its system prompt, user prompts, model responses, and tool arguments and results, which can include source code and command output, to Langfuse. That setting controls only Copilot's exporter; Burnrate's span carries metadata and never content. Langfuse's cost column is its own price-table estimate from token counts; Copilot's AI Credits figure arrives as the nested `github.copilot.nano_aiu` attribute. `burnrate-copilot langfuse status` reports whether the destination is configured and the outcome of the last turn. `sent` means Langfuse accepted the request; confirm the metadata on the trace in Langfuse.
+The team configuration keeps content capture on. Without `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`, trace and observation input and output stay empty. With it, Copilot sends its system prompt, user prompts, model responses, and tool arguments and results, which can include source code and command output, to Langfuse. That setting controls only Copilot's exporter; Burnrate's span carries metadata and never content. Copilot sets no trace-level input or output, so Langfuse's trace list is blank for Copilot traces even with capture on. With `BURNRATE_LANGFUSE_TURN_IO=true`, Burnrate's span sets them, like Codex traces, to the turn's prompt and final answer from Copilot's session transcript. Burnrate passes that text straight to Langfuse and stores none of it. Langfuse's cost column is its own price-table estimate from token counts; Copilot's AI Credits figure arrives as the nested `github.copilot.nano_aiu` attribute. `burnrate-copilot langfuse status` reports whether the destination is configured and the outcome of the last turn. `sent` means Langfuse accepted the request; confirm the metadata on the trace in Langfuse.
 
 ## Try the development plugin
 
