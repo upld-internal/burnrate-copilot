@@ -63,6 +63,6 @@ The implementation is under `src/` (`hook.rs` input, `runtime.rs` local records,
 ## Not built yet
 
 - The statusline command and its user `statusLine` setting ownership.
-- Plugin installation from a marketplace, signed multi-target releases, upgrade, and rollback.
+- A first signed release. The [release workflow and marketplace branches](docs/release-and-marketplace.md) are in place: signed five-target releases, verified packaging, and `marketplace-pilot` and `marketplace` branches for the enterprise-managed rollout.
 - A verified Windows install. Windows hooks, data paths, and the detached sender are implemented, and CI builds and smoke-tests the x64 binary, but no Copilot session on Windows has run them yet; [the Windows live checklist](docs/windows-live-checklist.md) covers that. Windows on ARM would run the x64 binary under emulation.
 - Verification that `agentStop` fires once per interactive turn, including aborted turns.

@@ -1,0 +1,291 @@
+name: Protected native release
+
+# A GitHub-verified signed tag vX.Y.Z builds, tests, signs, and publishes one
+# archive per target, then assembles the marketplace package from the
+# verified release assets. Publishing that package to a marketplace branch is
+# a separate, deliberate step: scripts/publish-marketplace-branch.sh.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  # A dry run of every target whenever release inputs change in a pull request.
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - Cargo.toml
+      - Cargo.lock
+      - packaging/**
+      - plugin/**
+      - scripts/build-marketplace-package.py
+      - scripts/windows-hook-smoke.ps1
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: dry-run builds and tests every target from this ref without signing or publishing; repackage rebuilds the marketplace package for a signed release
+        required: true
+        type: choice
+        options: [dry-run, repackage]
+      marketplace_version:
+        description: For repackage, the signed release version without the v prefix
+        required: false
+        type: string
+
+permissions: {}
+
+jobs:
+  validate:
+    if: github.repository == 'upld-internal/burnrate-copilot' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'dry-run')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+      source_revision: ${{ steps.source.outputs.value }}
+      shared_revision: ${{ steps.shared.outputs.value }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Reject mutable, unsigned, dirty, or mismatched inputs
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF_TYPE" = tag
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          tag_object=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq 'select(.object.type == "tag") | .object.sha')
+          test -n "$tag_object"
+          verified=false
+          for attempt in 1 2 3 4 5 6; do
+            verified=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_object" --jq '.verification.verified')
+            test "$verified" = true && break
+            sleep 5
+          done
+          test "$verified" = true
+          git diff --exit-code
+          version=${GITHUB_REF_NAME#v}
+          test "$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)" = "$version"
+          test "$(python3 -c 'import json; print(json.load(open("plugin/burnrate-copilot/plugin.json"))["version"])')" = "$version"
+          revision=$(sed -n '/name = "burnrate-adapter-kit"/,/^$/s/.*#\([0-9a-f]\{40\}\)"/\1/p' Cargo.lock)
+          test "$(printf '%s\n' "$revision" | wc -l | tr -d ' ')" = 1
+          grep -F "rev = \"$revision\"" Cargo.toml
+          ! grep -F 'path =' Cargo.toml
+      - name: Check dry-run versions and pin
+        if: github.event_name != 'push'
+        run: |
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
+          test "$(python3 -c 'import json; print(json.load(open("plugin/burnrate-copilot/plugin.json"))["version"])')" = "$version"
+          revision=$(sed -n '/name = "burnrate-adapter-kit"/,/^$/s/.*#\([0-9a-f]\{40\}\)"/\1/p' Cargo.lock)
+          test "$(printf '%s\n' "$revision" | wc -l | tr -d ' ')" = 1
+          grep -F "rev = \"$revision\"" Cargo.toml
+          ! grep -F 'path =' Cargo.toml
+      - id: version
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)" >> "$GITHUB_OUTPUT"
+          fi
+      - id: source
+        run: echo "value=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+      - id: shared
+        run: |
+          revision=$(sed -n '/name = "burnrate-adapter-kit"/,/^$/s/.*#\([0-9a-f]\{40\}\)"/\1/p' Cargo.lock)
+          echo "value=$revision" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-14
+            binary: burnrate-copilot
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+            binary: burnrate-copilot
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+            binary: burnrate-copilot
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+            binary: burnrate-copilot
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2022
+            binary: burnrate-copilot.exe
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Authenticate private shared dependency
+        env:
+          TOKEN: ${{ secrets.BURNRATE_SPEC_TOKEN }}
+        run: git config --global url."https://x-access-token:${TOKEN}@github.com/upld-internal/burnrate-spec.git".insteadOf ssh://git@github.com/upld-internal/burnrate-spec.git
+      - name: Install stable and MSRV toolchains
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy,rustfmt --target ${{ matrix.target }}
+          rustup toolchain install 1.85.0 --profile minimal --target ${{ matrix.target }}
+      - name: Complete native suites
+        run: |
+          cargo +stable fetch --locked
+          cargo +stable fmt --all --check
+          CARGO_NET_OFFLINE=true cargo +stable clippy --locked --all-targets -- -D warnings
+          CARGO_NET_OFFLINE=true cargo +stable test --locked --all-targets
+          CARGO_NET_OFFLINE=true cargo +1.85.0 test --locked --all-targets
+      - name: Build release binaries with immutable revisions
+        env:
+          BURNRATE_SOURCE_REVISION: ${{ needs.validate.outputs.source_revision }}
+          BURNRATE_SHARED_REVISION: ${{ needs.validate.outputs.shared_revision }}
+        run: CARGO_NET_OFFLINE=true cargo +stable build --locked --release --target ${{ matrix.target }} --bin burnrate-copilot --bin generate-release-manifest
+      - name: Check build identity
+        env:
+          SOURCE_REVISION: ${{ needs.validate.outputs.source_revision }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          info=$("target/$TARGET/release/${{ matrix.binary }}" build-info)
+          echo "$info"
+          test "$(echo "$info" | jq -r '"\(.target) \(.source_revision)"')" = "$TARGET $SOURCE_REVISION"
+      - name: Windows plugin hook smoke test
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        shell: pwsh
+        run: ./scripts/windows-hook-smoke.ps1 -Binary target/x86_64-pc-windows-msvc/release/burnrate-copilot.exe
+      - name: Package deterministic target archive
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          SOURCE_REVISION: ${{ needs.validate.outputs.source_revision }}
+          SHARED_REVISION: ${{ needs.validate.outputs.shared_revision }}
+          TARGET: ${{ matrix.target }}
+          BINARY: ${{ matrix.binary }}
+        run: |
+          archive="burnrate-copilot-v${VERSION}-${TARGET}.tar.gz"
+          mkdir package
+          cp "target/$TARGET/release/$BINARY" "package/$BINARY"
+          cp LICENSE package/LICENSE
+          "target/$TARGET/release/generate-release-manifest${BINARY#burnrate-copilot}" "$VERSION" "$TARGET" "$SOURCE_REVISION" "$SHARED_REVISION" "package/$BINARY" > package/release-manifest.json
+          tar -C package -czf "$archive" "$BINARY" release-manifest.json LICENSE
+          echo "ARCHIVE=$archive" >> "$GITHUB_ENV"
+      - id: provenance
+        name: Generate SLSA v1 provenance
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: ${{ env.ARCHIVE }}
+      - name: Preserve provenance bundle
+        if: github.event_name == 'push'
+        run: cp '${{ steps.provenance.outputs.bundle-path }}' "${ARCHIVE}.intoto.jsonl"
+      - name: Install keyless signer
+        if: github.event_name == 'push'
+        uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2
+      - name: Sign target archive
+        if: github.event_name == 'push'
+        run: cosign sign-blob --yes --bundle "${ARCHIVE}.sigstore.json" "$ARCHIVE"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ matrix.target }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            ${{ env.ARCHIVE }}
+            ${{ env.ARCHIVE }}.intoto.jsonl
+            ${{ env.ARCHIVE }}.sigstore.json
+
+  publish:
+    needs: [validate, build]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-*
+          merge-multiple: true
+      - name: Require every target
+        run: test "$(ls burnrate-copilot-v*.tar.gz | wc -l | tr -d ' ')" = 5
+      - name: Create release-wide checksums
+        run: sha256sum burnrate-copilot-v*.tar.gz > SHA256SUMS
+      - uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2
+      - name: Sign release-wide checksums
+        run: cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
+      - name: Publish immutable private release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF_TYPE" = tag
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$GITHUB_REF_NAME" --generate-notes \
+            burnrate-copilot-v*.tar.gz \
+            burnrate-copilot-v*.tar.gz.intoto.jsonl \
+            burnrate-copilot-v*.tar.gz.sigstore.json \
+            SHA256SUMS SHA256SUMS.sigstore.json
+
+  marketplace-package:
+    needs: [validate, publish]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2
+      - name: Assemble marketplace package from verified release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          python3 scripts/build-marketplace-package.py "$VERSION" marketplace-output
+          test -f marketplace-output/.github/plugin/marketplace.json
+          test -f marketplace-output/plugin/burnrate-copilot/plugin.json
+          test -x marketplace-output/plugin/burnrate-copilot/bin/x86_64-unknown-linux-gnu/burnrate-copilot
+          marketplace-output/plugin/burnrate-copilot/bin/x86_64-unknown-linux-gnu/burnrate-copilot build-info
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: burnrate-copilot-marketplace-v${{ needs.validate.outputs.version }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+          path: marketplace-output/
+
+  marketplace-repackage:
+    if: github.repository == 'upld-internal/burnrate-copilot' && inputs.mode == 'repackage'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      attestations: read
+      id-token: write
+    steps:
+      - name: Validate version input
+        env:
+          VERSION: ${{ inputs.marketplace_version }}
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: v${{ inputs.marketplace_version }}
+      - uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2
+      - name: Rebuild and sign the complete marketplace package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.marketplace_version }}
+        run: |
+          python3 scripts/build-marketplace-package.py "$VERSION" marketplace-output
+          tar -C marketplace-output -czf "burnrate-copilot-marketplace-v${VERSION}.tar.gz" .
+          cosign sign-blob --yes --bundle "burnrate-copilot-marketplace-v${VERSION}.tar.gz.sigstore.json" "burnrate-copilot-marketplace-v${VERSION}.tar.gz"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: burnrate-copilot-marketplace-v${{ inputs.marketplace_version }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+          path: |
+            marketplace-output/
+            burnrate-copilot-marketplace-v${{ inputs.marketplace_version }}.tar.gz
+            burnrate-copilot-marketplace-v${{ inputs.marketplace_version }}.tar.gz.sigstore.json

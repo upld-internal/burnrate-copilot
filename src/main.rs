@@ -41,6 +41,7 @@ fn run() -> Result<(), ProviderError> {
                 "suggestion": langfuse::suggest_user_id(&cwd),
             }))
         }
+        ["build-info"] => print_json(&burnrate_copilot::build_info::build_info()),
         ["version"] => {
             println!("{}", env!("CARGO_PKG_VERSION"));
             Ok(())

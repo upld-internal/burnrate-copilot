@@ -16,3 +16,6 @@ time = { version = "=0.3.36", features = ["formatting", "parsing"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading"] }
+
+[profile.release]
+strip = "symbols"
