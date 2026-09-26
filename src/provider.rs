@@ -1,6 +1,7 @@
 use std::env;
-use std::io::Read;
-use std::path::PathBuf;
+use std::fs::{self, OpenOptions};
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 
 pub const PRODUCT: &str = "burnrate-copilot";
 pub const HARNESS: &str = "copilot";
@@ -11,7 +12,7 @@ pub enum ProviderError {
     Io,
     InputTooLarge,
     InvalidInput,
-    NotImplemented,
+    UnsupportedSchema,
 }
 
 impl ProviderError {
@@ -21,7 +22,7 @@ impl ProviderError {
             Self::Io => "io_error",
             Self::InputTooLarge => "input_too_large",
             Self::InvalidInput => "invalid_input",
-            Self::NotImplemented => "not_implemented",
+            Self::UnsupportedSchema => "unsupported_schema",
         }
     }
 }
@@ -88,6 +89,30 @@ impl Paths {
     pub fn store(&self) -> PathBuf {
         self.data.join("store")
     }
+
+    pub fn state(&self) -> PathBuf {
+        self.data.join("state")
+    }
+}
+
+/// Atomically replaces `path` with owner-only permissions.
+pub fn write_private(path: &Path, bytes: &[u8]) -> Result<(), ProviderError> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let temporary = path.with_extension(format!("tmp-{}", std::process::id()));
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(&temporary)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    fs::rename(&temporary, path)?;
+    Ok(())
 }
 
 /// Reads at most `limit` bytes, failing rather than truncating oversized input.

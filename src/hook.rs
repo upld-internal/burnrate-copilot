@@ -71,6 +71,10 @@ impl HookInput {
     pub fn trace_parent(&self) -> Option<TraceParent> {
         self.traceparent.as_deref().and_then(TraceParent::parse)
     }
+
+    pub(crate) fn traceparent_raw(&self) -> Option<&str> {
+        self.traceparent.as_deref()
+    }
 }
 
 pub fn read_hook(reader: impl Read, event: HookEvent) -> Result<HookInput, ProviderError> {
@@ -82,10 +86,17 @@ pub fn read_hook(reader: impl Read, event: HookEvent) -> Result<HookInput, Provi
 }
 
 fn validate(input: &HookInput, event: HookEvent) -> Result<(), ProviderError> {
-    let bounded = |value: &str, max: usize| !value.is_empty() && value.len() <= max;
+    let bounded = |value: &str, max: usize| {
+        !value.is_empty() && value.len() <= max && !value.chars().any(char::is_control)
+    };
+    let optional = |value: &Option<String>| value.as_deref().is_none_or(|v| bounded(v, 64));
     if !bounded(&input.session_id, 128)
-        || input.session_id.chars().any(char::is_control)
         || !bounded(&input.cwd, 4096)
+        || !std::path::Path::new(&input.cwd).is_absolute()
+        || !optional(&input.source)
+        || !optional(&input.reason)
+        || !optional(&input.stop_reason)
+        || input.traceparent.as_deref().is_some_and(|v| v.len() > 128)
     {
         return Err(ProviderError::InvalidInput);
     }

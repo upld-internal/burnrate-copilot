@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [{ "type": "command", "command": "/bin/sh \"${PLUGIN_ROOT}/hooks/run.sh\" session-start", "timeoutSec": 5 }],
+    "postToolUse": [{ "type": "command", "command": "/bin/sh \"${PLUGIN_ROOT}/hooks/run.sh\" post-tool-use", "timeoutSec": 5 }],
+    "agentStop": [{ "type": "command", "command": "/bin/sh \"${PLUGIN_ROOT}/hooks/run.sh\" agent-stop", "timeoutSec": 5 }],
+    "sessionEnd": [{ "type": "command", "command": "/bin/sh \"${PLUGIN_ROOT}/hooks/run.sh\" session-end", "timeoutSec": 5 }]
+  }
+}

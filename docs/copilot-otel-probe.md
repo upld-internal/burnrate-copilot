@@ -47,7 +47,7 @@ Every hook except `userPromptSubmitted` receives `traceparent` in stdin, and `CO
 - `sessionStart`, `agentStop`, `sessionEnd`: the turn's root `invoke_agent` span.
 - `preToolUse`, `postToolUse`: the current `chat` span.
 
-The trace ID matched the exported spans. A hook can therefore send its own span into the same trace, as a child of the root span. Command hooks also receive `PLUGIN_ROOT`, `COPILOT_PLUGIN_ROOT`, `COPILOT_PLUGIN_DATA`, `COPILOT_PROJECT_DIR`, and `COPILOT_CLI_BINARY_VERSION`. OTel variables from the user's shell are inherited as usual.
+The trace ID matched the exported spans. A hook can therefore send its own span into the same trace, as a child of the root span. Command hooks also receive `PLUGIN_ROOT`, `COPILOT_PLUGIN_ROOT`, `COPILOT_PLUGIN_DATA`, `COPILOT_PROJECT_DIR`, and `COPILOT_CLI_BINARY_VERSION`. `OTEL_*` and `COPILOT_OTEL_*` variables are removed from the hook environment; other user variables pass through.
 
 ## Hook stdin fields
 
@@ -62,8 +62,36 @@ All hooks: `sessionId`, `timestamp` (epoch milliseconds), and `cwd`. Per event:
 
 Content fields are excluded from [`src/hook.rs`](../src/hook.rs) types, and the tests prove they are dropped. Scrubbed payloads are in `fixtures/hooks/`.
 
+## Langfuse child-span write
+
+Target: the self-hosted Langfuse 4.44.0 project `team-aws-model-router-dev`. The Copilot host exporter sent to `<base>/api/public/otel` with `x-langfuse-ingestion-version=4`. A probe `agentStop` hook sent one `burnrate.attribution` span in a separate OTLP/HTTP JSON request. Its parent was the hook's `traceparent`, and it set `langfuse.trace.metadata.{git_branch,git_repository,jira_key,jira_keys,event_type}`, `langfuse.session.id`, and `langfuse.trace.tags`.
+
+- **Environment:** Copilot removes every `OTEL_*` and `COPILOT_OTEL_*` variable from the hook environment. The first attempt failed because `OTEL_EXPORTER_OTLP_HEADERS` was absent. `LANGFUSE_BASE_URL`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `COPILOT_TRACEPARENT` do pass through.
+- **Send:** HTTP 200 in 330 ms, queued as an `otel-ingestion-job`. The Burnrate span arrived before the host's root span.
+- **Read-back** of trace `e7bf0a2d08c4c196f048b007f487e7ec`: the name is `invoke_agent`, and the session is the Copilot session ID. The top-level metadata is `git_branch=ABC-123-flush-probe`, `git_repository=upld-internal/burnrate-copilot`, `jira_key=ABC-123`, `jira_keys=ABC-123`, and `event_type=burnrate.probe`. Tags are `burnrate-probe`. Observations are `invoke_agent` (AGENT), `chat gpt-5-mini` (GENERATION, with cost), and `burnrate.attribution` (SPAN), and both children point to the root.
+- **Filtering:** `GET /api/public/traces` with a `stringObject` filter on `metadata.jira_key = ABC-123` returned only this trace.
+- **Control:** two host-only traces from the failed attempts (sessions `446cfec5…` and `a92abfe4…`) have no top-level metadata and no tags, but already carry their Copilot session ID. Setting `langfuse.session.id` is therefore unnecessary.
+
+The probe traces are tagged `burnrate-probe` and carry `event_type=burnrate.probe`.
+
+## End-to-end plugin run
+
+Development build 0.5.0, staged with `scripts/stage-dev-plugin.sh` and loaded with `copilot --plugin-dir plugin/burnrate-copilot`. One tool-using turn ran in a repository on branch `ABC-123-flush-probe`, with `origin` set to `git@github.com:upld-internal/burnrate-copilot.git`, in session `7e39bf9f-3413-46ab-aab6-8df30ae808af`.
+
+- **Local store:** `session.started`, `tool.completed`, and `session.ended` events, each with an attribution snapshot and a `attribution.git` capability, and a finalized session summary. The store contained neither the tool name nor its arguments.
+- **`langfuse status`:** `configured`, last attempt `sent` with HTTP 200 from the detached sender.
+- **Langfuse trace `3dd6d993259bab223923e414390ad035`:** top-level metadata `harness=copilot_cli`, `git_branch=ABC-123-flush-probe`, `git_repository=upld-internal/burnrate-copilot`, `jira_key=ABC-123`, and `jira_keys=ABC-123`. Observations: `invoke_agent` (AGENT) with children `bash` (TOOL), two `chat gpt-5-mini` (GENERATION), and one `burnrate.attribution` (SPAN).
+
+## Content capture
+
+The end-to-end run above had `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` unset, which is the host default. Its trace had empty input and output. Two further runs had it set to `true`:
+
+- **Trace `f775ce1e63eeef7de1911a3cd827afd4`** (a shell-tool prompt): the trace and `invoke_agent` input held the system and user messages, and the output held the final answer. Each `chat` generation had its messages, model, token usage including reasoning tokens, and a Langfuse-computed cost. The `bash` tool had its command as input and the command output as output.
+- **Trace `9bc9115868442c792cb374e9c45e3578`** (a file-reading prompt, four model calls and three tool calls): every generation and tool had input. One `view` call targeted a missing path; Langfuse recorded it with level `ERROR` and status `Path does not exist` rather than an output.
+
+Both traces kept the Burnrate top-level metadata. The `burnrate.attribution` span has no input or output by design. Langfuse's cost is its own price-table estimate; Copilot's `github.copilot.nano_aiu` stays nested under `metadata.attributes`.
+
 ## Open questions
 
-- Does Langfuse apply `langfuse.trace.metadata.*` from a **non-root** span in the trace, arriving in a separate OTLP request? This needs a live write and read-back against a Langfuse test project.
-- Does `agentStop` fire exactly once per interactive turn, and does it fire for aborted turns? The run above was non-interactive, with one turn.
+- Does `agentStop` fire exactly once per interactive turn, and does it fire for aborted turns? All runs above were non-interactive, with one turn.
 - Plugin hook `exec` plus `args` form (from the cross-platform hook spec) versus the `command` string used here.

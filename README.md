@@ -1,16 +1,50 @@
 # Burnrate Copilot
 
-Burnrate Copilot is the GitHub Copilot CLI host adapter for [Burnrate's shared contracts](../burnrate-spec/README.md). It is being rebuilt in Rust as a consumer of the pinned `burnrate-adapter-kit`, following [Burnrate Codex](../burnrate-codex/README.md). The earlier JavaScript plugin was removed. It is not a shared-contract consumer and is not supported.
+Burnrate Copilot is the GitHub Copilot CLI host adapter for [Burnrate's shared contracts](../burnrate-spec/README.md). Its plugin records supported Copilot lifecycle and tool events locally. When Copilot's built-in OpenTelemetry export sends traces to Langfuse, Burnrate adds `git_branch`, `git_repository`, `jira_key`, and `jira_keys` to each turn's trace when those facts are available.
 
-## Status
+This is a Rust rewrite that consumes the pinned `burnrate-adapter-kit`, following [Burnrate Codex](../burnrate-codex/README.md). The earlier JavaScript plugin was removed; it was not a shared-contract consumer. There is no signed release yet. The plugin runs from a local development build on macOS and GNU/Linux.
 
-The crate is scaffolded. It parses and validates Copilot hook input, keeping only metadata. Local records, the statusline, Langfuse metadata, packaging, and installation are not built yet. `burnrate-copilot hook <event>` currently validates its input and then exits with `not_implemented`.
+## How it works
 
-## Planned scope
+```text
+Copilot CLI ──OTel export──────────────────────────────────> Langfuse trace (invoke_agent, chat, tools)
+     │                                                                 ^
+     └─ plugin hooks ─> burnrate-copilot ─> adapter kit ─> local records
+                              └─ agentStop ─> burnrate.attribution span ┘
+```
 
-- **Local records:** Copilot plugin hooks (`sessionStart`, `postToolUse`, `agentStop`, `sessionEnd`) produce normalized local records through the adapter kit.
-- **Statusline:** a native `statusLine` command renders the shared projection. It uses documented stdin fields, including Copilot's `ai_used.total_nano_aiu`.
-- **Langfuse metadata:** Copilot exports its own traces to Langfuse through its built-in OpenTelemetry exporter. At `agentStop`, Burnrate adds a correlated span that carries the cross-harness `git_branch`, `git_repository`, and `jira_key` metadata. See the [probe evidence](docs/copilot-otel-probe.md).
+- **Local records:** `sessionStart`, `postToolUse`, and `sessionEnd` create normalized session and tool events with event-time Git and Jira attribution. Prompt, tool arguments, tool results, and transcripts are discarded when the hook input is read.
+- **Langfuse metadata:** Copilot's exporter sends each turn as a trace, but its Git attributes are not filterable in Langfuse and it sends no Jira key. At `agentStop`, Burnrate sends one `burnrate.attribution` span into that trace, as a child of the turn's root span, with `langfuse.trace.metadata.*` attributes. Langfuse promotes those to top-level, filterable trace metadata. The span is sent from a detached process so the turn is not delayed.
+
+Details and evidence are in the [Copilot OTel and hook probe](docs/copilot-otel-probe.md) and the [integration specification](../burnrate-spec/docs/spec/copilot-langfuse-attribution.md).
+
+## Langfuse setup
+
+Copilot hides its own `OTEL_*` settings from plugin hooks, so two sets of variables are needed in the environment that starts Copilot, and both must point at the **same Langfuse project**:
+
+```sh
+# Copilot's exporter
+export COPILOT_OTEL_ENABLED=true
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://<langfuse-host>/api/public/otel"
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic%20<base64 public:secret>,x-langfuse-ingestion-version=4"
+export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true   # prompts, responses, tool input/output
+
+# Burnrate's metadata span
+export LANGFUSE_BASE_URL="https://<langfuse-host>"
+export LANGFUSE_PUBLIC_KEY="pk-lf-..."
+export LANGFUSE_SECRET_KEY="sk-lf-..."
+```
+
+The team configuration keeps content capture on. Without `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`, trace and observation input and output stay empty. With it, Copilot sends its system prompt, user prompts, model responses, and tool arguments and results, which can include source code and command output, to Langfuse. That setting controls only Copilot's exporter; Burnrate's span carries metadata and never content. Langfuse's cost column is its own price-table estimate from token counts; Copilot's AI Credits figure arrives as the nested `github.copilot.nano_aiu` attribute. `burnrate-copilot langfuse status` reports whether the destination is configured and the outcome of the last turn. `sent` means Langfuse accepted the request; confirm the metadata on the trace in Langfuse.
+
+## Try the development plugin
+
+```sh
+./scripts/stage-dev-plugin.sh
+copilot --plugin-dir plugin/burnrate-copilot
+```
+
+The staging script builds the host-native release binary into `plugin/burnrate-copilot/bin/`. Local data lives under `~/Library/Application Support/burnrate-copilot` on macOS and `${XDG_STATE_HOME:-~/.local/state}/burnrate-copilot` on Linux; `config/attribution.json` there can override the shared Jira-key rule.
 
 ## Development
 
@@ -22,4 +56,11 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --all-targets
 ```
 
-Read [AGENTS.md](AGENTS.md) before changing code.
+The implementation is under `src/` (`hook.rs` input, `runtime.rs` local records, `langfuse.rs` metadata span), the plugin under `plugin/burnrate-copilot/`, and observed hook payloads under `fixtures/hooks/`. Read [AGENTS.md](AGENTS.md) before changing code.
+
+## Not built yet
+
+- The statusline command and its user `statusLine` setting ownership.
+- Plugin installation from a marketplace, signed multi-target releases, upgrade, and rollback.
+- Windows support, and the Agent Plugins `exec`/`args` hook form.
+- Verification that `agentStop` fires once per interactive turn, including aborted turns.

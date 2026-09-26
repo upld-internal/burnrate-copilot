@@ -8,5 +8,8 @@ publish = false
 
 [dependencies]
 burnrate-adapter-kit = { git = "ssh://git@github.com/upld-internal/burnrate-spec.git", rev = "d337cfd6b7b3a20e10a22f28d2f50a54d0a0227c" }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10"
+time = { version = "=0.3.36", features = ["formatting", "parsing"] }

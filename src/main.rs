@@ -2,7 +2,8 @@ use std::env;
 use std::io;
 
 use burnrate_copilot::hook::{self, HookEvent};
-use burnrate_copilot::provider::ProviderError;
+use burnrate_copilot::provider::{Paths, ProviderError};
+use burnrate_copilot::{langfuse, runtime};
 
 fn main() {
     if let Err(error) = run() {
@@ -21,14 +22,28 @@ fn run() -> Result<(), ProviderError> {
     {
         ["hook", event] => {
             let event = HookEvent::from_argument(event).ok_or(ProviderError::InvalidInput)?;
-            hook::read_hook(io::stdin().lock(), event)?;
-            // Local persistence and the Langfuse metadata span are not built yet.
-            Err(ProviderError::NotImplemented)
+            let input = hook::read_hook(io::stdin().lock(), event)?;
+            let paths = Paths::discover()?;
+            // Local records are committed before, and independently of, the
+            // optional Langfuse span.
+            let local = runtime::accept_hook(&paths, event, &input);
+            if event == HookEvent::AgentStop {
+                langfuse::dispatch_agent_stop(&paths, &input)?;
+            }
+            local
         }
+        ["langfuse", "send"] => langfuse::send(io::stdin().lock()),
+        ["langfuse", "status"] => print_json(&langfuse::status()?),
         ["version"] => {
             println!("{}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
         _ => Err(ProviderError::InvalidInput),
     }
+}
+
+fn print_json(value: &impl serde::Serialize) -> Result<(), ProviderError> {
+    serde_json::to_writer_pretty(io::stdout().lock(), value).map_err(|_| ProviderError::Io)?;
+    println!();
+    Ok(())
 }
