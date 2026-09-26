@@ -106,6 +106,12 @@ The Burnrate span now sends no resource attributes. Earlier its `service.name=bu
 
 Langfuse names a trace after its root span unless `langfuse.trace.name` is set. Codex's Langfuse plugin sets `Codex Turn`; Copilot's root span is `invoke_agent`. With `langfuse.trace.name=Copilot Turn` on the Burnrate span, trace `e52373d8111d5b290a268f0e237e1501` (session `a0c080eb-10cb-44c6-b825-707b9254a10f`) was listed and opened as `Copilot Turn`, and a traces API filter on `name=Copilot Turn` returned it. The `invoke_agent` observation kept its name, and traces sent earlier keep `invoke_agent`.
 
+## Trace user
+
+Copilot traces had no Langfuse user: the traces API returned `userId: null`, and a user filter hid them. Codex's Langfuse plugin sets the user from `LANGFUSE_CODEX_USER_ID`, a `user_id` in `langfuse.json`, or the `email` claim of the `id_token` in `~/.codex/auth.json`. Copilot's config holds no user or email, and GitHub's SAML external identity is readable only by organization owners.
+
+With `LANGFUSE_COPILOT_USER_ID` set, trace `51ea1d2c9db22e352f75723cb8993a2c` (`Copilot Turn`) had the configured user, and a traces API filter on that user returned it together with the user's `Codex Turn` traces. The same session's system prompt listed the plugin's `setup-langfuse` skill under `available_skills`. `langfuse suggest-user-id` returned the Git email for an `@uplandsoftware.com` address and `null` for `someone@example.com`.
+
 ## Open questions
 
 - Does `agentStop` fire exactly once per interactive turn, and does it fire for aborted turns? All runs above were non-interactive, with one turn.

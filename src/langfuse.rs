@@ -10,7 +10,7 @@
 
 use std::collections::BTreeMap;
 use std::env;
-use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
@@ -40,6 +40,8 @@ const SPAN_NAME: &str = "burnrate.attribution";
 /// match Codex's `Codex Turn`.
 pub const TRACE_NAME: &str = "Copilot Turn";
 const SEND_SUBCOMMAND: [&str; 2] = ["langfuse", "send"];
+pub const USER_ID_VARIABLE: &str = "LANGFUSE_COPILOT_USER_ID";
+const SUGGESTED_USER_DOMAIN: &str = "uplandsoftware.com";
 
 /// Where the metadata span is sent. Credentials stay in memory only.
 pub struct Destination {
@@ -199,15 +201,64 @@ pub fn request_body(
 
 /// Sets the Codex-style trace input and output shown in Langfuse's trace list.
 pub fn add_turn_io(body: &mut Value, turn_io: &TurnIo) {
+    push_attribute(body, "langfuse.trace.input", &turn_io.input);
+    push_attribute(body, "langfuse.trace.output", &turn_io.output);
+}
+
+/// Sets the Langfuse trace user, as Codex's Langfuse plugin does.
+pub fn add_user_id(body: &mut Value, user_id: &str) {
+    push_attribute(body, "langfuse.user.id", user_id);
+}
+
+fn push_attribute(body: &mut Value, key: &str, value: &str) {
     if let Some(attributes) =
         body["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["attributes"].as_array_mut()
     {
-        attributes.push(attribute("langfuse.trace.input", &turn_io.input));
-        attributes.push(attribute("langfuse.trace.output", &turn_io.output));
+        attributes.push(attribute(key, value));
     }
 }
 
-/// Handed from the hook to the detached sender on stdin. It carries the
+/// The trace user from `LANGFUSE_COPILOT_USER_ID`, the Copilot counterpart of
+/// Codex's `LANGFUSE_CODEX_USER_ID`. Copilot sends no user identity of its own.
+pub fn user_id_from_environment() -> Option<String> {
+    env::var(USER_ID_VARIABLE)
+        .ok()
+        .and_then(|value| valid_user_id(&value))
+}
+
+fn valid_user_id(value: &str) -> Option<String> {
+    let value = value.trim();
+    (!value.is_empty() && value.len() <= 256 && !value.chars().any(char::is_control))
+        .then(|| value.to_owned())
+}
+
+/// Suggests `git config user.email` for `LANGFUSE_COPILOT_USER_ID` during setup,
+/// but only an address in the organization's SSO domain. Anything else must be
+/// typed by the user.
+pub fn suggest_user_id(cwd: &std::path::Path) -> Option<String> {
+    let output = Command::new("git")
+        .args(["config", "--get", "user.email"])
+        .current_dir(cwd)
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    if !output.status.success() || output.stdout.len() > 1024 {
+        return None;
+    }
+    organization_email(String::from_utf8(output.stdout).ok()?.trim())
+}
+
+fn organization_email(value: &str) -> Option<String> {
+    let (local, domain) = value.rsplit_once('@')?;
+    (!local.is_empty()
+        && !local.contains(char::is_whitespace)
+        && domain.eq_ignore_ascii_case(SUGGESTED_USER_DOMAIN))
+    .then(|| value.to_owned())
+    .and_then(|value| valid_user_id(&value))
+}
+
+/// Handed from the hook to the detached sender in an outbox file. It carries the
 /// transcript path, never transcript text.
 #[derive(Debug, Serialize, Deserialize)]
 struct SendRequest {
@@ -234,34 +285,142 @@ pub fn dispatch_agent_stop(paths: &Paths, input: &HookInput) -> Result<(), Provi
         return Ok(());
     }
     let metadata = metadata(paths, &input.cwd)?;
+    let mut body = request_body(
+        &input.session_id,
+        &parent,
+        &metadata,
+        OffsetDateTime::now_utc().unix_timestamp_nanos(),
+    );
+    if let Some(user_id) = user_id_from_environment() {
+        add_user_id(&mut body, &user_id);
+    }
     let request = SendRequest {
         session_id: input.session_id.clone(),
-        body: request_body(
-            &input.session_id,
-            &parent,
-            &metadata,
-            OffsetDateTime::now_utc().unix_timestamp_nanos(),
-        ),
+        body,
         transcript_path: input.transcript_path.clone().filter(|_| turn_io::enabled()),
     };
     let bytes = serde_json::to_vec(&request).map_err(|_| ProviderError::InvalidInput)?;
+    let request_path = outbox(paths).join(format!("{}.json", request_file_stem(&input.session_id)));
+    write_private(&request_path, &bytes)?;
     record_attempt(paths, &input.session_id, "dispatched", None);
-    let mut child = Command::new(env::current_exe()?)
-        .args(SEND_SUBCOMMAND)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
-    let mut stdin = child.stdin.take().ok_or(ProviderError::Io)?;
-    stdin.write_all(&bytes)?;
-    // Dropping stdin closes the pipe; the sender continues after this hook exits.
+    if let Err(error) = spawn_sender(&request_path) {
+        let _ = std::fs::remove_file(&request_path);
+        return Err(error);
+    }
     Ok(())
 }
 
+/// Requests handed from the hook to the detached sender. A request holds
+/// only the span (metadata, no content) and the transcript path; credentials
+/// stay in the environment and turn text is read by the sender itself.
+fn outbox(paths: &Paths) -> PathBuf {
+    paths.state().join("langfuse-outbox")
+}
+
+fn request_file_stem(session_id: &str) -> String {
+    let nanos = OffsetDateTime::now_utc().unix_timestamp_nanos();
+    let digest = Sha256::digest(format!("{session_id}:{nanos}:{}", std::process::id()).as_bytes());
+    hex(&digest[..12])
+}
+
+/// Only a `.json` file directly inside the outbox is accepted as a request.
+fn request_path_allowed(paths: &Paths, request: &Path) -> bool {
+    request.parent() == Some(outbox(paths).as_path())
+        && request
+            .extension()
+            .is_some_and(|extension| extension == "json")
+}
+
+/// Unix: the child's standard streams are replaced and other descriptors are
+/// close-on-exec, so the host's pipes to this hook close when the hook exits.
+#[cfg(not(windows))]
+fn spawn_sender(request: &Path) -> Result<(), ProviderError> {
+    Command::new(env::current_exe()?)
+        .args(SEND_SUBCOMMAND)
+        .arg(request)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()?;
+    Ok(())
+}
+
+/// Windows: a child started through `std::process::Command` inherits every
+/// inheritable handle, including pipes the host shell passed to this hook, so
+/// the host would wait for the network send. Start the sender with handle
+/// inheritance disabled, no console window, and its own Ctrl+C group.
+#[cfg(windows)]
+fn spawn_sender(request: &Path) -> Result<(), ProviderError> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{
+        CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW, CreateProcessW, PROCESS_INFORMATION,
+        STARTUPINFOW,
+    };
+    let executable = env::current_exe()?;
+    let wide = |value: &std::ffi::OsStr| -> Vec<u16> {
+        value.encode_wide().chain(std::iter::once(0)).collect()
+    };
+    let application = wide(executable.as_os_str());
+    let line = windows_command_line(&[
+        &executable.to_string_lossy(),
+        SEND_SUBCOMMAND[0],
+        SEND_SUBCOMMAND[1],
+        &request.to_string_lossy(),
+    ]);
+    let mut command_line = wide(std::ffi::OsStr::new(&line));
+    // SAFETY: every pointer refers to a live, NUL-terminated buffer or a
+    // zero-initialized structure owned by this frame; the returned process and
+    // thread handles are closed immediately.
+    unsafe {
+        let mut startup: STARTUPINFOW = std::mem::zeroed();
+        startup.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
+        let mut process: PROCESS_INFORMATION = std::mem::zeroed();
+        let created = CreateProcessW(
+            application.as_ptr(),
+            command_line.as_mut_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            0,
+            CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
+            std::ptr::null(),
+            std::ptr::null(),
+            &startup,
+            &mut process,
+        );
+        if created == 0 {
+            return Err(ProviderError::Io);
+        }
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+    }
+    Ok(())
+}
+
+/// Quotes arguments for a Windows command line as the Microsoft C runtime
+/// parses it. Burnrate's arguments are paths and fixed words, which cannot
+/// contain `"`; backslashes before the closing quote are doubled.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_command_line(arguments: &[&str]) -> String {
+    arguments
+        .iter()
+        .map(|argument| {
+            let trailing = argument.len() - argument.trim_end_matches('\\').len();
+            format!("\"{argument}{}\"", "\\".repeat(trailing))
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// The detached sender. It records its outcome but never reports it to the host.
-pub fn send(reader: impl Read) -> Result<(), ProviderError> {
+pub fn send(request_path: &Path) -> Result<(), ProviderError> {
     let paths = Paths::discover()?;
-    let bytes = read_bounded(reader, REQUEST_LIMIT)?;
+    if !request_path_allowed(&paths, request_path) {
+        return Err(ProviderError::InvalidInput);
+    }
+    let file = std::fs::File::open(request_path);
+    let _ = std::fs::remove_file(request_path);
+    let bytes = read_bounded(file?, REQUEST_LIMIT)?;
     let mut request: SendRequest =
         serde_json::from_slice(&bytes).map_err(|_| ProviderError::InvalidInput)?;
     let destination = match Destination::from_environment() {
@@ -341,6 +500,9 @@ pub struct Status {
     pub configuration: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub host: Option<String>,
+    /// The trace user from `LANGFUSE_COPILOT_USER_ID`, or absent when unset.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_attempt: Option<LastAttempt>,
     /// A `sent` attempt is not proof of ingestion; read the trace back.
@@ -361,6 +523,7 @@ pub fn status() -> Result<Status, ProviderError> {
     Ok(Status {
         configuration,
         host,
+        user_id: user_id_from_environment(),
         last_attempt,
         note: "sent means Langfuse accepted the request; confirm the metadata on the trace in Langfuse",
     })
@@ -461,6 +624,99 @@ mod tests {
         assert_eq!(value("langfuse.trace.output"), Some(json!("answer")));
         let without = request_body("session", &parent(), &metadata, 1);
         assert!(!without.to_string().contains("langfuse.trace.input"));
+    }
+
+    #[test]
+    fn only_organization_emails_are_suggested() {
+        assert_eq!(
+            organization_email("jane.doe@uplandsoftware.com").as_deref(),
+            Some("jane.doe@uplandsoftware.com")
+        );
+        assert_eq!(
+            organization_email("Jane@UplandSoftware.COM").as_deref(),
+            Some("Jane@UplandSoftware.COM")
+        );
+        for rejected in [
+            "jane@gmail.com",
+            "jane@uplandsoftware.com.evil.test",
+            "jane@mail.uplandsoftware.com",
+            "@uplandsoftware.com",
+            "jane doe@uplandsoftware.com",
+            "uplandsoftware.com",
+            "",
+        ] {
+            assert_eq!(organization_email(rejected), None, "{rejected}");
+        }
+    }
+
+    #[test]
+    fn suggestion_reads_the_repository_git_email() {
+        let root = TempRoot::new("suggest");
+        let repository = root.path().join("repo");
+        std::fs::create_dir_all(&repository).unwrap();
+        git(&repository, &["init", "-q"]);
+        git(
+            &repository,
+            &["config", "user.email", "jane@uplandsoftware.com"],
+        );
+        assert_eq!(
+            suggest_user_id(&repository).as_deref(),
+            Some("jane@uplandsoftware.com")
+        );
+        git(&repository, &["config", "user.email", "jane@example.com"]);
+        assert_eq!(suggest_user_id(&repository), None);
+    }
+
+    #[test]
+    fn user_id_is_trimmed_bounded_and_set_on_the_trace() {
+        assert_eq!(valid_user_id("  a@b.c \n").as_deref(), Some("a@b.c"));
+        assert_eq!(valid_user_id("   "), None);
+        assert_eq!(valid_user_id("a\u{7}b"), None);
+        assert_eq!(valid_user_id(&"x".repeat(257)), None);
+        let mut body = request_body("session", &parent(), &BTreeMap::new(), 1);
+        add_user_id(&mut body, "jane@uplandsoftware.com");
+        assert!(
+            body["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["attributes"]
+                .as_array()
+                .unwrap()
+                .contains(&attribute("langfuse.user.id", "jane@uplandsoftware.com"))
+        );
+    }
+
+    #[test]
+    fn windows_command_line_quotes_paths_with_spaces() {
+        assert_eq!(
+            windows_command_line(&[
+                r"C:\Program Files\plugin ü\burnrate-copilot.exe",
+                "langfuse",
+                "send",
+                r"C:\Users\dev\AppData\Local\burnrate-copilot\state\langfuse-outbox\a.json",
+            ]),
+            r#""C:\Program Files\plugin ü\burnrate-copilot.exe" "langfuse" "send" "C:\Users\dev\AppData\Local\burnrate-copilot\state\langfuse-outbox\a.json""#
+        );
+        assert_eq!(windows_command_line(&[r"C:\dir\"]), r#""C:\dir\\""#);
+    }
+
+    #[test]
+    fn only_outbox_requests_are_sent() {
+        let root = TempRoot::new("outbox");
+        let paths = root.paths();
+        let inbox = outbox(&paths);
+        assert!(request_path_allowed(&paths, &inbox.join("abc.json")));
+        assert!(!request_path_allowed(&paths, &inbox.join("abc.txt")));
+        assert!(!request_path_allowed(
+            &paths,
+            &paths.state().join("langfuse-last-turn.json")
+        ));
+        assert!(!request_path_allowed(
+            &paths,
+            &inbox.join("nested").join("abc.json")
+        ));
+        assert!(!request_path_allowed(&paths, &root.path().join("abc.json")));
+        assert_eq!(
+            send(&root.path().join("abc.json")),
+            Err(ProviderError::InvalidInput)
+        );
     }
 
     fn git(repository: &std::path::Path, args: &[&str]) {
