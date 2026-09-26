@@ -49,40 +49,80 @@ pub struct Paths {
     pub config: PathBuf,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Platform {
+    MacOs,
+    Windows,
+    Linux,
+}
+
+impl Platform {
+    pub const fn current() -> Self {
+        if cfg!(target_os = "macos") {
+            Self::MacOs
+        } else if cfg!(windows) {
+            Self::Windows
+        } else {
+            Self::Linux
+        }
+    }
+}
+
 impl Paths {
     pub fn discover() -> Result<Self, ProviderError> {
-        let home_variable = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-        let home = env::var_os(home_variable)
-            .filter(|value| !value.is_empty())
+        let platform = Platform::current();
+        let home_variable = match platform {
+            Platform::Windows => "USERPROFILE",
+            _ => "HOME",
+        };
+        let variable = |name: &str| env::var_os(name).filter(|value| !value.is_empty());
+        let home = variable(home_variable)
             .map(PathBuf::from)
             .filter(|path| path.is_absolute())
             .ok_or(ProviderError::HomeUnavailable)?;
-        Ok(Self::for_home(
-            &home,
-            env::var_os("XDG_STATE_HOME").map(PathBuf::from),
-            env::var_os("XDG_CONFIG_HOME").map(PathBuf::from),
-        ))
+        Ok(Self::for_platform(platform, &home, |name| {
+            variable(name).map(PathBuf::from)
+        }))
     }
 
-    fn for_home(
-        home: &std::path::Path,
-        xdg_state: Option<PathBuf>,
-        xdg_config: Option<PathBuf>,
+    /// macOS: `~/Library/Application Support/burnrate-copilot`.
+    /// Windows: `%LOCALAPPDATA%\burnrate-copilot`.
+    /// Linux: `$XDG_STATE_HOME` and `$XDG_CONFIG_HOME`, with XDG defaults.
+    /// Relative variable values are ignored.
+    fn for_platform(
+        platform: Platform,
+        home: &Path,
+        variable: impl Fn(&str) -> Option<PathBuf>,
     ) -> Self {
-        if cfg!(target_os = "macos") {
-            let data = home.join("Library/Application Support").join(PRODUCT);
-            let config = data.join("config");
-            Self { data, config }
-        } else {
-            let absolute = |value: Option<PathBuf>| value.filter(|path| path.is_absolute());
-            Self {
-                data: absolute(xdg_state)
-                    .unwrap_or_else(|| home.join(".local/state"))
+        let absolute = |name: &str| variable(name).filter(|path| path.is_absolute());
+        match platform {
+            Platform::MacOs => {
+                let data = home
+                    .join("Library")
+                    .join("Application Support")
+                    .join(PRODUCT);
+                Self {
+                    config: data.join("config"),
+                    data,
+                }
+            }
+            Platform::Windows => {
+                let data = absolute("LOCALAPPDATA")
+                    .unwrap_or_else(|| home.join("AppData").join("Local"))
+                    .join(PRODUCT);
+                Self {
+                    config: data.join("config"),
+                    data,
+                }
+            }
+            Platform::Linux => Self {
+                data: absolute("XDG_STATE_HOME")
+                    .unwrap_or_else(|| home.join(".local").join("state"))
                     .join(PRODUCT),
-                config: absolute(xdg_config)
+                config: absolute("XDG_CONFIG_HOME")
                     .unwrap_or_else(|| home.join(".config"))
                     .join(PRODUCT),
-            }
+            },
         }
     }
 
@@ -138,26 +178,68 @@ mod tests {
         );
     }
 
-    #[test]
-    fn roots_are_provider_owned() {
-        let paths = Paths::for_home(std::path::Path::new("/home/dev"), None, None);
-        assert!(paths.data.ends_with(PRODUCT));
-        assert!(paths.config.to_string_lossy().contains(PRODUCT));
-        assert!(!paths.data.to_string_lossy().contains(".copilot"));
+    fn absolute(path: &str) -> PathBuf {
+        // A path that is absolute on the host running the tests.
+        std::env::temp_dir().join(path)
     }
 
-    #[cfg(not(target_os = "macos"))]
     #[test]
-    fn relative_xdg_roots_are_ignored() {
-        let paths = Paths::for_home(
-            std::path::Path::new("/home/dev"),
-            Some(PathBuf::from("relative")),
-            Some(PathBuf::from("/etc/xdg")),
-        );
+    fn roots_follow_each_platform_convention() {
+        let home = absolute("home");
+        let none = |_: &str| None;
+        let mac = Paths::for_platform(Platform::MacOs, &home, none);
         assert_eq!(
-            paths.data,
-            PathBuf::from("/home/dev/.local/state").join(PRODUCT)
+            mac.data,
+            home.join("Library")
+                .join("Application Support")
+                .join(PRODUCT)
         );
-        assert_eq!(paths.config, PathBuf::from("/etc/xdg").join(PRODUCT));
+        assert_eq!(mac.config, mac.data.join("config"));
+
+        let windows = Paths::for_platform(Platform::Windows, &home, none);
+        assert_eq!(
+            windows.data,
+            home.join("AppData").join("Local").join(PRODUCT)
+        );
+        let local = absolute("local-app-data");
+        let windows = Paths::for_platform(Platform::Windows, &home, |name| {
+            (name == "LOCALAPPDATA").then(|| local.clone())
+        });
+        assert_eq!(windows.data, local.join(PRODUCT));
+        assert_eq!(windows.config, local.join(PRODUCT).join("config"));
+
+        let linux = Paths::for_platform(Platform::Linux, &home, none);
+        assert_eq!(linux.data, home.join(".local").join("state").join(PRODUCT));
+        assert_eq!(linux.config, home.join(".config").join(PRODUCT));
+    }
+
+    #[test]
+    fn relative_variables_are_ignored() {
+        let home = absolute("home");
+        let config = absolute("xdg-config");
+        let linux = Paths::for_platform(Platform::Linux, &home, |name| match name {
+            "XDG_STATE_HOME" => Some(PathBuf::from("relative")),
+            "XDG_CONFIG_HOME" => Some(config.clone()),
+            _ => None,
+        });
+        assert_eq!(linux.data, home.join(".local").join("state").join(PRODUCT));
+        assert_eq!(linux.config, config.join(PRODUCT));
+        let windows = Paths::for_platform(Platform::Windows, &home, |name| {
+            (name == "LOCALAPPDATA").then(|| PathBuf::from("relative"))
+        });
+        assert_eq!(
+            windows.data,
+            home.join("AppData").join("Local").join(PRODUCT)
+        );
+    }
+
+    #[test]
+    fn roots_never_use_copilot_host_state() {
+        let home = absolute("home");
+        for platform in [Platform::MacOs, Platform::Windows, Platform::Linux] {
+            let paths = Paths::for_platform(platform, &home, |_| None);
+            assert!(!paths.data.to_string_lossy().contains(".copilot"));
+            assert!(paths.data.ends_with(PRODUCT));
+        }
     }
 }

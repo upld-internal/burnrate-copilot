@@ -165,6 +165,7 @@ fn decode_hex(value: &str) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::with_cwd;
 
     fn fixture(name: &str) -> &'static str {
         match name {
@@ -180,11 +181,9 @@ mod tests {
     }
 
     fn parse(name: &str) -> HookInput {
-        read_hook(
-            fixture(name).as_bytes(),
-            HookEvent::from_argument(name).unwrap(),
-        )
-        .expect("fixture must validate")
+        let input = with_cwd(fixture(name), &std::env::temp_dir());
+        read_hook(input.as_bytes(), HookEvent::from_argument(name).unwrap())
+            .expect("fixture must validate")
     }
 
     #[test]
@@ -242,8 +241,21 @@ mod tests {
     }
 
     #[test]
+    fn relative_cwd_is_rejected() {
+        let input = with_cwd(
+            fixture("session-start"),
+            std::path::Path::new("relative/dir"),
+        );
+        assert_eq!(
+            read_hook(input.as_bytes(), HookEvent::SessionStart),
+            Err(ProviderError::InvalidInput)
+        );
+    }
+
+    #[test]
     fn tool_hook_requires_tool_name() {
-        let input = fixture("post-tool-use").replace("\"toolName\":\"bash\",", "");
+        let input = with_cwd(fixture("post-tool-use"), &std::env::temp_dir())
+            .replace("\"toolName\":\"bash\",", "");
         assert_eq!(
             read_hook(input.as_bytes(), HookEvent::PostToolUse),
             Err(ProviderError::InvalidInput)

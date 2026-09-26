@@ -2,6 +2,19 @@ use std::path::{Path, PathBuf};
 
 use crate::provider::Paths;
 
+const FIXTURE_CWD: &str = "\"/Users/dev/projects/app\"";
+
+/// Replaces the fixtures' Unix `cwd` with `cwd`, JSON-escaped, so hook fixtures
+/// validate on every host (a Windows path needs escaped backslashes).
+pub fn with_cwd(fixture: &str, cwd: &Path) -> String {
+    assert!(
+        fixture.contains(FIXTURE_CWD),
+        "fixture has no cwd placeholder"
+    );
+    let escaped = serde_json::to_string(&cwd.to_string_lossy()).unwrap();
+    fixture.replace(FIXTURE_CWD, &escaped)
+}
+
 /// A unique temporary directory removed on drop.
 pub struct TempRoot(PathBuf);
 

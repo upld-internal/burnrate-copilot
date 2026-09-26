@@ -224,7 +224,7 @@ fn map_store_error(error: StoreError) -> ProviderError {
 mod tests {
     use super::*;
     use crate::hook::read_hook;
-    use crate::test_support::TempRoot;
+    use crate::test_support::{TempRoot, with_cwd};
 
     fn input(name: &str, event: HookEvent, cwd: &Path) -> HookInput {
         let raw = match name {
@@ -234,7 +234,7 @@ mod tests {
             "session-end" => include_str!("../fixtures/hooks/session-end.json"),
             _ => unreachable!(),
         };
-        let raw = raw.replace("/Users/dev/projects/app", &cwd.to_string_lossy());
+        let raw = with_cwd(raw, cwd);
         read_hook(raw.as_bytes(), event).unwrap()
     }
 

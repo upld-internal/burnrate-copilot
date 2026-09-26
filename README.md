@@ -34,9 +34,10 @@ export LANGFUSE_BASE_URL="https://<langfuse-host>"
 export LANGFUSE_PUBLIC_KEY="pk-lf-..."
 export LANGFUSE_SECRET_KEY="sk-lf-..."
 export BURNRATE_LANGFUSE_TURN_IO=true   # prompt and final answer in the trace list
+export LANGFUSE_COPILOT_USER_ID="you@uplandsoftware.com"   # Langfuse trace user
 ```
 
-The team configuration keeps content capture on. Without `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`, trace and observation input and output stay empty. With it, Copilot sends its system prompt, user prompts, model responses, and tool arguments and results, which can include source code and command output, to Langfuse. That setting controls only Copilot's exporter; Burnrate's span carries metadata and never content. Copilot sets no trace-level input or output, so Langfuse's trace list is blank for Copilot traces even with capture on. With `BURNRATE_LANGFUSE_TURN_IO=true`, Burnrate's span sets them, like Codex traces, to the turn's prompt and final answer from Copilot's session transcript. Burnrate passes that text straight to Langfuse and stores none of it. Langfuse's cost column is its own price-table estimate from token counts; Copilot's AI Credits figure arrives as the nested `github.copilot.nano_aiu` attribute. `burnrate-copilot langfuse status` reports whether the destination is configured and the outcome of the last turn. `sent` means Langfuse accepted the request; confirm the metadata on the trace in Langfuse.
+The team configuration keeps content capture on. Without `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`, trace and observation input and output stay empty. With it, Copilot sends its system prompt, user prompts, model responses, and tool arguments and results, which can include source code and command output, to Langfuse. That setting controls only Copilot's exporter; Burnrate's span carries metadata and never content. Copilot sets no trace-level input or output, so Langfuse's trace list is blank for Copilot traces even with capture on. With `BURNRATE_LANGFUSE_TURN_IO=true`, Burnrate's span sets them, like Codex traces, to the turn's prompt and final answer from Copilot's session transcript. Burnrate passes that text straight to Langfuse and stores none of it. Langfuse's cost column is its own price-table estimate from token counts; Copilot's AI Credits figure arrives as the nested `github.copilot.nano_aiu` attribute. Copilot sends no user identity, so `LANGFUSE_COPILOT_USER_ID` sets the Langfuse trace user, as `LANGFUSE_CODEX_USER_ID` does for Codex. The plugin's `setup-langfuse` skill walks through these variables. It suggests your `git config user.email` for the user ID only when that is an `@uplandsoftware.com` address, and otherwise asks you to type it. `burnrate-copilot langfuse status` reports whether the destination is configured and the outcome of the last turn. `sent` means Langfuse accepted the request; confirm the metadata on the trace in Langfuse.
 
 ## Try the development plugin
 
@@ -63,5 +64,5 @@ The implementation is under `src/` (`hook.rs` input, `runtime.rs` local records,
 
 - The statusline command and its user `statusLine` setting ownership.
 - Plugin installation from a marketplace, signed multi-target releases, upgrade, and rollback.
-- Windows support, and the Agent Plugins `exec`/`args` hook form.
+- A verified Windows install. Windows hooks, data paths, and the detached sender are implemented, and CI builds and smoke-tests the x64 binary, but no Copilot session on Windows has run them yet. Windows on ARM would run the x64 binary under emulation.
 - Verification that `agentStop` fires once per interactive turn, including aborted turns.

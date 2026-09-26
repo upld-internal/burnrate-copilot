@@ -34,6 +34,13 @@ fn run() -> Result<(), ProviderError> {
         }
         ["langfuse", "send"] => langfuse::send(io::stdin().lock()),
         ["langfuse", "status"] => print_json(&langfuse::status()?),
+        ["langfuse", "suggest-user-id"] => {
+            let cwd = env::current_dir()?;
+            print_json(&serde_json::json!({
+                "variable": langfuse::USER_ID_VARIABLE,
+                "suggestion": langfuse::suggest_user_id(&cwd),
+            }))
+        }
         ["version"] => {
             println!("{}", env!("CARGO_PKG_VERSION"));
             Ok(())

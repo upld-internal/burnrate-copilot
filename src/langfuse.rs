@@ -40,6 +40,8 @@ const SPAN_NAME: &str = "burnrate.attribution";
 /// match Codex's `Codex Turn`.
 pub const TRACE_NAME: &str = "Copilot Turn";
 const SEND_SUBCOMMAND: [&str; 2] = ["langfuse", "send"];
+pub const USER_ID_VARIABLE: &str = "LANGFUSE_COPILOT_USER_ID";
+const SUGGESTED_USER_DOMAIN: &str = "uplandsoftware.com";
 
 /// Where the metadata span is sent. Credentials stay in memory only.
 pub struct Destination {
@@ -199,12 +201,61 @@ pub fn request_body(
 
 /// Sets the Codex-style trace input and output shown in Langfuse's trace list.
 pub fn add_turn_io(body: &mut Value, turn_io: &TurnIo) {
+    push_attribute(body, "langfuse.trace.input", &turn_io.input);
+    push_attribute(body, "langfuse.trace.output", &turn_io.output);
+}
+
+/// Sets the Langfuse trace user, as Codex's Langfuse plugin does.
+pub fn add_user_id(body: &mut Value, user_id: &str) {
+    push_attribute(body, "langfuse.user.id", user_id);
+}
+
+fn push_attribute(body: &mut Value, key: &str, value: &str) {
     if let Some(attributes) =
         body["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["attributes"].as_array_mut()
     {
-        attributes.push(attribute("langfuse.trace.input", &turn_io.input));
-        attributes.push(attribute("langfuse.trace.output", &turn_io.output));
+        attributes.push(attribute(key, value));
     }
+}
+
+/// The trace user from `LANGFUSE_COPILOT_USER_ID`, the Copilot counterpart of
+/// Codex's `LANGFUSE_CODEX_USER_ID`. Copilot sends no user identity of its own.
+pub fn user_id_from_environment() -> Option<String> {
+    env::var(USER_ID_VARIABLE)
+        .ok()
+        .and_then(|value| valid_user_id(&value))
+}
+
+fn valid_user_id(value: &str) -> Option<String> {
+    let value = value.trim();
+    (!value.is_empty() && value.len() <= 256 && !value.chars().any(char::is_control))
+        .then(|| value.to_owned())
+}
+
+/// Suggests `git config user.email` for `LANGFUSE_COPILOT_USER_ID` during setup,
+/// but only an address in the organization's SSO domain. Anything else must be
+/// typed by the user.
+pub fn suggest_user_id(cwd: &std::path::Path) -> Option<String> {
+    let output = Command::new("git")
+        .args(["config", "--get", "user.email"])
+        .current_dir(cwd)
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    if !output.status.success() || output.stdout.len() > 1024 {
+        return None;
+    }
+    organization_email(String::from_utf8(output.stdout).ok()?.trim())
+}
+
+fn organization_email(value: &str) -> Option<String> {
+    let (local, domain) = value.rsplit_once('@')?;
+    (!local.is_empty()
+        && !local.contains(char::is_whitespace)
+        && domain.eq_ignore_ascii_case(SUGGESTED_USER_DOMAIN))
+    .then(|| value.to_owned())
+    .and_then(|value| valid_user_id(&value))
 }
 
 /// Handed from the hook to the detached sender on stdin. It carries the
@@ -234,28 +285,67 @@ pub fn dispatch_agent_stop(paths: &Paths, input: &HookInput) -> Result<(), Provi
         return Ok(());
     }
     let metadata = metadata(paths, &input.cwd)?;
+    let mut body = request_body(
+        &input.session_id,
+        &parent,
+        &metadata,
+        OffsetDateTime::now_utc().unix_timestamp_nanos(),
+    );
+    if let Some(user_id) = user_id_from_environment() {
+        add_user_id(&mut body, &user_id);
+    }
     let request = SendRequest {
         session_id: input.session_id.clone(),
-        body: request_body(
-            &input.session_id,
-            &parent,
-            &metadata,
-            OffsetDateTime::now_utc().unix_timestamp_nanos(),
-        ),
+        body,
         transcript_path: input.transcript_path.clone().filter(|_| turn_io::enabled()),
     };
     let bytes = serde_json::to_vec(&request).map_err(|_| ProviderError::InvalidInput)?;
     record_attempt(paths, &input.session_id, "dispatched", None);
-    let mut child = Command::new(env::current_exe()?)
+    let mut command = Command::new(env::current_exe()?);
+    command
         .args(SEND_SUBCOMMAND)
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
+        .stderr(Stdio::null());
+    detach(&mut command);
+    let mut child = command.spawn()?;
     let mut stdin = child.stdin.take().ok_or(ProviderError::Io)?;
     stdin.write_all(&bytes)?;
     // Dropping stdin closes the pipe; the sender continues after this hook exits.
     Ok(())
+}
+
+/// Unix: the child's standard streams are replaced and other descriptors are
+/// close-on-exec, so the host's pipes to this hook close when the hook exits.
+#[cfg(not(windows))]
+fn detach(_command: &mut Command) {}
+
+/// Windows: a child inherits every inheritable handle of this process,
+/// including the host's pipes to this hook, which would make the host wait for
+/// the network send. Stop those handles from being inherited, and start the
+/// sender without a console window or the hook's Ctrl+C group.
+#[cfg(windows)]
+fn detach(command: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    use windows_sys::Win32::Foundation::{
+        HANDLE_FLAG_INHERIT, INVALID_HANDLE_VALUE, SetHandleInformation,
+    };
+    use windows_sys::Win32::System::Console::{
+        GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+    };
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    for id in [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
+        // SAFETY: GetStdHandle and SetHandleInformation only read and update
+        // this process's handle table; invalid or absent handles are skipped.
+        unsafe {
+            let handle = GetStdHandle(id);
+            if !handle.is_null() && handle != INVALID_HANDLE_VALUE {
+                SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0);
+            }
+        }
+    }
+    command.creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW);
 }
 
 /// The detached sender. It records its outcome but never reports it to the host.
@@ -341,6 +431,9 @@ pub struct Status {
     pub configuration: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub host: Option<String>,
+    /// The trace user from `LANGFUSE_COPILOT_USER_ID`, or absent when unset.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_attempt: Option<LastAttempt>,
     /// A `sent` attempt is not proof of ingestion; read the trace back.
@@ -361,6 +454,7 @@ pub fn status() -> Result<Status, ProviderError> {
     Ok(Status {
         configuration,
         host,
+        user_id: user_id_from_environment(),
         last_attempt,
         note: "sent means Langfuse accepted the request; confirm the metadata on the trace in Langfuse",
     })
@@ -461,6 +555,63 @@ mod tests {
         assert_eq!(value("langfuse.trace.output"), Some(json!("answer")));
         let without = request_body("session", &parent(), &metadata, 1);
         assert!(!without.to_string().contains("langfuse.trace.input"));
+    }
+
+    #[test]
+    fn only_organization_emails_are_suggested() {
+        assert_eq!(
+            organization_email("jane.doe@uplandsoftware.com").as_deref(),
+            Some("jane.doe@uplandsoftware.com")
+        );
+        assert_eq!(
+            organization_email("Jane@UplandSoftware.COM").as_deref(),
+            Some("Jane@UplandSoftware.COM")
+        );
+        for rejected in [
+            "jane@gmail.com",
+            "jane@uplandsoftware.com.evil.test",
+            "jane@mail.uplandsoftware.com",
+            "@uplandsoftware.com",
+            "jane doe@uplandsoftware.com",
+            "uplandsoftware.com",
+            "",
+        ] {
+            assert_eq!(organization_email(rejected), None, "{rejected}");
+        }
+    }
+
+    #[test]
+    fn suggestion_reads_the_repository_git_email() {
+        let root = TempRoot::new("suggest");
+        let repository = root.path().join("repo");
+        std::fs::create_dir_all(&repository).unwrap();
+        git(&repository, &["init", "-q"]);
+        git(
+            &repository,
+            &["config", "user.email", "jane@uplandsoftware.com"],
+        );
+        assert_eq!(
+            suggest_user_id(&repository).as_deref(),
+            Some("jane@uplandsoftware.com")
+        );
+        git(&repository, &["config", "user.email", "jane@example.com"]);
+        assert_eq!(suggest_user_id(&repository), None);
+    }
+
+    #[test]
+    fn user_id_is_trimmed_bounded_and_set_on_the_trace() {
+        assert_eq!(valid_user_id("  a@b.c \n").as_deref(), Some("a@b.c"));
+        assert_eq!(valid_user_id("   "), None);
+        assert_eq!(valid_user_id("a\u{7}b"), None);
+        assert_eq!(valid_user_id(&"x".repeat(257)), None);
+        let mut body = request_body("session", &parent(), &BTreeMap::new(), 1);
+        add_user_id(&mut body, "jane@uplandsoftware.com");
+        assert!(
+            body["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["attributes"]
+                .as_array()
+                .unwrap()
+                .contains(&attribute("langfuse.user.id", "jane@uplandsoftware.com"))
+        );
     }
 
     fn git(repository: &std::path::Path, args: &[&str]) {
