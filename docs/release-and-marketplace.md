@@ -39,7 +39,7 @@ A pull request that changes release inputs runs the same build and test matrix a
 
 ## 2. Publish to a marketplace branch
 
-Publication is a separate, deliberate step. From a clean checkout of the tag, with `gh` and `cosign` installed:
+Publication is a separate, deliberate step. It needs an authenticated `gh` with access to this private repository and [Cosign](https://docs.sigstore.dev/cosign/system_config/installation/) (`brew install cosign` on macOS). From a clean checkout of the tag:
 
 ```sh
 git checkout vX.Y.Z
@@ -90,8 +90,14 @@ Device-managed settings override server-managed ones, so the pilot does not affe
 - publishing a new version to `marketplace-pilot` reaches the machine at its next session;
 - the `telemetry` block replaces the `OTEL_*` environment variables.
 
-Burnrate's own `LANGFUSE_*` variables are still needed until Burnrate reads its own configuration file.
+Burnrate's own `LANGFUSE_*` variables are still needed until Burnrate reads its own configuration file. On Windows, also run the [Windows live checklist](windows-live-checklist.md).
 
 ## 4. Enterprise rollout
 
 After the pilot passes on macOS and Windows, put the same `extraKnownMarketplaces`, `enabledPlugins`, and `telemetry` entries in `.github-private/.github/copilot/settings.json`, with `ref` set to `marketplace`. Server-managed settings apply to every user licensed through the enterprise and reach clients within about an hour. Removing the entries is the rollback.
+
+## Known gaps
+
+- The release gate has no hook-latency benchmark yet; Codex's release runs one on every target.
+- Users still set `LANGFUSE_BASE_URL`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `BURNRATE_LANGFUSE_TURN_IO`, and `LANGFUSE_COPILOT_USER_ID` themselves, because managed settings cannot set environment variables for hooks. A Burnrate configuration file written by the `setup-langfuse` skill, with the secret in the OS credential store, will replace them.
+- The workflow, packaging script, and publish script have run only as a pull-request dry run. The first signed tag is their first full run.
