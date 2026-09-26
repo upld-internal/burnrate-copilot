@@ -10,7 +10,7 @@
 
 use std::collections::BTreeMap;
 use std::env;
-use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
@@ -258,7 +258,7 @@ fn organization_email(value: &str) -> Option<String> {
     .and_then(|value| valid_user_id(&value))
 }
 
-/// Handed from the hook to the detached sender on stdin. It carries the
+/// Handed from the hook to the detached sender in an outbox file. It carries the
 /// transcript path, never transcript text.
 #[derive(Debug, Serialize, Deserialize)]
 struct SendRequest {
@@ -300,58 +300,127 @@ pub fn dispatch_agent_stop(paths: &Paths, input: &HookInput) -> Result<(), Provi
         transcript_path: input.transcript_path.clone().filter(|_| turn_io::enabled()),
     };
     let bytes = serde_json::to_vec(&request).map_err(|_| ProviderError::InvalidInput)?;
+    let request_path = outbox(paths).join(format!("{}.json", request_file_stem(&input.session_id)));
+    write_private(&request_path, &bytes)?;
     record_attempt(paths, &input.session_id, "dispatched", None);
-    let mut command = Command::new(env::current_exe()?);
-    command
-        .args(SEND_SUBCOMMAND)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    detach(&mut command);
-    let mut child = command.spawn()?;
-    let mut stdin = child.stdin.take().ok_or(ProviderError::Io)?;
-    stdin.write_all(&bytes)?;
-    // Dropping stdin closes the pipe; the sender continues after this hook exits.
+    if let Err(error) = spawn_sender(&request_path) {
+        let _ = std::fs::remove_file(&request_path);
+        return Err(error);
+    }
     Ok(())
+}
+
+/// Requests handed from the hook to the detached sender. A request holds
+/// only the span (metadata, no content) and the transcript path; credentials
+/// stay in the environment and turn text is read by the sender itself.
+fn outbox(paths: &Paths) -> PathBuf {
+    paths.state().join("langfuse-outbox")
+}
+
+fn request_file_stem(session_id: &str) -> String {
+    let nanos = OffsetDateTime::now_utc().unix_timestamp_nanos();
+    let digest = Sha256::digest(format!("{session_id}:{nanos}:{}", std::process::id()).as_bytes());
+    hex(&digest[..12])
+}
+
+/// Only a `.json` file directly inside the outbox is accepted as a request.
+fn request_path_allowed(paths: &Paths, request: &Path) -> bool {
+    request.parent() == Some(outbox(paths).as_path())
+        && request
+            .extension()
+            .is_some_and(|extension| extension == "json")
 }
 
 /// Unix: the child's standard streams are replaced and other descriptors are
 /// close-on-exec, so the host's pipes to this hook close when the hook exits.
 #[cfg(not(windows))]
-fn detach(_command: &mut Command) {}
+fn spawn_sender(request: &Path) -> Result<(), ProviderError> {
+    Command::new(env::current_exe()?)
+        .args(SEND_SUBCOMMAND)
+        .arg(request)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()?;
+    Ok(())
+}
 
-/// Windows: a child inherits every inheritable handle of this process,
-/// including the host's pipes to this hook, which would make the host wait for
-/// the network send. Stop those handles from being inherited, and start the
-/// sender without a console window or the hook's Ctrl+C group.
+/// Windows: a child started through `std::process::Command` inherits every
+/// inheritable handle, including pipes the host shell passed to this hook, so
+/// the host would wait for the network send. Start the sender with handle
+/// inheritance disabled, no console window, and its own Ctrl+C group.
 #[cfg(windows)]
-fn detach(command: &mut Command) {
-    use std::os::windows::process::CommandExt;
-    use windows_sys::Win32::Foundation::{
-        HANDLE_FLAG_INHERIT, INVALID_HANDLE_VALUE, SetHandleInformation,
+fn spawn_sender(request: &Path) -> Result<(), ProviderError> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{
+        CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW, CreateProcessW, PROCESS_INFORMATION,
+        STARTUPINFOW,
     };
-    use windows_sys::Win32::System::Console::{
-        GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+    let executable = env::current_exe()?;
+    let wide = |value: &std::ffi::OsStr| -> Vec<u16> {
+        value.encode_wide().chain(std::iter::once(0)).collect()
     };
-    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    for id in [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
-        // SAFETY: GetStdHandle and SetHandleInformation only read and update
-        // this process's handle table; invalid or absent handles are skipped.
-        unsafe {
-            let handle = GetStdHandle(id);
-            if !handle.is_null() && handle != INVALID_HANDLE_VALUE {
-                SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0);
-            }
+    let application = wide(executable.as_os_str());
+    let line = windows_command_line(&[
+        &executable.to_string_lossy(),
+        SEND_SUBCOMMAND[0],
+        SEND_SUBCOMMAND[1],
+        &request.to_string_lossy(),
+    ]);
+    let mut command_line = wide(std::ffi::OsStr::new(&line));
+    // SAFETY: every pointer refers to a live, NUL-terminated buffer or a
+    // zero-initialized structure owned by this frame; the returned process and
+    // thread handles are closed immediately.
+    unsafe {
+        let mut startup: STARTUPINFOW = std::mem::zeroed();
+        startup.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
+        let mut process: PROCESS_INFORMATION = std::mem::zeroed();
+        let created = CreateProcessW(
+            application.as_ptr(),
+            command_line.as_mut_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            0,
+            CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
+            std::ptr::null(),
+            std::ptr::null(),
+            &startup,
+            &mut process,
+        );
+        if created == 0 {
+            return Err(ProviderError::Io);
         }
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
     }
-    command.creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW);
+    Ok(())
+}
+
+/// Quotes arguments for a Windows command line as the Microsoft C runtime
+/// parses it. Burnrate's arguments are paths and fixed words, which cannot
+/// contain `"`; backslashes before the closing quote are doubled.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_command_line(arguments: &[&str]) -> String {
+    arguments
+        .iter()
+        .map(|argument| {
+            let trailing = argument.len() - argument.trim_end_matches('\\').len();
+            format!("\"{argument}{}\"", "\\".repeat(trailing))
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// The detached sender. It records its outcome but never reports it to the host.
-pub fn send(reader: impl Read) -> Result<(), ProviderError> {
+pub fn send(request_path: &Path) -> Result<(), ProviderError> {
     let paths = Paths::discover()?;
-    let bytes = read_bounded(reader, REQUEST_LIMIT)?;
+    if !request_path_allowed(&paths, request_path) {
+        return Err(ProviderError::InvalidInput);
+    }
+    let file = std::fs::File::open(request_path);
+    let _ = std::fs::remove_file(request_path);
+    let bytes = read_bounded(file?, REQUEST_LIMIT)?;
     let mut request: SendRequest =
         serde_json::from_slice(&bytes).map_err(|_| ProviderError::InvalidInput)?;
     let destination = match Destination::from_environment() {
@@ -611,6 +680,42 @@ mod tests {
                 .as_array()
                 .unwrap()
                 .contains(&attribute("langfuse.user.id", "jane@uplandsoftware.com"))
+        );
+    }
+
+    #[test]
+    fn windows_command_line_quotes_paths_with_spaces() {
+        assert_eq!(
+            windows_command_line(&[
+                r"C:\Program Files\plugin ü\burnrate-copilot.exe",
+                "langfuse",
+                "send",
+                r"C:\Users\dev\AppData\Local\burnrate-copilot\state\langfuse-outbox\a.json",
+            ]),
+            r#""C:\Program Files\plugin ü\burnrate-copilot.exe" "langfuse" "send" "C:\Users\dev\AppData\Local\burnrate-copilot\state\langfuse-outbox\a.json""#
+        );
+        assert_eq!(windows_command_line(&[r"C:\dir\"]), r#""C:\dir\\""#);
+    }
+
+    #[test]
+    fn only_outbox_requests_are_sent() {
+        let root = TempRoot::new("outbox");
+        let paths = root.paths();
+        let inbox = outbox(&paths);
+        assert!(request_path_allowed(&paths, &inbox.join("abc.json")));
+        assert!(!request_path_allowed(&paths, &inbox.join("abc.txt")));
+        assert!(!request_path_allowed(
+            &paths,
+            &paths.state().join("langfuse-last-turn.json")
+        ));
+        assert!(!request_path_allowed(
+            &paths,
+            &inbox.join("nested").join("abc.json")
+        ));
+        assert!(!request_path_allowed(&paths, &root.path().join("abc.json")));
+        assert_eq!(
+            send(&root.path().join("abc.json")),
+            Err(ProviderError::InvalidInput)
         );
     }
 

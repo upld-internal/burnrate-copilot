@@ -32,7 +32,7 @@ fn run() -> Result<(), ProviderError> {
             }
             local
         }
-        ["langfuse", "send"] => langfuse::send(io::stdin().lock()),
+        ["langfuse", "send", request] => langfuse::send(std::path::Path::new(request)),
         ["langfuse", "status"] => print_json(&langfuse::status()?),
         ["langfuse", "suggest-user-id"] => {
             let cwd = env::current_dir()?;
