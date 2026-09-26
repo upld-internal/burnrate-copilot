@@ -1,0 +1,1 @@
+{"sessionId":"08a7fe15-6719-4f00-aa78-01ba9cffc0ef","timestamp":1790383454861,"cwd":"/Users/dev/projects/app","toolName":"bash","toolArgs":{"command":"TOOL-ARGS-MARKER","description":"TOOL-ARGS-MARKER"},"toolResult":{"resultType":"success","textResultForLlm":"TOOL-RESULT-MARKER"},"traceparent":"00-32d796bfcf46f9746b04321034d0eee7-7d2140ec947bc6b6-01"}
