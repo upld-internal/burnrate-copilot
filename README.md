@@ -64,5 +64,5 @@ The implementation is under `src/` (`hook.rs` input, `runtime.rs` local records,
 
 - The statusline command and its user `statusLine` setting ownership.
 - Plugin installation from a marketplace, signed multi-target releases, upgrade, and rollback.
-- A verified Windows install. Windows hooks, data paths, and the detached sender are implemented, and CI builds and smoke-tests the x64 binary, but no Copilot session on Windows has run them yet. Windows on ARM would run the x64 binary under emulation.
+- A verified Windows install. Windows hooks, data paths, and the detached sender are implemented, and CI builds and smoke-tests the x64 binary, but no Copilot session on Windows has run them yet; [the Windows live checklist](docs/windows-live-checklist.md) covers that. Windows on ARM would run the x64 binary under emulation.
 - Verification that `agentStop` fires once per interactive turn, including aborted turns.
