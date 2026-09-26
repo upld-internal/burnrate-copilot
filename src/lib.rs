@@ -1,5 +1,6 @@
 //! GitHub Copilot CLI adapter boundary.
 
+pub mod build_info;
 pub mod hook;
 pub mod langfuse;
 pub mod provider;
