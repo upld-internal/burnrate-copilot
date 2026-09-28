@@ -1,0 +1,17 @@
+{
+  "name": "burnrate-copilot",
+  "description": "Records local Copilot CLI session activity and adds Git branch, repository, and Jira metadata to Copilot traces in Langfuse.",
+  "version": "0.5.0",
+  "author": {
+    "name": "Burnrate"
+  },
+  "license": "MIT",
+  "keywords": [
+    "langfuse",
+    "opentelemetry",
+    "git",
+    "jira"
+  ],
+  "hooks": "hooks.json",
+  "skills": "skills/"
+}

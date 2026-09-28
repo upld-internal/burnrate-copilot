@@ -1,0 +1,32 @@
+{
+  "version": "0.5.0",
+  "source_revision": "f3d799a0846386ea0d98107c00fdd1a5364d29dd",
+  "shared_revision": "d337cfd6b7b3a20e10a22f28d2f50a54d0a0227c",
+  "artifacts": [
+    {
+      "target": "aarch64-apple-darwin",
+      "archive": "burnrate-copilot-v0.5.0-aarch64-apple-darwin.tar.gz",
+      "sha256": "2e7292755ab2c23b1b59c8df9acb099cfee923906712c15e4ebd696479fa9232"
+    },
+    {
+      "target": "x86_64-apple-darwin",
+      "archive": "burnrate-copilot-v0.5.0-x86_64-apple-darwin.tar.gz",
+      "sha256": "6a0e3bbaef587bc846ba1191fd8ceb756d32a3076ccc1e08cfe3ba426c38e9b5"
+    },
+    {
+      "target": "aarch64-unknown-linux-gnu",
+      "archive": "burnrate-copilot-v0.5.0-aarch64-unknown-linux-gnu.tar.gz",
+      "sha256": "094c1a7cbec3c1baed81957b6dec6a3545c380452e54d59cd28a699f9da82c94"
+    },
+    {
+      "target": "x86_64-unknown-linux-gnu",
+      "archive": "burnrate-copilot-v0.5.0-x86_64-unknown-linux-gnu.tar.gz",
+      "sha256": "7464cc091c9a227b30db4c5315da98dd5b622edf160defa38d50d08c875caa46"
+    },
+    {
+      "target": "x86_64-pc-windows-msvc",
+      "archive": "burnrate-copilot-v0.5.0-x86_64-pc-windows-msvc.tar.gz",
+      "sha256": "5b9e6dc74f66fc2ad329b48095064b2b8e875078e889abaafa61948449ebf42a"
+    }
+  ]
+}

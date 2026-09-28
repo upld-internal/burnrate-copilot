@@ -1,0 +1,20 @@
+{
+  "name": "upld-internal",
+  "owner": {
+    "name": "Upland Software"
+  },
+  "metadata": {
+    "description": "Upland internal Copilot CLI plugins",
+    "version": "0.5.0"
+  },
+  "plugins": [
+    {
+      "name": "burnrate-copilot",
+      "description": "Records local Copilot CLI session activity and adds Git branch, repository, Jira, and user metadata to Copilot traces in Langfuse.",
+      "version": "0.5.0",
+      "source": "./plugin/burnrate-copilot",
+      "license": "MIT",
+      "category": "productivity"
+    }
+  ]
+}

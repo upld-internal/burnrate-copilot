@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "/bin/sh \"${PLUGIN_ROOT}/hooks/run.sh\" session-start",
+        "powershell": "& \"$env:PLUGIN_ROOT\\bin\\x86_64-pc-windows-msvc\\burnrate-copilot.exe\" hook session-start; exit $LASTEXITCODE",
+        "timeoutSec": 5
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "/bin/sh \"${PLUGIN_ROOT}/hooks/run.sh\" post-tool-use",
+        "powershell": "& \"$env:PLUGIN_ROOT\\bin\\x86_64-pc-windows-msvc\\burnrate-copilot.exe\" hook post-tool-use; exit $LASTEXITCODE",
+        "timeoutSec": 5
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "/bin/sh \"${PLUGIN_ROOT}/hooks/run.sh\" agent-stop",
+        "powershell": "& \"$env:PLUGIN_ROOT\\bin\\x86_64-pc-windows-msvc\\burnrate-copilot.exe\" hook agent-stop; exit $LASTEXITCODE",
+        "timeoutSec": 5
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "/bin/sh \"${PLUGIN_ROOT}/hooks/run.sh\" session-end",
+        "powershell": "& \"$env:PLUGIN_ROOT\\bin\\x86_64-pc-windows-msvc\\burnrate-copilot.exe\" hook session-end; exit $LASTEXITCODE",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}
