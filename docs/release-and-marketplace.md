@@ -83,12 +83,17 @@ An administrator writes this file on each test machine:
 }
 ```
 
-Device-managed settings override server-managed ones, so the pilot does not affect other users. The pilot must confirm that:
+Device-managed settings override server-managed ones, so the pilot does not affect other users. The [macOS pilot](pilot-macos-managed-settings.md) of v0.5.0 established that:
 
-- the `ref` field of a managed marketplace source selects `marketplace-pilot`, since GitHub's documented example has no `ref`;
-- the plugin installs at sign-in and cannot be disabled locally;
-- publishing a new version to `marketplace-pilot` reaches the machine at its next session;
-- the `telemetry` block replaces the `OTEL_*` environment variables.
+- the `ref` field of a managed marketplace source selects `marketplace-pilot`;
+- the `telemetry` block replaces the `OTEL_*` environment variables;
+- a managed plugin cannot be uninstalled, and a local disable does not stop its hooks, although `copilot plugin list` shows it as `[disabled]`;
+- the plugin installs when the first **interactive** session starts; `copilot -p` runs do not install it;
+- the old JavaScript plugin keeps running beside the managed one until it is removed.
+
+Still to confirm: that a new version published to `marketplace-pilot` reaches the machine at its next session.
+
+To end a pilot, remove the file (`sudo rm` on macOS, an elevated `Remove-Item` on Windows). The managed marketplace and telemetry stop at the next session. The plugin stays installed but disabled, and its hooks no longer run. `copilot plugin uninstall burnrate-copilot@upld-internal` removes it.
 
 Burnrate's own `LANGFUSE_*` variables are still needed until Burnrate reads its own configuration file. On Windows, also run the [Windows live checklist](windows-live-checklist.md).
 
@@ -96,8 +101,13 @@ Burnrate's own `LANGFUSE_*` variables are still needed until Burnrate reads its 
 
 After the pilot passes on macOS and Windows, put the same `extraKnownMarketplaces`, `enabledPlugins`, and `telemetry` entries in `.github-private/.github/copilot/settings.json`, with `ref` set to `marketplace`. Server-managed settings apply to every user licensed through the enterprise and reach clients within about an hour. Removing the entries is the rollback.
 
+## Records
+
+- [v0.5.0 release record](releases/v0.5.0.md)
+- [macOS managed-settings pilot](pilot-macos-managed-settings.md)
+
 ## Known gaps
 
 - The release gate has no hook-latency benchmark yet; Codex's release runs one on every target.
 - Users still set `LANGFUSE_BASE_URL`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `BURNRATE_LANGFUSE_TURN_IO`, and `LANGFUSE_COPILOT_USER_ID` themselves, because managed settings cannot set environment variables for hooks. A Burnrate configuration file written by the `setup-langfuse` skill, with the secret in the OS credential store, will replace them.
-- The workflow, packaging script, and publish script have run only as a pull-request dry run. The first signed tag is their first full run.
+- Users who installed the old JavaScript `burnrate-copilot` plugin keep running it, and its `statusLine`, beside the managed plugin until a migration removes it.

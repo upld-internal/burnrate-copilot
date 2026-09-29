@@ -48,6 +48,10 @@ copilot --plugin-dir plugin/burnrate-copilot
 
 The staging script builds the host-native release binary into `plugin/burnrate-copilot/bin/`. Local data lives under `~/Library/Application Support/burnrate-copilot` on macOS and `${XDG_STATE_HOME:-~/.local/state}/burnrate-copilot` on Linux; `config/attribution.json` there can override the shared Jira-key rule.
 
+## Releases
+
+[v0.5.0](docs/releases/v0.5.0.md) is the first signed release. It is published to the `marketplace-pilot` branch and has been [piloted with managed settings on macOS](docs/pilot-macos-managed-settings.md). See [signed releases and marketplace branches](docs/release-and-marketplace.md) for the process.
+
 ## Development
 
 Rust 1.85 or newer is required. The shared dependency is pinned to an immutable `burnrate-spec` revision in `Cargo.toml` and `Cargo.lock`.
@@ -63,6 +67,6 @@ The implementation is under `src/` (`hook.rs` input, `runtime.rs` local records,
 ## Not built yet
 
 - The statusline command and its user `statusLine` setting ownership.
-- A first signed release. The [release workflow and marketplace branches](docs/release-and-marketplace.md) are in place: signed five-target releases, verified packaging, and `marketplace-pilot` and `marketplace` branches for the enterprise-managed rollout.
+- Publication to the production `marketplace` branch and the enterprise-managed rollout, after the macOS and Windows pilots and the migration from the old JavaScript plugin.
 - A verified Windows install. Windows hooks, data paths, and the detached sender are implemented, and CI builds and smoke-tests the x64 binary, but no Copilot session on Windows has run them yet; [the Windows live checklist](docs/windows-live-checklist.md) covers that. Windows on ARM would run the x64 binary under emulation.
 - Verification that `agentStop` fires once per interactive turn, including aborted turns.
