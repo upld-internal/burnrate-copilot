@@ -7,7 +7,7 @@ license = "MIT"
 publish = false
 
 [dependencies]
-burnrate-adapter-kit = { git = "ssh://git@github.com/upld-internal/burnrate-spec.git", rev = "ee8c4a6ea39b8273ea88a6fe28760dc80d784abb" }
+burnrate-adapter-kit = { git = "ssh://git@github.com/upld-internal/burnrate-spec.git", rev = "88494ef397c88c4547ddb334d5b6d232f002da11" }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

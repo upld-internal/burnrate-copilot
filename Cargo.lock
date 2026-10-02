@@ -53,7 +53,7 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 [[package]]
 name = "burnrate-adapter-kit"
 version = "0.4.2"
-source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=ee8c4a6ea39b8273ea88a6fe28760dc80d784abb#ee8c4a6ea39b8273ea88a6fe28760dc80d784abb"
+source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=88494ef397c88c4547ddb334d5b6d232f002da11#88494ef397c88c4547ddb334d5b6d232f002da11"
 dependencies = [
  "burnrate-config",
  "burnrate-conformance",
@@ -67,7 +67,7 @@ dependencies = [
 [[package]]
 name = "burnrate-config"
 version = "0.4.2"
-source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=ee8c4a6ea39b8273ea88a6fe28760dc80d784abb#ee8c4a6ea39b8273ea88a6fe28760dc80d784abb"
+source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=88494ef397c88c4547ddb334d5b6d232f002da11#88494ef397c88c4547ddb334d5b6d232f002da11"
 dependencies = [
  "serde",
  "serde_json",
@@ -76,7 +76,7 @@ dependencies = [
 [[package]]
 name = "burnrate-conformance"
 version = "0.4.2"
-source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=ee8c4a6ea39b8273ea88a6fe28760dc80d784abb#ee8c4a6ea39b8273ea88a6fe28760dc80d784abb"
+source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=88494ef397c88c4547ddb334d5b6d232f002da11#88494ef397c88c4547ddb334d5b6d232f002da11"
 dependencies = [
  "burnrate-config",
  "burnrate-contracts",
@@ -90,7 +90,7 @@ dependencies = [
 [[package]]
 name = "burnrate-contracts"
 version = "0.4.2"
-source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=ee8c4a6ea39b8273ea88a6fe28760dc80d784abb#ee8c4a6ea39b8273ea88a6fe28760dc80d784abb"
+source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=88494ef397c88c4547ddb334d5b6d232f002da11#88494ef397c88c4547ddb334d5b6d232f002da11"
 dependencies = [
  "serde",
 ]
@@ -117,7 +117,7 @@ dependencies = [
 [[package]]
 name = "burnrate-core"
 version = "0.4.2"
-source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=ee8c4a6ea39b8273ea88a6fe28760dc80d784abb#ee8c4a6ea39b8273ea88a6fe28760dc80d784abb"
+source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=88494ef397c88c4547ddb334d5b6d232f002da11#88494ef397c88c4547ddb334d5b6d232f002da11"
 dependencies = [
  "burnrate-config",
  "burnrate-contracts",
@@ -131,7 +131,7 @@ dependencies = [
 [[package]]
 name = "burnrate-display"
 version = "0.4.2"
-source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=ee8c4a6ea39b8273ea88a6fe28760dc80d784abb#ee8c4a6ea39b8273ea88a6fe28760dc80d784abb"
+source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=88494ef397c88c4547ddb334d5b6d232f002da11#88494ef397c88c4547ddb334d5b6d232f002da11"
 dependencies = [
  "burnrate-config",
  "serde",
@@ -141,7 +141,7 @@ dependencies = [
 [[package]]
 name = "burnrate-export"
 version = "0.4.2"
-source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=ee8c4a6ea39b8273ea88a6fe28760dc80d784abb#ee8c4a6ea39b8273ea88a6fe28760dc80d784abb"
+source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=88494ef397c88c4547ddb334d5b6d232f002da11#88494ef397c88c4547ddb334d5b6d232f002da11"
 dependencies = [
  "burnrate-contracts",
  "burnrate-core",
@@ -152,7 +152,7 @@ dependencies = [
 [[package]]
 name = "burnrate-operations"
 version = "0.4.2"
-source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=ee8c4a6ea39b8273ea88a6fe28760dc80d784abb#ee8c4a6ea39b8273ea88a6fe28760dc80d784abb"
+source = "git+ssh://git@github.com/upld-internal/burnrate-spec.git?rev=88494ef397c88c4547ddb334d5b6d232f002da11#88494ef397c88c4547ddb334d5b6d232f002da11"
 dependencies = [
  "burnrate-config",
  "burnrate-contracts",

@@ -19,6 +19,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for arguments in [
         vec!["init", "-q", "-b", "feature/ABC-123-benchmark"],
         vec![
+            "-c",
+            "user.name=Burnrate fixture",
+            "-c",
+            "user.email=fixture@example.test",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "--allow-empty",
+            "-q",
+            "-m",
+            "fixture",
+        ],
+        vec![
             "remote",
             "add",
             "origin",
@@ -106,7 +119,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let passed = p95 <= 100_000 && p99 <= 250_000;
     println!(
         "{}",
-        json!({"profile":"release","operation":"provider_hook","existing_events":1000,"warmup":20,"samples":100,"p95_micros":p95,"p99_micros":p99,"passed":passed,"build":burnrate_copilot::build_info::build_info()})
+        json!({"profile":"release","operation":"provider_hook","existing_events":1000,"existing_open_sessions":1000,"warmup":20,"samples":100,"p95_micros":p95,"p99_micros":p99,"passed":passed,"build":burnrate_copilot::build_info::build_info()})
     );
     fs::remove_dir_all(root)?;
     if !passed {

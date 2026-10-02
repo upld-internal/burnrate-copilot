@@ -308,11 +308,12 @@ mod tests {
     use super::*;
     #[test]
     fn exact_ownership_preserves_unrelated_and_ambiguous_commands() {
-        let root = Path::new("/fixture/installed plugin ü");
-        let owned = json!({"type":"command","command":format!("node \"{}/scripts/statusline.js\"",root.display())});
-        let extra =
-            json!({"command":format!("node {}/scripts/statusline.js; echo other",root.display())});
-        let mut settings = json!({"statusLine":owned,"theme":"user","hooks":{"sessionStart":[{"command":format!("node {}/scripts/session-start.js",root.display())}, extra.clone(), {"command":"other"}]}});
+        let temporary = crate::test_support::TempRoot::new("migration-command");
+        let root = temporary.path().join("installed plugin ü");
+        let root = root.as_path();
+        let owned = json!({"type":"command","command":format!("node \"{}\"",root.join("scripts").join("statusline.js").display())});
+        let extra = json!({"command":format!("node {}; echo other",root.join("scripts").join("statusline.js").display())});
+        let mut settings = json!({"statusLine":owned,"theme":"user","hooks":{"sessionStart":[{"command":format!("node {}",root.join("scripts").join("session-start.js").display())}, extra.clone(), {"command":"other"}]}});
         let journal = remove_owned(&mut settings, root, true);
         assert!(journal.statusline.is_some());
         assert_eq!(journal.hooks.len(), 1);
@@ -323,7 +324,7 @@ mod tests {
         );
         assert!(!owned_command(&extra, root, true));
         assert!(!owned_command(
-            &json!({"command":format!("node {}/scripts/statusline.js",root.display()),"env":{"SECRET":"x"}}),
+            &json!({"command":format!("node {}",root.join("scripts").join("statusline.js").display()),"env":{"SECRET":"x"}}),
             root,
             true
         ));

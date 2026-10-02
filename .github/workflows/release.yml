@@ -96,7 +96,7 @@ jobs:
   build:
     needs: validate
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - target: aarch64-apple-darwin
