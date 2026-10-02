@@ -2,7 +2,7 @@
 
 Burnrate Copilot is the GitHub Copilot CLI host adapter for [Burnrate's shared contracts](../burnrate-spec/README.md). Its plugin records supported Copilot lifecycle and tool events locally. When Copilot's built-in OpenTelemetry export sends traces to Langfuse, Burnrate adds `git_branch`, `git_repository`, `jira_key`, and `jira_keys` to each turn's trace when those facts are available.
 
-This is a Rust rewrite that consumes the pinned `burnrate-adapter-kit`, following [Burnrate Codex](../burnrate-codex/README.md). The earlier JavaScript plugin was removed; it was not a shared-contract consumer. There is no signed release yet. The plugin runs from a local development build on macOS and GNU/Linux.
+This is a Rust rewrite that consumes the pinned `burnrate-adapter-kit`, following [Burnrate Codex](../burnrate-codex/README.md). The earlier JavaScript plugin was removed; it was not a shared-contract consumer. The signed [v0.5.0](docs/releases/v0.5.0.md) five-target package is published to `marketplace-pilot`, with live installation and managed-settings trace proof on macOS ARM64. Native Windows host, automatic update, and production rollout gates remain pending. The current source prepares an unreleased v0.6.0 candidate; see the [rollout evidence](docs/rollout-readiness.md).
 
 ## How it works
 
@@ -20,24 +20,37 @@ Details and evidence are in the [Copilot OTel and hook probe](docs/copilot-otel-
 
 ## Langfuse setup
 
-Copilot hides its own `OTEL_*` settings from plugin hooks, so two sets of variables are needed in the environment that starts Copilot, and both must point at the **same Langfuse project**:
+For the unreleased v0.6.0 candidate on macOS and Windows, run the installed binary
+with `langfuse setup` in your terminal. Hidden prompts collect a test project's
+HTTPS URL and keys; setup checks the project and stores credentials in macOS
+Keychain or Windows Credential Manager. Restart with `langfuse launch`, which
+supplies both Copilot's native exporter and Burnrate from the same pair in memory.
+Device-managed telemetry must match; server policy still requires real trace
+readback. The signed v0.5.0 package retains its environment-only setup path.
 
-```sh
-# Copilot's exporter
-export COPILOT_OTEL_ENABLED=true
-export OTEL_EXPORTER_OTLP_ENDPOINT="https://<langfuse-host>/api/public/otel"
-export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic%20<base64 public:secret>,x-langfuse-ingestion-version=4"
-export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true   # prompts, responses, tool input/output
+Setup preserves the two separate content opt-ins:
+`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true` for Copilot's prompts,
+responses, and tool content, and `BURNRATE_LANGFUSE_TURN_IO=true` for Burnrate's
+trace-list prompt/final answer. Neither is enabled by setup. Burnrate stores no
+conversation text. `LANGFUSE_COPILOT_USER_ID` supplies optional user identity;
+only an `@uplandsoftware.com` Git email may be suggested.
 
-# Burnrate's metadata span
-export LANGFUSE_BASE_URL="https://<langfuse-host>"
-export LANGFUSE_PUBLIC_KEY="pk-lf-..."
-export LANGFUSE_SECRET_KEY="sk-lf-..."
-export BURNRATE_LANGFUSE_TURN_IO=true   # prompt and final answer in the trace list
-export LANGFUSE_COPILOT_USER_ID="you@uplandsoftware.com"   # Langfuse trace user
-```
+Linux and existing environment users retain `LANGFUSE_BASE_URL` (or
+`LANGFUSE_HOST`), `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_SECRET_KEY`. Copilot hides
+its `OTEL_*` variables from hooks, so the native exporter and metadata sender
+need the same project credentials independently. A partial environment config
+fails rather than mixing keys from the vault. Never put keys in chat, files, or
+command arguments. See [secure setup and repair](docs/langfuse-setup.md).
 
-The team configuration keeps content capture on. Without `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`, trace and observation input and output stay empty. With it, Copilot sends its system prompt, user prompts, model responses, and tool arguments and results, which can include source code and command output, to Langfuse. That setting controls only Copilot's exporter; Burnrate's span carries metadata and never content. Copilot sets no trace-level input or output, so Langfuse's trace list is blank for Copilot traces even with capture on. With `BURNRATE_LANGFUSE_TURN_IO=true`, Burnrate's span sets them, like Codex traces, to the turn's prompt and final answer from Copilot's session transcript. Burnrate passes that text straight to Langfuse and stores none of it. Langfuse's cost column is its own price-table estimate from token counts; Copilot's AI Credits figure arrives as the nested `github.copilot.nano_aiu` attribute. Copilot sends no user identity, so `LANGFUSE_COPILOT_USER_ID` sets the Langfuse trace user, as `LANGFUSE_CODEX_USER_ID` does for Codex. The plugin's `setup-langfuse` skill walks through these variables. It suggests your `git config user.email` for the user ID only when that is an `@uplandsoftware.com` address, and otherwise asks you to type it. `burnrate-copilot langfuse status` reports whether the destination is configured and the outcome of the last turn. `sent` means Langfuse accepted the request; confirm the metadata on the trace in Langfuse.
+`langfuse status` reports configuration and the last send outcome; `sent` is not
+proof of ingestion. After a real turn, `langfuse verify TRACE_ID` checks API
+readback against the current repository attribution, including the host root
+and exactly one attribution span. Run it before changing branch.
+
+Before enabling the Rust plugin for a legacy v0.1.0 user, run
+`migration disable-legacy` and restart Copilot. It deactivates the recognized
+JavaScript copy and removes its exact statusline and user hooks while preserving
+historical data and unrelated settings. See [installation and migration](docs/install-and-migration.md).
 
 ## Try the development plugin
 
@@ -46,7 +59,7 @@ The team configuration keeps content capture on. Without `OTEL_INSTRUMENTATION_G
 copilot --plugin-dir plugin/burnrate-copilot
 ```
 
-The staging script builds the host-native release binary into `plugin/burnrate-copilot/bin/`. Local data lives under `~/Library/Application Support/burnrate-copilot` on macOS and `${XDG_STATE_HOME:-~/.local/state}/burnrate-copilot` on Linux; `config/attribution.json` there can override the shared Jira-key rule.
+The staging script builds the host-native release binary into `plugin/burnrate-copilot/bin/`. Local data lives under `~/Library/Application Support/burnrate-copilot` on macOS and `${XDG_STATE_HOME:-~/.local/state}/burnrate-copilot` on Linux, and `%LOCALAPPDATA%\burnrate-copilot` on Windows; `config/attribution.json` there can override the shared Jira-key rule.
 
 ## Releases
 
@@ -60,6 +73,7 @@ Rust 1.85 or newer is required. The shared dependency is pinned to an immutable 
 cargo fmt --all --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --all-targets
+cargo +1.85.0 test --locked --all-targets
 ```
 
 The implementation is under `src/` (`hook.rs` input, `runtime.rs` local records, `langfuse.rs` metadata span), the plugin under `plugin/burnrate-copilot/`, and observed hook payloads under `fixtures/hooks/`. Read [AGENTS.md](AGENTS.md) before changing code.
@@ -69,4 +83,4 @@ The implementation is under `src/` (`hook.rs` input, `runtime.rs` local records,
 - The statusline command and its user `statusLine` setting ownership.
 - Publication to the production `marketplace` branch and the enterprise-managed rollout, after the macOS and Windows pilots and the migration from the old JavaScript plugin.
 - A verified Windows install. Windows hooks, data paths, and the detached sender are implemented, and CI builds and smoke-tests the x64 binary, but no Copilot session on Windows has run them yet; [the Windows live checklist](docs/windows-live-checklist.md) covers that. Windows on ARM would run the x64 binary under emulation.
-- Verification that `agentStop` fires once per interactive turn, including aborted turns.
+- Complete native acceptance on every release target, including interactive and aborted turns, automatic/manual changed-hook update, and failed rollback.

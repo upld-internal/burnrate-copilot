@@ -52,7 +52,7 @@ The script re-runs the full verification, replaces the branch content with exact
 scripts/publish-marketplace-branch.sh X.Y.Z marketplace
 ```
 
-**Rollback:** publish the previous verified version to the same branch. Users with `autoUpdate` pick it up at their next session, because the plugin version changes.
+**Rollback candidate:** republish the previous verified version to the pilot branch, then prove both automatic and manual downgrade on native hosts. Do not assume a version change triggers `autoUpdate` or that a lower version is accepted. Production rollback requires an exact previously verified package, schema compatibility, settings restoration, no duplicate hooks, and trace readback. See the [reviewable rollout plan](rollout-readiness.md).
 
 ## 3. Pilot with file-based managed settings
 
@@ -95,11 +95,11 @@ Still to confirm: that a new version published to `marketplace-pilot` reaches th
 
 To end a pilot, remove the file (`sudo rm` on macOS, an elevated `Remove-Item` on Windows). The managed marketplace and telemetry stop at the next session. The plugin stays installed but disabled, and its hooks no longer run. `copilot plugin uninstall burnrate-copilot@upld-internal` removes it.
 
-Burnrate's own `LANGFUSE_*` variables are still needed until Burnrate reads its own configuration file. On Windows, also run the [Windows live checklist](windows-live-checklist.md).
+Signed v0.5.0 still needs Burnrate's separate `LANGFUSE_*` variables. The unreleased v0.6.0 candidate offers OS-vault setup and an explicit launcher; see [secure setup](langfuse-setup.md). A file-based telemetry policy containing a shared key must not be exposed to other local accounts. Use a secret-free plugin policy with a per-user launcher, or an approved private enterprise mechanism. On Windows, also run the [Windows live checklist](windows-live-checklist.md).
 
 ## 4. Enterprise rollout
 
-After the pilot passes on macOS and Windows, put the same `extraKnownMarketplaces`, `enabledPlugins`, and `telemetry` entries in `.github-private/.github/copilot/settings.json`, with `ref` set to `marketplace`. Server-managed settings apply to every user licensed through the enterprise and reach clients within about an hour. Removing the entries is the rollback.
+After native install, update, rollback, setup, performance, and Langfuse readback pass on macOS and Windows and final publication/policy approval is recorded, put the same `extraKnownMarketplaces`, `enabledPlugins`, and `telemetry` entries in `.github-private/.github/copilot/settings.json`, with `ref` set to `marketplace`. Confirm current server-policy propagation and pilot-role targeting before applying settings. Removing policy entries alone is not a proved artifact rollback; recheck installed versions and live hooks on both OSes. Do not start with an enterprise-wide policy when only a pilot role has been authorized.
 
 ## Records
 
@@ -108,6 +108,6 @@ After the pilot passes on macOS and Windows, put the same `extraKnownMarketplace
 
 ## Known gaps
 
-- The release gate has no hook-latency benchmark yet; Codex's release runs one on every target.
-- Users still set `LANGFUSE_BASE_URL`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `BURNRATE_LANGFUSE_TURN_IO`, and `LANGFUSE_COPILOT_USER_ID` themselves, because managed settings cannot set environment variables for hooks. A Burnrate configuration file written by the `setup-langfuse` skill, with the secret in the OS credential store, will replace them.
-- Users who installed the old JavaScript `burnrate-copilot` plugin keep running it, and its `statusLine`, beside the managed plugin until a migration removes it.
+- v0.5.0 had no enforcing hook benchmark. The v0.6.0 candidate workflow adds native provider and exact-pinned shared performance gates; all five remote target results remain required.
+- OS-vault setup, repair, missing credentials, rotation, and same-project native trace readback need Windows proof. Device policy checks do not observe every server/MDM override.
+- The candidate implements [explicit legacy deactivation](install-and-migration.md); Windows and managed migration still require live proof. Signed v0.5.0 has no migration command.

@@ -57,15 +57,29 @@ impl Destination {
             .map_err(|_| SkipReason::NotConfigured)?;
         let public_key = env::var("LANGFUSE_PUBLIC_KEY").map_err(|_| SkipReason::NotConfigured)?;
         let secret_key = env::var("LANGFUSE_SECRET_KEY").map_err(|_| SkipReason::NotConfigured)?;
-        let usable = |value: &str| !value.is_empty() && !value.chars().any(char::is_control);
-        if !usable(&public_key) || !usable(&secret_key) {
+        Self::new(&base, &public_key, &secret_key)
+    }
+
+    pub(crate) fn new(base: &str, public_key: &str, secret_key: &str) -> Result<Self, SkipReason> {
+        let usable = |value: &str| {
+            !value.is_empty() && value.len() <= 4096 && !value.chars().any(char::is_control)
+        };
+        if !usable(public_key) || !usable(secret_key) {
             return Err(SkipReason::InvalidConfiguration);
         }
         Ok(Self {
-            url: endpoint(&base).ok_or(SkipReason::InvalidConfiguration)?,
-            public_key,
-            secret_key,
+            url: endpoint(base).ok_or(SkipReason::InvalidConfiguration)?,
+            public_key: public_key.into(),
+            secret_key: secret_key.into(),
         })
+    }
+
+    pub fn configured(paths: &Paths) -> Result<Self, SkipReason> {
+        if has_environment_configuration() {
+            Self::from_environment()
+        } else {
+            crate::credentials::destination(paths)
+        }
     }
 
     pub fn host(&self) -> Option<&str> {
@@ -73,10 +87,21 @@ impl Destination {
     }
 }
 
+pub(crate) fn has_environment_configuration() -> bool {
+    [
+        "LANGFUSE_BASE_URL",
+        "LANGFUSE_HOST",
+        "LANGFUSE_PUBLIC_KEY",
+        "LANGFUSE_SECRET_KEY",
+    ]
+    .iter()
+    .any(|name| env::var_os(name).is_some())
+}
+
 /// Resolves the OTLP trace endpoint below a Langfuse base URL. Only HTTPS
 /// without embedded credentials, query, or fragment is accepted, matching the
 /// host exporter's refusal of cleartext endpoints.
-fn endpoint(base: &str) -> Option<reqwest::Url> {
+pub(crate) fn endpoint(base: &str) -> Option<reqwest::Url> {
     let base = reqwest::Url::parse(base.trim_end_matches('/')).ok()?;
     if base.scheme() != "https"
         || base.host_str().is_none()
@@ -97,6 +122,7 @@ pub enum SkipReason {
     NotConfigured,
     InvalidConfiguration,
     NoTraceContext,
+    CredentialUnavailable,
 }
 
 impl SkipReason {
@@ -104,6 +130,7 @@ impl SkipReason {
         match self {
             Self::NotConfigured => "skipped_not_configured",
             Self::InvalidConfiguration => "skipped_invalid_configuration",
+            Self::CredentialUnavailable => "skipped_credential_unavailable",
             Self::NoTraceContext => "skipped_no_trace_context",
         }
     }
@@ -271,6 +298,13 @@ struct SendRequest {
 /// `agentStop`: observe attribution, then hand the span to a detached sender
 /// so the turn is not delayed by the network.
 pub fn dispatch_agent_stop(paths: &Paths, input: &HookInput) -> Result<(), ProviderError> {
+    if dispatch_agent_stop_inner(paths, input).is_err() {
+        record_attempt(paths, &input.session_id, "dispatch_failed", None);
+    }
+    Ok(())
+}
+
+fn dispatch_agent_stop_inner(paths: &Paths, input: &HookInput) -> Result<(), ProviderError> {
     let Some(parent) = input.trace_parent() else {
         record_attempt(
             paths,
@@ -280,7 +314,12 @@ pub fn dispatch_agent_stop(paths: &Paths, input: &HookInput) -> Result<(), Provi
         );
         return Ok(());
     };
-    if let Err(reason) = Destination::from_environment() {
+    let configured = if has_environment_configuration() {
+        Destination::from_environment().map(|_| ())
+    } else {
+        crate::credentials::configured_hint(paths)
+    };
+    if let Err(reason) = configured {
         record_attempt(paths, &input.session_id, reason.state(), None);
         return Ok(());
     }
@@ -303,9 +342,9 @@ pub fn dispatch_agent_stop(paths: &Paths, input: &HookInput) -> Result<(), Provi
     let request_path = outbox(paths).join(format!("{}.json", request_file_stem(&input.session_id)));
     write_private(&request_path, &bytes)?;
     record_attempt(paths, &input.session_id, "dispatched", None);
-    if let Err(error) = spawn_sender(&request_path) {
+    if spawn_sender(&request_path).is_err() {
         let _ = std::fs::remove_file(&request_path);
-        return Err(error);
+        record_attempt(paths, &input.session_id, "sender_start_failed", None);
     }
     Ok(())
 }
@@ -423,7 +462,7 @@ pub fn send(request_path: &Path) -> Result<(), ProviderError> {
     let bytes = read_bounded(file?, REQUEST_LIMIT)?;
     let mut request: SendRequest =
         serde_json::from_slice(&bytes).map_err(|_| ProviderError::InvalidInput)?;
-    let destination = match Destination::from_environment() {
+    let destination = match Destination::configured(&paths) {
         Ok(destination) => destination,
         Err(reason) => {
             record_attempt(&paths, &request.session_id, reason.state(), None);
@@ -496,7 +535,7 @@ fn record_attempt(paths: &Paths, session_id: &str, state: &str, http_status: Opt
 
 #[derive(Debug, Serialize)]
 pub struct Status {
-    /// `configured`, `not_configured`, or `invalid_configuration`.
+    /// `configured`, `not_configured`, `invalid_configuration`, or `credential_unavailable`.
     pub configuration: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub host: Option<String>,
@@ -511,9 +550,10 @@ pub struct Status {
 
 pub fn status() -> Result<Status, ProviderError> {
     let paths = Paths::discover()?;
-    let (configuration, host) = match Destination::from_environment() {
+    let (configuration, host) = match Destination::configured(&paths) {
         Ok(destination) => ("configured", destination.host().map(str::to_owned)),
         Err(SkipReason::InvalidConfiguration) => ("invalid_configuration", None),
+        Err(SkipReason::CredentialUnavailable) => ("credential_unavailable", None),
         Err(_) => ("not_configured", None),
     };
     let last_attempt = std::fs::read(last_attempt_path(&paths))

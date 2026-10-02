@@ -139,11 +139,25 @@ jobs:
           CARGO_NET_OFFLINE=true cargo +stable clippy --locked --all-targets -- -D warnings
           CARGO_NET_OFFLINE=true cargo +stable test --locked --all-targets
           CARGO_NET_OFFLINE=true cargo +1.85.0 test --locked --all-targets
+      - name: Check out exact shared contracts for conformance and performance
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: upld-internal/burnrate-spec
+          ref: ${{ needs.validate.outputs.shared_revision }}
+          token: ${{ secrets.BURNRATE_SPEC_TOKEN }}
+          path: shared-contracts
+      - name: Shared offline conformance and privacy
+        run: |
+          cargo +stable fetch --locked --manifest-path shared-contracts/Cargo.toml
+          CARGO_NET_OFFLINE=true cargo +stable test --locked --offline --workspace --manifest-path shared-contracts/Cargo.toml
+      - name: Native credential-store lifecycle
+        if: contains(matrix.target, 'apple-darwin') || matrix.target == 'x86_64-pc-windows-msvc'
+        run: CARGO_NET_OFFLINE=true cargo +stable test --locked native_vault_rotation_and_missing -- --ignored
       - name: Build release binaries with immutable revisions
         env:
           BURNRATE_SOURCE_REVISION: ${{ needs.validate.outputs.source_revision }}
           BURNRATE_SHARED_REVISION: ${{ needs.validate.outputs.shared_revision }}
-        run: CARGO_NET_OFFLINE=true cargo +stable build --locked --release --target ${{ matrix.target }} --bin burnrate-copilot --bin generate-release-manifest
+        run: CARGO_NET_OFFLINE=true cargo +stable build --locked --release --target ${{ matrix.target }} --bin burnrate-copilot --bin generate-release-manifest --bin hook-benchmarks
       - name: Check build identity
         env:
           SOURCE_REVISION: ${{ needs.validate.outputs.source_revision }}
@@ -152,6 +166,19 @@ jobs:
           info=$("target/$TARGET/release/${{ matrix.binary }}" build-info)
           echo "$info"
           test "$(echo "$info" | jq -r '"\(.target) \(.source_revision)"')" = "$TARGET $SOURCE_REVISION"
+      - name: Enforce native provider and shared performance budgets
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          mkdir -p performance-evidence
+          "target/$TARGET/release/hook-benchmarks${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}" "target/$TARGET/release/${{ matrix.binary }}" > performance-evidence/provider-hook.json
+          cargo +stable run --locked --offline --release --manifest-path shared-contracts/Cargo.toml -p burnrate-adapter-kit --example operational-benchmarks -- --release-profile > performance-evidence/shared.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: performance-${{ matrix.target }}
+          if-no-files-found: error
+          path: performance-evidence/
       - name: Windows plugin hook smoke test
         if: matrix.target == 'x86_64-pc-windows-msvc'
         shell: pwsh

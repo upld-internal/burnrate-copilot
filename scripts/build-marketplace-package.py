@@ -72,7 +72,7 @@ def archive_contents(archive: Path, target: str) -> tuple[dict, bytes]:
     binary = binary_name(target)
     with tarfile.open(archive, "r:gz") as package:
         members = package.getmembers()
-        if {member.name for member in members} != {
+        if len(members) != 3 or {member.name for member in members} != {
             binary, "release-manifest.json", "LICENSE"
         } or not all(member.isfile() for member in members):
             raise ValueError(f"unexpected archive contents: {archive.name}")
@@ -80,6 +80,8 @@ def archive_contents(archive: Path, target: str) -> tuple[dict, bytes]:
         binary_file = package.extractfile(binary)
         if manifest_file is None or binary_file is None:
             raise ValueError("missing manifest or binary")
+        if package.getmember(binary).size > 192 * 1024 * 1024:
+            raise ValueError("oversized release binary")
         manifest_bytes = manifest_file.read(MANIFEST_LIMIT + 1)
         if len(manifest_bytes) > MANIFEST_LIMIT:
             raise ValueError("oversized release manifest")
@@ -119,6 +121,11 @@ def main() -> None:
         cwd=repository_root, text=True,
     ).strip():
         parser.error("source checkout must be clean")
+
+    import tomllib
+    expected_shared = tomllib.loads((repository_root / "Cargo.toml").read_text())["dependencies"]["burnrate-adapter-kit"].get("rev")
+    if not expected_shared or not re.fullmatch(r"[0-9a-f]{40}", expected_shared):
+        parser.error("shared dependency must be an immutable revision")
 
     identity = (
         f"https://github.com/{REPOSITORY}/.github/workflows/release.yml"
@@ -170,7 +177,11 @@ def main() -> None:
             verify_blob(archive, signature, identity)
             manifest, binary = archive_contents(archive, target)
             if (
-                manifest.get("product") != PRODUCT
+                manifest.get("operations_schema_version") != "1"
+                or manifest.get("shared_revision") != expected_shared
+                or manifest.get("provenance_name") != f"{name}.intoto.jsonl"
+                or manifest.get("signature_name") != f"{name}.sigstore.json"
+                or manifest.get("product") != PRODUCT
                 or manifest.get("version") != version
                 or manifest.get("target") != target
                 or manifest.get("archive_name") != name
