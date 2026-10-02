@@ -82,5 +82,5 @@ The implementation is under `src/` (`hook.rs` input, `runtime.rs` local records,
 
 - The statusline command and its user `statusLine` setting ownership.
 - Publication to the production `marketplace` branch and the enterprise-managed rollout, after the macOS and Windows pilots and the migration from the old JavaScript plugin.
-- A verified Windows install. Windows hooks, data paths, and the detached sender are implemented, and CI builds and smoke-tests the x64 binary, but no Copilot session on Windows has run them yet; [the Windows live checklist](docs/windows-live-checklist.md) covers that. Windows on ARM would run the x64 binary under emulation.
+- A verified Windows install. Windows hooks, data paths, and the detached sender are implemented, and CI builds and smoke-tests the x64 binary, but no Copilot session on Windows has run them yet; [the Windows live checklist](docs/windows-live-checklist.md) covers that. Windows on ARM/emulation is not qualified for this release.
 - Complete native acceptance on every release target, including interactive and aborted turns, automatic/manual changed-hook update, and failed rollback.

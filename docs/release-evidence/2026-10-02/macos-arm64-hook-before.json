@@ -1,0 +1,1 @@
+{"build":{"product":"burnrate-copilot","shared_revision":"ee8c4a6ea39b8273ea88a6fe28760dc80d784abb","source_revision":"fcdb52b747561551c21c428aa4bcd49dc47f3c77","target":"aarch64-apple-darwin","version":"0.6.0"},"existing_events":1000,"operation":"provider_hook","p95_micros":110901,"p99_micros":117903,"passed":false,"profile":"release","samples":100,"warmup":20}

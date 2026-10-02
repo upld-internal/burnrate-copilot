@@ -108,6 +108,6 @@ After native install, update, rollback, setup, performance, and Langfuse readbac
 
 ## Known gaps
 
-- v0.5.0 had no enforcing hook benchmark. The v0.6.0 candidate workflow adds native provider and exact-pinned shared performance gates; all five remote target results remain required.
+- v0.5.0 had no enforcing hook benchmark. The v0.6.0 candidate workflow adds native provider and exact-pinned shared performance gates; the final five-target dry run passed shared budgets but failed provider hook p95 on Intel macOS and Windows. See the [exact rollout evidence](rollout-readiness.md); promotion remains blocked.
 - OS-vault setup, repair, missing credentials, rotation, and same-project native trace readback need Windows proof. Device policy checks do not observe every server/MDM override.
 - The candidate implements [explicit legacy deactivation](install-and-migration.md); Windows and managed migration still require live proof. Signed v0.5.0 has no migration command.
