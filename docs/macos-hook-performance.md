@@ -106,3 +106,44 @@ Any shared optimization requires a new immutable shared revision, both provider
 pin files, exact consumer conformance and a passing five-target native gate.
 Do not claim Intel performance from the local ARM64 result or weaken the
 existing benchmark limits/corpus.
+
+## Durable-write optimization and bounded scans
+
+The Mac write profile identified repeated device-wide flushes as the largest
+write component. Shared revision `32f3abe2dce3fc47e86e94261974986c6b04b2f1`
+uses ordinary file `fsync` only when the atomic rename is followed by the
+existing parent `F_FULLFSYNC`, which flushes the preceding file data and rename
+before acknowledgement. Paths that defer the parent flush retain full file
+flushes. Linux and Windows synchronization behavior is unchanged. Shared ADR
+0016 records the durability argument; this is not physical power-loss evidence.
+
+Provider `5fe19a3a3e99404d5c790fb015fed2437df1c5cf` pinned that exact revision.
+[Native run 37094776587](https://github.com/upld-internal/burnrate-copilot/actions/runs/37094776587)
+built synthetic merge `641c2e167485bc798e1b217788f4b14abf3932a5`.
+All shared performance budgets passed on all five hosts. The full provider hook
+still failed Intel and Windows p95:
+
+| Native target | Full hook p95 / p99 | Result |
+| --- | ---: | --- |
+| macOS ARM64 | 69.623 / 87.510 ms | Pass |
+| macOS Intel | 138.414 / 190.810 ms | Fail p95 |
+| Windows x64 CI | 101.662 / 117.390 ms | Fail p95 |
+| Linux ARM64 | 26.840 / 29.123 ms | Pass |
+| Linux x64 | 36.423 / 36.662 ms | Pass |
+
+Intel's independent cached write p95 fell to 30.195 ms, but full-hook store
+scanning remains material. All fifteen raw JSON files are preserved under
+`docs/release-evidence/2026-10-03/37094776587-*`.
+
+Shared `9b4081276e080a28270d6ff7b588b5e941e8b619` adds at most four workers
+for immutable slot reads in stores with at least 128 slots. The exclusive store
+lock remains held and workers return records and diagnostics in original slot
+order. A 256-slot test includes malformed, unsupported and privacy-invalid
+records and checks restart deduplication plus unchanged rejected bytes. Shared
+format, Clippy and full stable/MSRV workspace suites passed.
+
+Provider `f92a73f43ed8d712e6818a9830e8203269121ce7` pins that revision in both
+files. Provider format, locked Clippy and stable/MSRV all-target suites passed.
+[Native run 37096702730](https://github.com/upld-internal/burnrate-copilot/actions/runs/37096702730)
+is the required full-hook acceptance check; preserve its final results before
+calling Intel latency resolved. No benchmark corpus or budget was reduced.

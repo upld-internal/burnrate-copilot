@@ -18,6 +18,7 @@ on:
       - plugin/**
       - scripts/build-marketplace-package.py
       - scripts/windows-hook-smoke.ps1
+      - scripts/macos-sign-binary.py
   workflow_dispatch:
     inputs:
       mode:
@@ -194,6 +195,13 @@ jobs:
           name: performance-${{ matrix.target }}
           if-no-files-found: error
           path: performance-evidence/
+      - name: Native macOS signing with provisioned identity
+        if: github.event_name == 'push' && contains(matrix.target, 'apple-darwin')
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+        run: |
+          test -n "$MACOS_SIGNING_IDENTITY" || { echo 'Release blocked: approved Developer ID identity has not been provisioned on this runner.' >&2; exit 1; }
+          python3 scripts/macos-sign-binary.py "target/${{ matrix.target }}/release/${{ matrix.binary }}" --identity "$MACOS_SIGNING_IDENTITY"
       - name: Package deterministic target archive
         env:
           VERSION: ${{ needs.validate.outputs.version }}

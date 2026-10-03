@@ -105,3 +105,45 @@ process arguments, logs or evidence.
 See [rollout readiness](rollout-readiness.md) for current passes, failures and
 trace IDs. A signing design or synthetic credential test does not close the
 real update gate.
+
+## Local native signing proof, 2026-10-03
+
+On macOS 26.5.1 (25F80), ARM64, the existing Developer ID Application certificate
+`915C7DEDCB336E243355C54FE8E0960EBFD42043` signed the disposable fixtures with
+identifier `com.upland.burnrate.copilot` and Team ID `Y5SX6J5N9L`. No key was
+exported and no access controls were changed. Strict verification passed with
+the Apple Developer ID requirement, identifier and team. The observed signing
+operation completed without a new authorization prompt.
+
+A signed v0.6.0 build from `4e718c0b41391628774cb1ddd1a7651ef71c367b`
+(shared `321ee246b42e5b2ccd45e97b99b49a4784e3f9fb`) created an isolated
+Keychain entry. A separately rebuilt, signed v0.6.0 build from
+`5fe19a3a3e99404d5c790fb015fed2437df1c5cf` (shared `32f3abe2...`) read it
+without UI and launched Copilot with shell Langfuse keys removed. Actual
+interactive host version was **1.0.88**, because `--no-auto-update` selects the
+bootstrap's bundled host, even though ordinary `copilot --version` reports the
+newer downloaded version. Session `eacadb35-c17e-44b6-b3d6-2c7f0ab95f86`
+produced:
+
+- `93a500209d32b58a191d5339cd27b577`: `feature/ABC-234-signed-vault`, Jira
+  `ABC-234`, repository `upld-internal/burnrate-copilot`.
+- `08c66c76cd8aba94fad13b38c2af5bd1`: after an event-time branch change to
+  `feature/ABC-345-vault-after-update`, Jira `ABC-345`, same repository.
+
+Both API verifier calls passed with environment keys unset, native host parent,
+exactly one attribution span, `harness=copilot_cli`, and no camelCase aliases.
+This demonstrates rebuild continuity on ARM64; Intel interactive continuity is
+still required.
+
+`scripts/macos-sign-binary.py` signs only with an already provisioned public
+certificate identity and verifies `packaging/macos-signing.json`. The workflow
+runs it before manifests and archives on signed-tag Mac jobs. Dry runs remain
+unsigned. GitHub currently has no provisioned native signing identity: an
+approved runner/service and public `MACOS_SIGNING_IDENTITY` repository variable
+are required before a real five-target signed candidate can be published. The
+existing local private key must not be exported as a workaround.
+
+A controlled loopback smart-Git marketplace fixture exercises host updates
+independently of that signing-infrastructure gate. It uses native-signed ARM64
+packages, not the signed five-target `marketplace-pilot` release. Record its
+observations separately and do not promote them to production update proof.

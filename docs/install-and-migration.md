@@ -38,8 +38,11 @@ BINARY migration disable-legacy
 ```
 
 The command validates the host's source, identity/version, cache containment,
-and local manifest. Ambiguous ownership stops with a bounded error. Copilot's
-own disable command deactivates the legacy plugin. Only exact `node` commands to
+and local manifest. Ambiguous ownership stops with a bounded error. The migration changes only that validated legacy registry entry's enabled flag,
+then checks Copilot's effective JSON listing. Copilot's bare-name disable can
+select the Rust copy when both share a name, so it cannot establish migration.
+An effective-state mismatch fails and restores the prior registry when it has
+not changed concurrently. Only exact `node` commands to
 that validated plugin's known scripts are removed from user hooks and statusline.
 Unrelated hooks, profiles, telemetry settings, and historical data remain intact.
 A restrictive `state/legacy-migration.json` journals only those owned values and
@@ -55,8 +58,8 @@ project-local duplicates, or another Copilot home needs separate remediation;
 this command does not alter enterprise policy or unknown project hooks.
 
 Deactivation keeps the old package and data for rollback. After new native
-activation is proved, an operator may uninstall the exact legacy unqualified
-identity through Copilot CLI. This is not historical data conversion. See shared
+activation is proved, an operator may uninstall the exact legacy direct-source
+identity (never a bare name while another copy is installed) through Copilot CLI. This is not historical data conversion. See shared
 ADR 0015 for the explicit deactivation exception to the fresh-install boundary.
 
 For preparation rollback, first remove the Rust copy through the host, then run

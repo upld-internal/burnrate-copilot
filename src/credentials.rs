@@ -431,6 +431,33 @@ pub fn verify(trace_id: &str) -> Result<Value, ProviderError> {
     )
 }
 
+fn reaches_native_root(rows: &[Value], parent: &Value) -> bool {
+    let Some(mut id) = parent.as_str() else {
+        return false;
+    };
+    let mut seen = std::collections::BTreeSet::new();
+    for _ in 0..rows.len() {
+        if !seen.insert(id) {
+            return false;
+        }
+        let mut matches = rows.iter().filter(|o| o["id"].as_str() == Some(id));
+        let Some(observation) = matches.next() else {
+            return false;
+        };
+        if matches.next().is_some() || observation["name"] == "burnrate.attribution" {
+            return false;
+        }
+        if observation["parentObservationId"].is_null() {
+            return observation["name"] == "invoke_agent";
+        }
+        let Some(next) = observation["parentObservationId"].as_str() else {
+            return false;
+        };
+        id = next;
+    }
+    false
+}
+
 fn trace_matches(
     trace: &Value,
     observations: &Value,
@@ -448,11 +475,7 @@ fn trace_matches(
             .as_u64()
             .is_none_or(|n| n <= rows.len() as u64)
         && attribution.len() == 1
-        && rows.iter().any(|o| {
-            o["name"] == "invoke_agent"
-                && o["id"] == attribution[0]["parentObservationId"]
-                && !o["id"].is_null()
-        })
+        && reaches_native_root(rows, &attribution[0]["parentObservationId"])
         && [
             "harness",
             "git_branch",
@@ -535,6 +558,19 @@ mod tests {
         let trace = json!({"name":"Copilot Turn","metadata":{"harness":"copilot_cli"}});
         let mut rows = json!({"data":[{"id":"root","name":"invoke_agent"},{"name":"burnrate.attribution","parentObservationId":"root"}],"meta":{"totalItems":2}});
         assert!(trace_matches(&trace, &rows, &expected));
+        let mut nested = json!({"data":[
+            {"id":"root","name":"invoke_agent"},
+            {"id":"generation","name":"chat gpt-5-mini","parentObservationId":"root"},
+            {"id":"attribution","name":"burnrate.attribution","parentObservationId":"generation"}
+        ],"meta":{"totalItems":3}});
+        assert!(trace_matches(&trace, &nested, &expected));
+        nested["data"][1]["parentObservationId"] = json!("missing");
+        assert!(!trace_matches(&trace, &nested, &expected));
+        nested["data"][1]["parentObservationId"] = json!("generation");
+        assert!(!trace_matches(&trace, &nested, &expected));
+        nested["data"][1]["parentObservationId"] = json!("root");
+        nested["data"][0]["name"] = json!("unrelated");
+        assert!(!trace_matches(&trace, &nested, &expected));
         rows["data"]
             .as_array_mut()
             .unwrap()
