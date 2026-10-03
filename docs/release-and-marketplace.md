@@ -109,6 +109,6 @@ After native install, update, rollback, setup, performance, and Langfuse readbac
 ## Known gaps
 
 - v0.5.0 had no enforcing hook benchmark. The v0.6.0 candidate workflow adds native provider and exact-pinned shared performance gates; the final five-target dry run passed shared budgets but failed provider hook p95 on Intel macOS and Windows. See the [exact rollout evidence](rollout-readiness.md); promotion remains blocked.
-- Stable macOS native signing and real credential-preserving update need proof; see the [signing/update acceptance plan](macos-signing-and-update-proof.md) and [hook component diagnostic](macos-hook-performance.md).
+- ARM64 Developer ID signing and controlled fixture updates have live proof; the five-target release still needs an approved CI signer and signed pilot update. Mac signed-tag jobs run `scripts/macos-sign-binary.py` before manifests/archive signatures, using the public policy in `packaging/macos-signing.json` and a provisioned certificate selected by `MACOS_SIGNING_IDENTITY`. See the [signing/update evidence](macos-signing-and-update-proof.md) and [hook component diagnostic](macos-hook-performance.md).
 - OS-vault setup, repair, missing credentials, rotation, and same-project native trace readback need Windows proof. Device policy checks do not observe every server/MDM override.
 - The candidate implements [explicit legacy deactivation](install-and-migration.md); Windows and managed migration still require live proof. Signed v0.5.0 has no migration command.

@@ -150,7 +150,17 @@ fn hook_bytes(root: &Path) -> Result<Vec<u8>, ProviderError> {
         for row in rows.as_array().ok_or(ProviderError::InvalidInput)? {
             let mut expanded = row.clone();
             let command = row["command"].as_str().ok_or(ProviderError::InvalidInput)?;
-            expanded["command"] = json!(command.replace("${PLUGIN_ROOT}", &root.to_string_lossy()));
+            if let Some(name) = SCRIPTS
+                .iter()
+                .find(|name| command == format!("node ${{PLUGIN_ROOT}}/scripts/{name}"))
+            {
+                // The legacy manifest uses portable forward slashes; normalize
+                // the known placeholder without assuming the host separator.
+                expanded["command"] = json!(format!(
+                    "node {}",
+                    root.join("scripts").join(name).display()
+                ));
+            }
             if !owned_command(&expanded, root, false) {
                 return Err(ProviderError::InvalidInput);
             }

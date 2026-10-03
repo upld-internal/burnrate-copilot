@@ -1,25 +1,25 @@
 # macOS signing and credential-preserving update proof
 
-Status: preparation only. The release workflow signs archives with Cosign; it
-does not yet apply a stable Developer ID signature to the macOS executable.
-The unsigned development rebuild required Keychain reauthorization. No new
-native-signed package or credential-preserving update has been proved.
+Status: ARM64 native signing, rebuild Keychain continuity and controlled Git
+fixture lifecycle have live evidence below. The release workflow now gates
+native Mac signing before manifests and archives, but an approved CI signer
+has not been provisioned. No new five-target signed pilot release is published.
 
 ## Signing integration to complete
 
 Use an organization-owned Developer ID Application identity, a stable executable
 identifier, and the same designated requirement across ARM64, Intel and subsequent
-versions. Proposed identifier: `com.upland.burnrate.copilot`; confirm it with the
-signing owner before making it a release input. Record the expected Team ID,
+versions. Candidate identifier: `com.upland.burnrate.copilot`, Team ID `Y5SX6J5N9L`.
+The final signer/service remains an owner-reviewed release input. Record the expected Team ID,
 certificate fingerprint, identifier and designated requirement as public release
 evidence. The private key remains in the approved signing service or Keychain.
-The local identity currently requires owner authorization; do not export its key
-or broaden its access controls to work around that prompt.
+The local signing proof completed with the existing identity without a new UI
+prompt. Do not export its private key or broaden its access controls.
 
 Apple describes the designated requirement as the identity that lets macOS
 recognize successive versions of a program, and Keychain uses that identity to
-track the creating application. This supports the proposed approach; the actual
-vault behavior still needs a two-version host test. See Apple's
+track the creating application. ARM64 fixture tests below now demonstrate that continuity; Intel host continuity
+still needs its own proof. See Apple's
 [code-signature guide](https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/AboutCS/AboutCS.html)
 and [code-signing technical note](https://developer.apple.com/library/archive/technotes/tn2206/_index.html).
 
