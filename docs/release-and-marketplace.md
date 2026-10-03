@@ -99,7 +99,7 @@ Signed v0.5.0 still needs Burnrate's separate `LANGFUSE_*` variables. The unrele
 
 ## 4. Enterprise rollout
 
-After native install, update, rollback, setup, performance, and Langfuse readback pass on macOS and Windows and final publication/policy approval is recorded, put the same `extraKnownMarketplaces`, `enabledPlugins`, and `telemetry` entries in `.github-private/.github/copilot/settings.json`, with `ref` set to `marketplace`. Confirm current server-policy propagation and pilot-role targeting before applying settings. Removing policy entries alone is not a proved artifact rollback; recheck installed versions and live hooks on both OSes. Do not start with an enterprise-wide policy when only a pilot role has been authorized.
+After native install, update, rollback, setup, performance, and Langfuse readback pass on macOS and Windows and final publication/policy approval is recorded, put the reviewed catalog and enablement entries in the approved pilot-role settings, with `ref` set to `marketplace`. Use the per-user vault launcher for telemetry, or a separately approved private managed-credential mechanism. Keep telemetry keys and authorization headers out of Git policy files. Confirm current server-policy propagation and pilot-role targeting before applying settings. Removing policy entries alone is not a proved artifact rollback; recheck installed versions and live hooks on both OSes. Do not start with an enterprise-wide policy when only a pilot role has been authorized.
 
 ## Records
 
