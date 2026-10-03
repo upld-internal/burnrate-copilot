@@ -161,23 +161,82 @@ fn remove_owned(settings: &mut Value, root: &Path, enabled: bool) -> Journal {
     journal
 }
 
-fn host_toggle(enable: bool) -> Result<(), ProviderError> {
-    // Identity is validated from host state before calling the unqualified legacy name.
-    let status = Command::new("copilot")
-        .args([
-            "plugin",
-            if enable { "enable" } else { "disable" },
-            "burnrate-copilot",
-        ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(ProviderError::Io)
+// Copilot's bare-name toggle selects the first installed copy, and its JSON
+// listing omits the direct-source selector. Change only the validated legacy
+// registry entry, then require the host's effective listing to agree. Restart
+// is required; migration never reloads an already-running session.
+fn toggle_config(config: &mut Value, enable: bool) -> Result<(), ProviderError> {
+    let plugins = config["installedPlugins"]
+        .as_array_mut()
+        .ok_or(ProviderError::InvalidInput)?;
+    let matches: Vec<_> = plugins
+        .iter_mut()
+        .filter(|p| p["name"] == "burnrate-copilot" && p["version"] == "0.1.0")
+        .collect();
+    if matches.len() != 1 {
+        return Err(ProviderError::InvalidInput);
     }
+    for plugin in matches {
+        plugin["enabled"] = json!(enable);
+    }
+    Ok(())
+}
+
+fn verify_toggle(list: &Value, enable: bool) -> Result<(), ProviderError> {
+    let rows = list.as_array().ok_or(ProviderError::InvalidInput)?;
+    let legacy: Vec<_> = rows
+        .iter()
+        .filter(|p| p["name"] == "burnrate-copilot" && p["version"] == "0.1.0")
+        .collect();
+    if legacy.len() != 1 || legacy[0]["enabled"] != json!(enable) {
+        return Err(ProviderError::InvalidInput);
+    }
+    Ok(())
+}
+
+fn host_toggle(home: &Path, root: &Path, enable: bool) -> Result<(), ProviderError> {
+    let path = home.join("config.json");
+    let before = read(&path)?;
+    if legacy_root(home, &before)?.as_deref() != Some(root) {
+        return Err(ProviderError::InvalidInput);
+    }
+    let mut after = before.clone();
+    toggle_config(&mut after, enable)?;
+    // Reject an observed concurrent change rather than overwriting it.
+    if read(&path)? != before {
+        return Err(ProviderError::InvalidInput);
+    }
+    write_private(
+        &path,
+        &serde_json::to_vec_pretty(&after).map_err(|_| ProviderError::InvalidInput)?,
+    )?;
+    let result = (|| {
+        if read(&path)? != after {
+            return Err(ProviderError::InvalidInput);
+        }
+        let mut child = Command::new("copilot")
+            .args(["plugin", "list", "--json"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()?;
+        let bytes = read_bounded(child.stdout.take().ok_or(ProviderError::Io)?, LIMIT);
+        // Always reap the child, including bounded-output failures.
+        let status = child.wait()?;
+        if !status.success() {
+            return Err(ProviderError::Io);
+        }
+        let list: Value =
+            serde_json::from_slice(&bytes?).map_err(|_| ProviderError::InvalidInput)?;
+        verify_toggle(&list, enable)
+    })();
+    if result.is_err() && read(&path)? == after {
+        write_private(
+            &path,
+            &serde_json::to_vec_pretty(&before).map_err(|_| ProviderError::InvalidInput)?,
+        )?;
+    }
+    result
 }
 
 pub fn status() -> Result<Value, ProviderError> {
@@ -198,7 +257,7 @@ pub fn disable_legacy() -> Result<Value, ProviderError> {
         // Reconcile an interrupted preparation rather than trusting the journal alone.
         let config = read(&home.join("config.json"))?;
         if let Some(root) = legacy_root(&home, &config)? {
-            host_toggle(false)?;
+            host_toggle(&home, &root, false)?;
             let mut settings = read(&home.join("settings.json"))?;
             remove_owned(&mut settings, &root, false);
             write_private(
@@ -225,7 +284,7 @@ pub fn disable_legacy() -> Result<Value, ProviderError> {
         &journal_path,
         &serde_json::to_vec(&journal).map_err(|_| ProviderError::InvalidInput)?,
     )?;
-    if let Err(error) = host_toggle(false) {
+    if let Err(error) = host_toggle(&home, &root, false) {
         let _ = fs::remove_file(&journal_path);
         return Err(error);
     }
@@ -238,7 +297,7 @@ pub fn disable_legacy() -> Result<Value, ProviderError> {
     .is_err()
     {
         if enabled {
-            host_toggle(true)?;
+            host_toggle(&home, &root, true)?;
         }
         let _ = fs::remove_file(&journal_path);
         return Err(ProviderError::Io);
@@ -297,7 +356,7 @@ pub fn rollback() -> Result<Value, ProviderError> {
         &serde_json::to_vec_pretty(&settings).map_err(|_| ProviderError::InvalidInput)?,
     )?;
     if journal.previously_enabled {
-        host_toggle(true)?;
+        host_toggle(&home, &root, true)?;
     }
     fs::remove_file(journal_path)?;
     Ok(json!({"state":"legacy_restored", "restart_required":true}))
@@ -306,6 +365,22 @@ pub fn rollback() -> Result<Value, ProviderError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn same_name_migration_changes_only_legacy_and_rejects_noop() {
+        let native = json!({"name":"burnrate-copilot", "version":"0.6.0", "enabled":true, "marketplace":"pilot"});
+        let mut config = json!({"installedPlugins":[native.clone(), {"name":"burnrate-copilot", "version":"0.1.0", "enabled":true}], "unrelated":"preserve"});
+        toggle_config(&mut config, false).unwrap();
+        assert_eq!(config["installedPlugins"][0], native);
+        assert_eq!(config["unrelated"], "preserve");
+        assert!(verify_toggle(&config["installedPlugins"], false).is_ok());
+        let noop = json!([{ "name":"burnrate-copilot", "version":"0.1.0", "enabled":true}]);
+        assert!(verify_toggle(&noop, false).is_err());
+        assert!(verify_toggle(&json!([]), false).is_err());
+        toggle_config(&mut config, true).unwrap();
+        assert!(verify_toggle(&config["installedPlugins"], true).is_ok());
+        assert_eq!(config["installedPlugins"][0], native);
+    }
+
     #[test]
     fn exact_ownership_preserves_unrelated_and_ambiguous_commands() {
         let temporary = crate::test_support::TempRoot::new("migration-command");
