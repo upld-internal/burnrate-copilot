@@ -1,0 +1,61 @@
+{
+  "capability_growth": 240,
+  "comparison_note": "Components measured independently; percentile values cannot be added. This diagnostic is not release acceptance.",
+  "components": {
+    "cached_attributed_event_and_two_capabilities": {
+      "p50_micros": 39966,
+      "p95_micros": 43759,
+      "p99_micros": 45887,
+      "samples": 100,
+      "warmup": 20
+    },
+    "executable_startup_version": {
+      "p50_micros": 2434,
+      "p95_micros": 3695,
+      "p99_micros": 4287,
+      "samples": 100,
+      "warmup": 20
+    },
+    "git_observation": {
+      "p50_micros": 10806,
+      "p95_micros": 11278,
+      "p99_micros": 11439,
+      "samples": 100,
+      "warmup": 20
+    },
+    "store_open_snapshot": {
+      "p50_micros": 15702,
+      "p95_micros": 18034,
+      "p99_micros": 18971,
+      "samples": 100,
+      "warmup": 20
+    }
+  },
+  "event_growth": 120,
+  "host": {
+    "architecture": "aarch64",
+    "os": "macos",
+    "runner_image": null,
+    "runner_image_version": null,
+    "os_version": "26.5.1",
+    "os_build": "25F80"
+  },
+  "initial_events": 1000,
+  "initial_open_sessions": 1000,
+  "profile": "diagnostic_only",
+  "profile_build": {
+    "product": "burnrate-copilot",
+    "shared_revision": "321ee246b42e5b2ccd45e97b99b49a4784e3f9fb",
+    "source_revision": "153e1969cf9a0697fd47cfcbf1ec771fa5ff3831",
+    "target": "aarch64-apple-darwin",
+    "version": "0.6.0"
+  },
+  "tested_binary_build": {
+    "product": "burnrate-copilot",
+    "shared_revision": "321ee246b42e5b2ccd45e97b99b49a4784e3f9fb",
+    "source_revision": "4e718c0b41391628774cb1ddd1a7651ef71c367b",
+    "target": "aarch64-apple-darwin",
+    "version": "0.6.0"
+  },
+  "recorded_at_utc": "2026-10-03T03:01:25Z"
+}

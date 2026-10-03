@@ -33,6 +33,22 @@ fn run() -> Result<(), ProviderError> {
             local
         }
         ["langfuse", "send", request] => langfuse::send(std::path::Path::new(request)),
+        ["langfuse", "forget"] => print_json(&burnrate_copilot::credentials::forget()?),
+        ["langfuse", "setup"] => print_json(&burnrate_copilot::credentials::setup(false)?),
+        ["langfuse", "setup", "--from-environment"] => {
+            print_json(&burnrate_copilot::credentials::setup(true)?)
+        }
+        ["langfuse", "launch", rest @ ..] => burnrate_copilot::credentials::launch(
+            &rest.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>(),
+        ),
+        ["langfuse", "verify", trace_id] => {
+            let report = burnrate_copilot::credentials::verify(trace_id)?;
+            print_json(&report)?;
+            if report["verified"] != true {
+                return Err(ProviderError::RemoteVerification);
+            }
+            Ok(())
+        }
         ["langfuse", "status"] => print_json(&langfuse::status()?),
         ["langfuse", "suggest-user-id"] => {
             let cwd = env::current_dir()?;
@@ -41,6 +57,11 @@ fn run() -> Result<(), ProviderError> {
                 "suggestion": langfuse::suggest_user_id(&cwd),
             }))
         }
+        ["migration", "status"] => print_json(&burnrate_copilot::migration::status()?),
+        ["migration", "disable-legacy"] => {
+            print_json(&burnrate_copilot::migration::disable_legacy()?)
+        }
+        ["migration", "rollback"] => print_json(&burnrate_copilot::migration::rollback()?),
         ["build-info"] => print_json(&burnrate_copilot::build_info::build_info()),
         ["version"] => {
             println!("{}", env!("CARGO_PKG_VERSION"));

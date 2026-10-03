@@ -1,0 +1,1126 @@
+{
+  "conclusion": "failure",
+  "headSha": "e657f6c81e7e1adc241f123f12b234abf61e31c4",
+  "jobs": [
+    {
+      "completedAt": "2026-10-03T05:00:19Z",
+      "conclusion": "success",
+      "databaseId": 111132896494,
+      "name": "validate",
+      "startedAt": "2026-10-03T05:00:15Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T05:00:16Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T05:00:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:17Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T05:00:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:17Z",
+          "conclusion": "skipped",
+          "name": "Reject mutable, unsigned, dirty, or mismatched inputs",
+          "number": 3,
+          "startedAt": "2026-10-03T05:00:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:17Z",
+          "conclusion": "success",
+          "name": "Check dry-run versions and pin",
+          "number": 4,
+          "startedAt": "2026-10-03T05:00:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:17Z",
+          "conclusion": "success",
+          "name": "Run if [ \"$GITHUB_EVENT_NAME\" = push ]; then",
+          "number": 5,
+          "startedAt": "2026-10-03T05:00:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:17Z",
+          "conclusion": "success",
+          "name": "Run echo \"value=$GITHUB_SHA\" >> \"$GITHUB_OUTPUT\"",
+          "number": 6,
+          "startedAt": "2026-10-03T05:00:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:17Z",
+          "conclusion": "success",
+          "name": "Run revision=$(sed -n '/name = \"burnrate-adapter-kit\"/,/^$/s/.*#\\([0-9a-f]\\{40\\}\\)\"/\\1/p' Cargo.lock)",
+          "number": 7,
+          "startedAt": "2026-10-03T05:00:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:18Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 14,
+          "startedAt": "2026-10-03T05:00:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:18Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 15,
+          "startedAt": "2026-10-03T05:00:18Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37098390348/job/111132896494"
+    },
+    {
+      "completedAt": "2026-10-03T05:00:13Z",
+      "conclusion": "skipped",
+      "databaseId": 111132897245,
+      "name": "marketplace-repackage",
+      "startedAt": "2026-10-03T05:00:13Z",
+      "status": "completed",
+      "steps": [],
+      "url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37098390348/job/111132897245"
+    },
+    {
+      "completedAt": "2026-10-03T05:03:51Z",
+      "conclusion": "success",
+      "databaseId": 111132914426,
+      "name": "build (x86_64-unknown-linux-gnu, ubuntu-24.04, burnrate-copilot)",
+      "startedAt": "2026-10-03T05:00:22Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T05:00:27Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T05:00:25Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:27Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T05:00:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:27Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T05:00:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:43Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T05:00:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:01:53Z",
+          "conclusion": "success",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T05:00:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:01:55Z",
+          "conclusion": "success",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T05:01:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:19Z",
+          "conclusion": "success",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T05:01:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:19Z",
+          "conclusion": "skipped",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T05:02:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:12Z",
+          "conclusion": "success",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T05:02:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:12Z",
+          "conclusion": "success",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T05:03:12Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:18Z",
+          "conclusion": "success",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T05:03:12Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:18Z",
+          "conclusion": "skipped",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T05:03:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:45Z",
+          "conclusion": "success",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T05:03:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:46Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T05:03:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:46Z",
+          "conclusion": "skipped",
+          "name": "Native macOS signing with provisioned identity",
+          "number": 15,
+          "startedAt": "2026-10-03T05:03:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:46Z",
+          "conclusion": "success",
+          "name": "Package deterministic target archive",
+          "number": 16,
+          "startedAt": "2026-10-03T05:03:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:46Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 17,
+          "startedAt": "2026-10-03T05:03:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:46Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 18,
+          "startedAt": "2026-10-03T05:03:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:46Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 19,
+          "startedAt": "2026-10-03T05:03:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:46Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 20,
+          "startedAt": "2026-10-03T05:03:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:48Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 21,
+          "startedAt": "2026-10-03T05:03:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:48Z",
+          "conclusion": "success",
+          "name": "Post Check out exact shared contracts for conformance and performance",
+          "number": 41,
+          "startedAt": "2026-10-03T05:03:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:49Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 42,
+          "startedAt": "2026-10-03T05:03:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:49Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 43,
+          "startedAt": "2026-10-03T05:03:49Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37098390348/job/111132914426"
+    },
+    {
+      "completedAt": "2026-10-03T05:09:16Z",
+      "conclusion": "failure",
+      "databaseId": 111132914446,
+      "name": "build (x86_64-apple-darwin, macos-15-intel, burnrate-copilot)",
+      "startedAt": "2026-10-03T05:00:22Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T05:00:27Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T05:00:22Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:29Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T05:00:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:29Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T05:00:29Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:52Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T05:00:29Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:16Z",
+          "conclusion": "success",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T05:00:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:18Z",
+          "conclusion": "success",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T05:04:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:05:19Z",
+          "conclusion": "success",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T05:04:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:05:20Z",
+          "conclusion": "success",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T05:05:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:07:33Z",
+          "conclusion": "success",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T05:05:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:07:33Z",
+          "conclusion": "success",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T05:07:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:07:53Z",
+          "conclusion": "success",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T05:07:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:07:53Z",
+          "conclusion": "skipped",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T05:07:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:12Z",
+          "conclusion": "failure",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T05:07:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:13Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T05:09:12Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:13Z",
+          "conclusion": "skipped",
+          "name": "Native macOS signing with provisioned identity",
+          "number": 15,
+          "startedAt": "2026-10-03T05:09:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:13Z",
+          "conclusion": "skipped",
+          "name": "Package deterministic target archive",
+          "number": 16,
+          "startedAt": "2026-10-03T05:09:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:13Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 17,
+          "startedAt": "2026-10-03T05:09:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:13Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 18,
+          "startedAt": "2026-10-03T05:09:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:13Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 19,
+          "startedAt": "2026-10-03T05:09:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:13Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 20,
+          "startedAt": "2026-10-03T05:09:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:13Z",
+          "conclusion": "skipped",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 21,
+          "startedAt": "2026-10-03T05:09:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:14Z",
+          "conclusion": "success",
+          "name": "Post Check out exact shared contracts for conformance and performance",
+          "number": 41,
+          "startedAt": "2026-10-03T05:09:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:15Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 42,
+          "startedAt": "2026-10-03T05:09:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:09:15Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 43,
+          "startedAt": "2026-10-03T05:09:15Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37098390348/job/111132914446"
+    },
+    {
+      "completedAt": "2026-10-03T05:04:18Z",
+      "conclusion": "success",
+      "databaseId": 111132914456,
+      "name": "build (aarch64-apple-darwin, macos-14, burnrate-copilot)",
+      "startedAt": "2026-10-03T05:00:25Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T05:00:29Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T05:00:26Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:30Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T05:00:29Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:30Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T05:00:30Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:44Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T05:00:30Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:02Z",
+          "conclusion": "success",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T05:00:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:04Z",
+          "conclusion": "success",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T05:02:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:32Z",
+          "conclusion": "success",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T05:02:04Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:33Z",
+          "conclusion": "success",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T05:02:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:30Z",
+          "conclusion": "success",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T05:02:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:30Z",
+          "conclusion": "success",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T05:03:30Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:39Z",
+          "conclusion": "success",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T05:03:30Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:39Z",
+          "conclusion": "skipped",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T05:03:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:13Z",
+          "conclusion": "success",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T05:03:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:14Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T05:04:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:14Z",
+          "conclusion": "skipped",
+          "name": "Native macOS signing with provisioned identity",
+          "number": 15,
+          "startedAt": "2026-10-03T05:04:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:14Z",
+          "conclusion": "success",
+          "name": "Package deterministic target archive",
+          "number": 16,
+          "startedAt": "2026-10-03T05:04:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:14Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 17,
+          "startedAt": "2026-10-03T05:04:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:14Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 18,
+          "startedAt": "2026-10-03T05:04:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:14Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 19,
+          "startedAt": "2026-10-03T05:04:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:14Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 20,
+          "startedAt": "2026-10-03T05:04:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:15Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 21,
+          "startedAt": "2026-10-03T05:04:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:16Z",
+          "conclusion": "success",
+          "name": "Post Check out exact shared contracts for conformance and performance",
+          "number": 41,
+          "startedAt": "2026-10-03T05:04:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:16Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 42,
+          "startedAt": "2026-10-03T05:04:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:04:16Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 43,
+          "startedAt": "2026-10-03T05:04:16Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37098390348/job/111132914456"
+    },
+    {
+      "completedAt": "2026-10-03T05:02:38Z",
+      "conclusion": "failure",
+      "databaseId": 111132914464,
+      "name": "build (x86_64-pc-windows-msvc, windows-2022, burnrate-copilot.exe)",
+      "startedAt": "2026-10-03T05:00:22Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T05:00:26Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T05:00:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:31Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T05:00:26Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:31Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T05:00:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:01:00Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T05:00:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "failure",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T05:01:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "failure",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Native macOS signing with provisioned identity",
+          "number": 15,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Package deterministic target archive",
+          "number": 16,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 17,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 18,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 19,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 20,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:35Z",
+          "conclusion": "skipped",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 21,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:37Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 42,
+          "startedAt": "2026-10-03T05:02:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:37Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 43,
+          "startedAt": "2026-10-03T05:02:37Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37098390348/job/111132914464"
+    },
+    {
+      "completedAt": "2026-10-03T05:03:21Z",
+      "conclusion": "success",
+      "databaseId": 111132914466,
+      "name": "build (aarch64-unknown-linux-gnu, ubuntu-24.04-arm, burnrate-copilot)",
+      "startedAt": "2026-10-03T05:00:24Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T05:00:27Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T05:00:25Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:28Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T05:00:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:28Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T05:00:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:00:41Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T05:00:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:01:48Z",
+          "conclusion": "success",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T05:00:41Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:01:49Z",
+          "conclusion": "success",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T05:01:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:11Z",
+          "conclusion": "success",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T05:01:49Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:11Z",
+          "conclusion": "skipped",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T05:02:11Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:50Z",
+          "conclusion": "success",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T05:02:11Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:50Z",
+          "conclusion": "success",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T05:02:50Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:56Z",
+          "conclusion": "success",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T05:02:50Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:02:56Z",
+          "conclusion": "skipped",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T05:02:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:17Z",
+          "conclusion": "success",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T05:02:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:17Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T05:03:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:17Z",
+          "conclusion": "skipped",
+          "name": "Native macOS signing with provisioned identity",
+          "number": 15,
+          "startedAt": "2026-10-03T05:03:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:18Z",
+          "conclusion": "success",
+          "name": "Package deterministic target archive",
+          "number": 16,
+          "startedAt": "2026-10-03T05:03:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:18Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 17,
+          "startedAt": "2026-10-03T05:03:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:18Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 18,
+          "startedAt": "2026-10-03T05:03:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:18Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 19,
+          "startedAt": "2026-10-03T05:03:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:18Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 20,
+          "startedAt": "2026-10-03T05:03:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:19Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 21,
+          "startedAt": "2026-10-03T05:03:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:19Z",
+          "conclusion": "success",
+          "name": "Post Check out exact shared contracts for conformance and performance",
+          "number": 41,
+          "startedAt": "2026-10-03T05:03:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:19Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 42,
+          "startedAt": "2026-10-03T05:03:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T05:03:19Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 43,
+          "startedAt": "2026-10-03T05:03:19Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37098390348/job/111132914466"
+    },
+    {
+      "completedAt": "2026-10-03T05:09:17Z",
+      "conclusion": "skipped",
+      "databaseId": 111134364921,
+      "name": "publish",
+      "startedAt": "2026-10-03T05:09:17Z",
+      "status": "completed",
+      "steps": [],
+      "url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37098390348/job/111134364921"
+    },
+    {
+      "completedAt": "2026-10-03T05:09:17Z",
+      "conclusion": "skipped",
+      "databaseId": 111134365362,
+      "name": "marketplace-package",
+      "startedAt": "2026-10-03T05:09:17Z",
+      "status": "completed",
+      "steps": [],
+      "url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37098390348/job/111134365362"
+    }
+  ]
+}

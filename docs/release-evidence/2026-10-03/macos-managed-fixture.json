@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-03",
+  "host": {
+    "os": "macOS",
+    "version": "26.5.1",
+    "build": "25F80",
+    "architecture": "arm64",
+    "copilot_cli_version": "1.0.88"
+  },
+  "catalog_revision": "e39a2eaba0dfcbcba73b52fa82ab7e19943e315d",
+  "fixture_package": {
+    "version": "0.6.1",
+    "source_revision": "639ad77c240c9a268f5dcde13724645a4a8aa94e",
+    "shared_revision": "32f3abe2dce3fc47e86e94261974986c6b04b2f1",
+    "binary_sha256": "629d24d8446fa1df92038857fa08bae44560060213e51c9ee366505133f18177",
+    "hooks_sha256": "fb84fe25bd3989f4086475d1fd6204394dd023e0fba01e5c2916866adbde2670",
+    "native_signature_verified": true,
+    "identifier": "com.upland.burnrate.copilot",
+    "team_id": "Y5SX6J5N9L"
+  },
+  "migration_and_verifier": {
+    "source_revision": "bf55a8c0b536234aa89fba352eaf90b88c09cad2",
+    "shared_revision": "0c7c72c5ac52392e80bdad6729ac8624b18d2160"
+  },
+  "noninteractive_install": {
+    "session_id": "745368c9-592d-4e55-8d0b-ac64de1afe1a",
+    "package_installed": false
+  },
+  "first_interactive_activation": {
+    "session_id": "63278b19-7f9a-4b37-98ea-38a43794bc7e",
+    "trace_id": "ba98ec22e5fea1efc119db63881da267",
+    "package_installed": true,
+    "hooks_loaded": false,
+    "attribution_spans": 0,
+    "result": "fail_requires_restart"
+  },
+  "accepted_trace_readback": [
+    {
+      "session_id": "eb535570-9590-4d2e-a542-4c3c556c392d",
+      "trace_id": "efad7ad2fd1a7ffad2a85bc5e6ce3741",
+      "name": "Copilot Turn",
+      "attribution_spans": 1,
+      "metadata": {
+        "harness": "copilot_cli",
+        "git_repository": "upld-internal/burnrate-copilot",
+        "git_branch": "feature/ABC-456-batched-candidate",
+        "jira_key": "ABC-456"
+      }
+    },
+    {
+      "session_id": "eb535570-9590-4d2e-a542-4c3c556c392d",
+      "trace_id": "0611cfe6389926aff131f3032b759a73",
+      "name": "custom_notification",
+      "attribution_spans": 0,
+      "metadata": {
+        "harness": null,
+        "git_repository": null,
+        "git_branch": null,
+        "jira_key": null
+      }
+    },
+    {
+      "session_id": "4bcdba29-2506-4a11-a84f-6cb01cab0255",
+      "trace_id": "1ad4119e7ee326465c4543a41022f438",
+      "name": "Copilot Turn",
+      "attribution_spans": 1,
+      "metadata": {
+        "harness": "copilot_cli",
+        "git_repository": "upld-internal/burnrate-copilot",
+        "git_branch": "feature/ABC-456-batched-candidate",
+        "jira_key": "ABC-456"
+      }
+    },
+    {
+      "session_id": "4bcdba29-2506-4a11-a84f-6cb01cab0255",
+      "trace_id": "a13bad341456626e857ea94a0bd44b87",
+      "name": "custom_notification",
+      "attribution_spans": 0,
+      "metadata": {
+        "harness": null,
+        "git_repository": null,
+        "git_branch": null,
+        "jira_key": null
+      }
+    }
+  ],
+  "legacy_migration": {
+    "historical_files": 7,
+    "all_hashes_preserved": true,
+    "statusline_absent": true,
+    "hooks_neutralized": true,
+    "unrelated_setting_and_hook_preserved": true,
+    "original_hooks_sha256": "3d13490dbf94b730657b501135b246cde0eb998c2759dfd148522627afa5d440"
+  },
+  "normal_home_config_settings_unchanged": true,
+  "policy_contains_credentials": false,
+  "policy_removed": false,
+  "cleanup_status": "waiting_for_administrator",
+  "release_qualification": "local_native_signed_arm64_fixture_not_five_target_signed_pilot",
+  "local_record_counts": {
+    "eb535570-9590-4d2e-a542-4c3c556c392d": {
+      "session_summary:": 1,
+      "normalized_event:session.ended": 1,
+      "normalized_event:session.started": 1,
+      "normalized_event:tool.completed": 1
+    },
+    "4bcdba29-2506-4a11-a84f-6cb01cab0255": {
+      "session_summary:": 1,
+      "normalized_event:tool.completed": 1,
+      "normalized_event:session.ended": 1,
+      "normalized_event:session.started": 1
+    }
+  }
+}

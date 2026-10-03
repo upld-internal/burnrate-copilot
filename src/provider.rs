@@ -9,6 +9,9 @@ pub const HARNESS: &str = "copilot";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProviderError {
     HomeUnavailable,
+    CredentialStore,
+    RemoteVerification,
+    HostProjectMismatch,
     Io,
     InputTooLarge,
     InvalidInput,
@@ -18,6 +21,9 @@ pub enum ProviderError {
 impl ProviderError {
     pub const fn code(self) -> &'static str {
         match self {
+            Self::CredentialStore => "credential_store_unavailable",
+            Self::RemoteVerification => "remote_verification_failed",
+            Self::HostProjectMismatch => "host_project_mismatch",
             Self::HomeUnavailable => "home_unavailable",
             Self::Io => "io_error",
             Self::InputTooLarge => "input_too_large",
@@ -70,6 +76,16 @@ impl Platform {
 
 impl Paths {
     pub fn discover() -> Result<Self, ProviderError> {
+        if let Some(root) = env::var_os("BURNRATE_COPILOT_HOME") {
+            let root = PathBuf::from(root);
+            if !root.is_absolute() {
+                return Err(ProviderError::HomeUnavailable);
+            }
+            return Ok(Self {
+                config: root.join("config"),
+                data: root,
+            });
+        }
         let platform = Platform::current();
         let home_variable = match platform {
             Platform::Windows => "USERPROFILE",
@@ -140,19 +156,29 @@ pub fn write_private(path: &Path, bytes: &[u8]) -> Result<(), ProviderError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let temporary = path.with_extension(format!("tmp-{}", std::process::id()));
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| ProviderError::Io)?
+        .as_nanos();
+    let temporary = path.with_extension(format!("tmp-{}-{nonce}", std::process::id()));
+    let result = (|| {
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options.open(&temporary)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+        fs::rename(&temporary, path)?;
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
     }
-    let mut file = options.open(&temporary)?;
-    file.write_all(bytes)?;
-    file.sync_all()?;
-    fs::rename(&temporary, path)?;
-    Ok(())
+    result
 }
 
 /// Reads at most `limit` bytes, failing rather than truncating oversized input.

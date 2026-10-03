@@ -1,0 +1,40 @@
+{
+  "run_id": 37055920997,
+  "provider_head": "4e718c0b41391628774cb1ddd1a7651ef71c367b",
+  "built_source_revision": "6e7e12ea65dede8c095b0ba92d086dd596b04db6",
+  "identical_git_tree": "b03fc3a52ec37cbb17a608533219f276af203e8c",
+  "shared_revision": "321ee246b42e5b2ccd45e97b99b49a4784e3f9fb",
+  "operating_systems": {
+    "validate": [
+      "Ubuntu",
+      "24.04.5",
+      "LTS"
+    ],
+    "build (x86_64-apple-darwin, macos-15-intel, burnrate-copilot)": [
+      "macOS",
+      "15.7.9",
+      "24G830"
+    ],
+    "build (x86_64-pc-windows-msvc, windows-2022, burnrate-copilot.exe)": [
+      "Microsoft Windows Server 2022",
+      "10.0.20348",
+      "Datacenter"
+    ],
+    "build (aarch64-apple-darwin, macos-14, burnrate-copilot)": [
+      "macOS",
+      "14.8.9",
+      "23J631"
+    ],
+    "build (x86_64-unknown-linux-gnu, ubuntu-24.04, burnrate-copilot)": [
+      "Ubuntu",
+      "24.04.5",
+      "LTS"
+    ],
+    "build (aarch64-unknown-linux-gnu, ubuntu-24.04-arm, burnrate-copilot)": [
+      "Ubuntu",
+      "24.04.5",
+      "LTS"
+    ]
+  },
+  "scope": "CI native test/build/performance; no live Windows Copilot session"
+}
