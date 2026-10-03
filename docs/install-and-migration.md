@@ -73,3 +73,16 @@ downloads an unknown historical package.
 
 Native macOS disposable-home CLI deactivation/repeat/rollback has been exercised.
 Native Windows and real managed migration remain open gates in the rollout record.
+
+## Host-dispatch correction, 2026-10-03
+
+The live two-copy update test proved that legacy startup could recreate its
+statusline despite a disabled listing. The migration additionally validates
+every command and option in the recognized v0.1.0 `hooks.json`, preserves its
+exact bytes in a private `.burnrate-disabled-legacy-hooks.json`, and writes an
+empty valid hook definition. The journal records only its checksum. Unknown
+commands, credentials/options, ambiguous ownership or changed definitions stop
+mutation. Repeat and rollback preserve the original bytes; restoration still
+requires removal of Rust. Exit all host sessions before migration and repeat
+it after any legacy repair/reinstallation. Already loaded hooks are unaffected
+until restart. Native delivery checks remain required.

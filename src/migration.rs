@@ -6,6 +6,7 @@ use std::process::{Command, Stdio};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 use crate::provider::{Paths, ProviderError, read_bounded, write_private};
 const LIMIT: usize = 1024 * 1024;
@@ -124,11 +125,85 @@ fn owned_command(value: &Value, root: &Path, statusline: bool) -> bool {
         })
 }
 
+const DISABLED_HOOKS: &[u8] = b"{\"version\":1,\"hooks\":{}}\n";
+const HOOK_BACKUP: &str = ".burnrate-disabled-legacy-hooks.json";
+
+fn hook_bytes(root: &Path) -> Result<Vec<u8>, ProviderError> {
+    if read(&root.join("plugin.json"))?["hooks"] != "hooks.json" {
+        return Err(ProviderError::InvalidInput);
+    }
+    let backup = root.join(HOOK_BACKUP);
+    let path = if backup.exists() {
+        backup
+    } else {
+        root.join("hooks.json")
+    };
+    let bytes = read_bounded(fs::File::open(path)?, LIMIT)?;
+    let value: Value = serde_json::from_slice(&bytes).map_err(|_| ProviderError::InvalidInput)?;
+    if value["version"] != 1 || value.as_object().is_none_or(|o| o.len() != 2) {
+        return Err(ProviderError::InvalidInput);
+    }
+    let hooks = value["hooks"]
+        .as_object()
+        .ok_or(ProviderError::InvalidInput)?;
+    for rows in hooks.values() {
+        for row in rows.as_array().ok_or(ProviderError::InvalidInput)? {
+            let mut expanded = row.clone();
+            let command = row["command"].as_str().ok_or(ProviderError::InvalidInput)?;
+            expanded["command"] = json!(command.replace("${PLUGIN_ROOT}", &root.to_string_lossy()));
+            if !owned_command(&expanded, root, false) {
+                return Err(ProviderError::InvalidInput);
+            }
+        }
+    }
+    Ok(bytes)
+}
+
+fn hook_digest(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+fn disable_hook_file(root: &Path, digest: &str) -> Result<(), ProviderError> {
+    let original = hook_bytes(root)?;
+    if hook_digest(&original) != digest {
+        return Err(ProviderError::InvalidInput);
+    }
+    let path = root.join("hooks.json");
+    if path.exists() {
+        let bytes = read_bounded(fs::File::open(&path)?, LIMIT)?;
+        if bytes != DISABLED_HOOKS && bytes != original {
+            return Err(ProviderError::InvalidInput);
+        }
+    }
+    let backup = root.join(HOOK_BACKUP);
+    if !backup.exists() {
+        write_private(&backup, &original)?;
+    }
+    write_private(&path, DISABLED_HOOKS)
+}
+
+fn restore_hook_file(root: &Path, digest: &str) -> Result<(), ProviderError> {
+    let original = hook_bytes(root)?;
+    if hook_digest(&original) != digest {
+        return Err(ProviderError::InvalidInput);
+    }
+    let path = root.join("hooks.json");
+    if path.exists() {
+        let bytes = read_bounded(fs::File::open(&path)?, LIMIT)?;
+        if bytes != DISABLED_HOOKS && bytes != original {
+            return Err(ProviderError::InvalidInput);
+        }
+    }
+    write_private(&path, &original)
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Journal {
     schema_version: u8,
     previously_enabled: bool,
+    #[serde(default)]
+    legacy_hook_sha256: Option<String>,
     statusline: Option<Value>,
     hooks: Vec<(String, Value)>,
 }
@@ -136,6 +211,7 @@ fn remove_owned(settings: &mut Value, root: &Path, enabled: bool) -> Journal {
     let mut journal = Journal {
         schema_version: 1,
         previously_enabled: enabled,
+        legacy_hook_sha256: None,
         statusline: None,
         hooks: Vec::new(),
     };
@@ -257,6 +333,26 @@ pub fn disable_legacy() -> Result<Value, ProviderError> {
         // Reconcile an interrupted preparation rather than trusting the journal alone.
         let config = read(&home.join("config.json"))?;
         if let Some(root) = legacy_root(&home, &config)? {
+            let mut journal: Journal =
+                serde_json::from_slice(&read_bounded(fs::File::open(&journal_path)?, LIMIT)?)
+                    .map_err(|_| ProviderError::InvalidInput)?;
+            if journal.schema_version != 1 {
+                return Err(ProviderError::UnsupportedSchema);
+            }
+            if journal.legacy_hook_sha256.is_none() {
+                journal.legacy_hook_sha256 = Some(hook_digest(&hook_bytes(&root)?));
+                write_private(
+                    &journal_path,
+                    &serde_json::to_vec(&journal).map_err(|_| ProviderError::InvalidInput)?,
+                )?;
+            }
+            disable_hook_file(
+                &root,
+                journal
+                    .legacy_hook_sha256
+                    .as_deref()
+                    .ok_or(ProviderError::InvalidInput)?,
+            )?;
             host_toggle(&home, &root, false)?;
             let mut settings = read(&home.join("settings.json"))?;
             remove_owned(&mut settings, &root, false);
@@ -265,7 +361,9 @@ pub fn disable_legacy() -> Result<Value, ProviderError> {
                 &serde_json::to_vec_pretty(&settings).map_err(|_| ProviderError::InvalidInput)?,
             )?;
         }
-        return Ok(json!({"state":"already_prepared", "activation":"pending_live_host_proof"}));
+        return Ok(
+            json!({"state":"already_prepared", "activation":"pending_live_host_proof", "restart_required":true}),
+        );
     }
     let config = read(&home.join("config.json"))?;
     let Some(root) = legacy_root(&home, &config)? else {
@@ -279,7 +377,8 @@ pub fn disable_legacy() -> Result<Value, ProviderError> {
         .is_some_and(|p| p["enabled"] == true);
     let settings_path = home.join("settings.json");
     let mut settings = read(&settings_path)?;
-    let journal = remove_owned(&mut settings, &root, enabled);
+    let mut journal = remove_owned(&mut settings, &root, enabled);
+    journal.legacy_hook_sha256 = Some(hook_digest(&hook_bytes(&root)?));
     write_private(
         &journal_path,
         &serde_json::to_vec(&journal).map_err(|_| ProviderError::InvalidInput)?,
@@ -288,6 +387,14 @@ pub fn disable_legacy() -> Result<Value, ProviderError> {
         let _ = fs::remove_file(&journal_path);
         return Err(error);
     }
+    // Journal precedes the hook-file change so interrupted migration is repairable.
+    disable_hook_file(
+        &root,
+        journal
+            .legacy_hook_sha256
+            .as_deref()
+            .ok_or(ProviderError::InvalidInput)?,
+    )?;
     settings = read(&settings_path)?;
     remove_owned(&mut settings, &root, enabled);
     if write_private(
@@ -296,6 +403,13 @@ pub fn disable_legacy() -> Result<Value, ProviderError> {
     )
     .is_err()
     {
+        restore_hook_file(
+            &root,
+            journal
+                .legacy_hook_sha256
+                .as_deref()
+                .ok_or(ProviderError::InvalidInput)?,
+        )?;
         if enabled {
             host_toggle(&home, &root, true)?;
         }
@@ -303,7 +417,7 @@ pub fn disable_legacy() -> Result<Value, ProviderError> {
         return Err(ProviderError::Io);
     }
     Ok(
-        json!({"state":"legacy_disabled", "statusline_removed":journal.statusline.is_some(), "user_hooks_removed":journal.hooks.len(), "activation":"pending_live_host_proof", "restart_required":true}),
+        json!({"state":"legacy_disabled", "legacy_hooks_neutralized":true, "statusline_removed":journal.statusline.is_some(), "user_hooks_removed":journal.hooks.len(), "activation":"pending_live_host_proof", "restart_required":true}),
     )
 }
 
@@ -329,7 +443,9 @@ pub fn rollback() -> Result<Value, ProviderError> {
     let settings_path = home.join("settings.json");
     let mut settings = read(&settings_path)?;
     if let Some(line) = &journal.statusline {
-        if !owned_command(line, &root, true) || !settings["statusLine"].is_null() {
+        if !owned_command(line, &root, true)
+            || (!settings["statusLine"].is_null() && settings["statusLine"] != *line)
+        {
             return Err(ProviderError::InvalidInput);
         }
         settings["statusLine"] = line.clone();
@@ -355,8 +471,15 @@ pub fn rollback() -> Result<Value, ProviderError> {
         &settings_path,
         &serde_json::to_vec_pretty(&settings).map_err(|_| ProviderError::InvalidInput)?,
     )?;
+    if let Some(digest) = &journal.legacy_hook_sha256 {
+        restore_hook_file(&root, digest)?;
+    }
     if journal.previously_enabled {
         host_toggle(&home, &root, true)?;
+    }
+    let backup = root.join(HOOK_BACKUP);
+    if backup.exists() && journal.legacy_hook_sha256.is_some() {
+        fs::remove_file(backup)?;
     }
     fs::remove_file(journal_path)?;
     Ok(json!({"state":"legacy_restored", "restart_required":true}))
@@ -365,6 +488,31 @@ pub fn rollback() -> Result<Value, ProviderError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn legacy_hook_deactivation_survives_repeat_and_preserves_original_bytes() {
+        let temporary = crate::test_support::TempRoot::new("migration-hooks");
+        let root = temporary.path();
+        fs::write(root.join("plugin.json"), br#"{"hooks":"hooks.json"}"#).unwrap();
+        let original = br#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"node ${PLUGIN_ROOT}/scripts/session-start.js","timeoutSec":5}]}}"#;
+        fs::write(root.join("hooks.json"), original).unwrap();
+        let digest = hook_digest(&hook_bytes(root).unwrap());
+        disable_hook_file(root, &digest).unwrap();
+        assert_eq!(fs::read(root.join("hooks.json")).unwrap(), DISABLED_HOOKS);
+        assert_eq!(fs::read(root.join(HOOK_BACKUP)).unwrap(), original);
+        disable_hook_file(root, &digest).unwrap();
+        restore_hook_file(root, &digest).unwrap();
+        assert_eq!(fs::read(root.join("hooks.json")).unwrap(), original);
+        fs::write(root.join("hooks.json"), b"user change").unwrap();
+        assert!(disable_hook_file(root, &digest).is_err());
+        assert_eq!(fs::read(root.join("hooks.json")).unwrap(), b"user change");
+        fs::remove_file(root.join(HOOK_BACKUP)).unwrap();
+        let unsafe_hook = br#"{"version":1,"hooks":{"sessionStart":[{"command":"node ${PLUGIN_ROOT}/scripts/session-start.js","env":{"KEY":"fixture"}}]}}"#;
+        fs::write(root.join("hooks.json"), unsafe_hook).unwrap();
+        assert!(hook_bytes(root).is_err());
+        assert!(!root.join(HOOK_BACKUP).exists());
+        assert_eq!(fs::read(root.join("hooks.json")).unwrap(), unsafe_hook);
+    }
+
     #[test]
     fn same_name_migration_changes_only_legacy_and_rejects_noop() {
         let native = json!({"name":"burnrate-copilot", "version":"0.6.0", "enabled":true, "marketplace":"pilot"});
