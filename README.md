@@ -2,7 +2,7 @@
 
 Burnrate Copilot is the GitHub Copilot CLI host adapter for [Burnrate's shared contracts](../burnrate-spec/README.md). Its plugin records supported Copilot lifecycle and tool events locally. When Copilot's built-in OpenTelemetry export sends traces to Langfuse, Burnrate adds `git_branch`, `git_repository`, `jira_key`, and `jira_keys` to each turn's trace when those facts are available.
 
-This is a Rust rewrite that consumes the pinned `burnrate-adapter-kit`, following [Burnrate Codex](../burnrate-codex/README.md). The earlier JavaScript plugin was removed; it was not a shared-contract consumer. The signed [v0.5.0](docs/releases/v0.5.0.md) five-target package is published to `marketplace-pilot`, with live installation and managed-settings trace proof on macOS ARM64. Native Windows host, automatic update, and production rollout gates remain pending. The current source prepares an unreleased v0.6.0 candidate; see the [rollout evidence](docs/rollout-readiness.md).
+This is a Rust rewrite that consumes the pinned `burnrate-adapter-kit`, following [Burnrate Codex](../burnrate-codex/README.md). The earlier JavaScript plugin was removed; it was not a shared-contract consumer. The signed [v0.5.0](docs/releases/v0.5.0.md) five-target package is published to `marketplace-pilot`, with live installation and managed-settings trace proof on macOS ARM64. Native Windows host and production rollout remain pending. The candidate has ARM64 native-signing and controlled Git-fixture update/rollback proof; a five-target signed pilot update and managed candidate activation remain open gates. The current source prepares an unreleased v0.6.0 candidate; see the [rollout evidence](docs/rollout-readiness.md).
 
 ## How it works
 
@@ -44,12 +44,13 @@ command arguments. See [secure setup and repair](docs/langfuse-setup.md).
 
 `langfuse status` reports configuration and the last send outcome; `sent` is not
 proof of ingestion. After a real turn, `langfuse verify TRACE_ID` checks API
-readback against the current repository attribution, including the host root
+readback against the current repository attribution, including the parent chain to the host root
 and exactly one attribution span. Run it before changing branch.
 
 Before enabling the Rust plugin for a legacy v0.1.0 user, run
 `migration disable-legacy` and restart Copilot. It deactivates the recognized
-JavaScript copy and removes its exact statusline and user hooks while preserving
+JavaScript copy, neutralizes its recognized plugin hooks, and removes its exact
+statusline and user hooks while preserving
 historical data and unrelated settings. See [installation and migration](docs/install-and-migration.md).
 
 ## Try the development plugin

@@ -147,3 +147,83 @@ A controlled loopback smart-Git marketplace fixture exercises host updates
 independently of that signing-infrastructure gate. It uses native-signed ARM64
 packages, not the signed five-target `marketplace-pilot` release. Record its
 observations separately and do not promote them to production update proof.
+
+## Controlled ARM64 install/update/migration lifecycle
+
+Copilot interactive version **1.0.88**, macOS **26.5.1 (25F80)**, native ARM64.
+The smart-Git server binds only `127.0.0.1:38437`; it exposes disposable package
+objects and no credentials. It is a host lifecycle fixture, not a private
+production distribution or Cosign/SLSA release. Actual Git-cloned installation
+copies the package into the isolated host cache; a live directory marketplace
+was deliberately excluded from update proof.
+
+| Package | Source / shared | Native-signed executable SHA-256 |
+| --- | --- | --- |
+| A, v0.6.0 | `4e718c0b41391628774cb1ddd1a7651ef71c367b` / `321ee246b42e5b2ccd45e97b99b49a4784e3f9fb` | `3bd7eceaca78210893035d0fef96dede75c8e25103c4489e223eecd8dc8b655e` |
+| B, v0.6.1 | `639ad77c240c9a268f5dcde13724645a4a8aa94e` / `32f3abe2dce3fc47e86e94261974986c6b04b2f1` | `629d24d8446fa1df92038857fa08bae44560060213e51c9ee366505133f18177` |
+
+B prefixes every Unix hook command with `exec`; its installed hook SHA-256 is
+`fb84fe25bd3989f4086475d1fd6204394dd023e0fba01e5c2916866adbde2670`.
+Both executables use the same verified Developer ID requirement and can read
+the entry created by A without a new prompt or inherited environment keys.
+
+Catalog commits: A `c5b4d5585d270b1015094fec78dc51c48dc4e65e`; first B
+`e5e202a07195d61d21b18546968b15f85cf959d8`; downgrade A
+`70ed9f5f36ee44fb2500168546a8e8e8ebf8a02a`; manual B `f6e46940b4d815e790050e72e9f7deec3fad90b2`; deliberately missing-source candidate `ee7c5f425f141463708644900ad23fb8a310aff3`;
+restored A `c1a54c1e3eb44b5c3e94c57cdc29a1981950e204`; repeated B after hook neutralization `e39a2eaba0dfcbcba73b52fa82ab7e19943e315d`.
+
+- Actual automatic update logged `Auto-updated 1 plugin` at interactive restart.
+  Installed executable and changed hook digests matched B. API trace
+  `03c62b8892c0fbac1a9de778d14fa180` has one attribution span and correct
+  `copilot_cli`, repository, ABC-345 branch/Jira metadata. Its hook parent is the
+  native generation span, whose parent is `invoke_agent`. The original verifier
+  incorrectly required the direct parent to be the root; the corrected ancestry
+  verifier at `38bd06bea1bccebf6508216d45c2d58df0b6180c` passed real readback and rejects missing/cyclic parents.
+- Manual update A to B succeeded. A missing-source v0.6.2 catalog was rejected;
+  B's executable and hook bytes stayed exactly unchanged, enabled state survived,
+  and trace `2adebca9cc13310a734a4d4e2bdbb442` passed readback from the
+  preserved installation. This is rejected-update preservation, not evidence of
+  a partially installed package being automatically restored.
+- The host accepted explicit `plugin update` downgrade B to A, twice. Original
+  Keychain access remained available. Post-correction A trace
+  `c27be553b67f9c95ba8acceba09664f4` passed readback with the same metadata.
+- Two same-name installed copies exposed a migration defect: bare-name disable
+  selected Rust when it was first. Changing only the validated legacy registry
+  flag fixed selection, but later update caused disabled legacy startup to
+  recreate its statusline. Final migration also neutralizes its recognized hook
+  file reversibly; no plugin listing is counted as dispatch proof.
+- After that correction, seven historical legacy data files retained aggregate
+  SHA-256 `b9a48004cc2e2d2dda8520416201a153950425416e4390655a0807c5e3d62ad6`
+  through A's turn, automatic update and B's actual tool turn. No old statusline
+  reappeared. Unrelated user settings and hook commands stayed intact. B trace
+  `0e2da66deb9a2504e748af6453204c55` passed parent/count/metadata readback.
+- After qualified Rust uninstall, migration rollback restored the original hook
+  SHA-256 `3d13490dbf94b730657b501135b246cde0eb998c2759dfd148522627afa5d440`,
+  removed its private backup, restored journaled settings and enabled legacy.
+  Re-deactivation and qualified Rust reinstall passed. No original user home was
+  migrated. Rollback while Rust is installed remains refused.
+
+A separately staged candidate `e657f6c81e7e1adc241f123f12b234abf61e31c4`
+(shared `600542e8970a0ff8135f6fc2783aa9042f92b92f`) ran a real tool turn
+with vault-only configuration from `--plugin-dir`, session
+`1369119c-ca88-4d0a-9bc6-c7d89ddb2f11`. Trace
+`affa7514a943aebc18c59b02d8c3995f` passed readback on
+`feature/ABC-456-batched-candidate` / `ABC-456`; local records include one start,
+each tool event's attribution, and its two capability records. A second completed
+turn `9defc6933430254b10ca9e22f84c5cd6` has one attribution. A Ctrl-C aborted
+turn `85d96a82fb91ebfdf743e129e4008434` has zero attribution spans.
+
+The local managed-policy test is blocked on administrator access. The prepared
+policy contains only the disposable catalog/enablement and no telemetry keys;
+no managed file has been installed by the agent. Admin apply and conditional
+removal scripts are under `/tmp/burnrate-macos-signing-proof/`. The original
+no-policy state and enterprise policy have not changed.
+
+Final code/pin pair `bf55a8c0b536234aa89fba352eaf90b88c09cad2` /
+`0c7c72c5ac52392e80bdad6729ac8624b18d2160` was separately rebuilt, staged
+and Developer ID signed. Copilot 1.0.88 session
+`c67aa68e-e41e-49ea-ad36-1739cabca8aa` ran an actual Git tool turn with no
+inherited Langfuse keys. API trace `b33ccb56b2b941abed965828d003b2b0` passed
+the final verifier for `copilot_cli`, repository
+`upld-internal/burnrate-copilot`, `feature/ABC-456-batched-candidate` and
+`ABC-456`, native parent ancestry and exactly one attribution span.

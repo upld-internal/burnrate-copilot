@@ -8,28 +8,22 @@ or enterprise-managed policy was changed during this work.
 
 Provider starting revision: `fc69240fa6db987787f02c35fee0b4a9a59c60c1`.
 Shared starting revision: `812d428fc9414df3977a77786cb66f1c435bb6ff`.
-Shared reconciliation, Git sampling and native fixtures: `321ee246b42e5b2ccd45e97b99b49a4784e3f9fb`, on
-`copilot/reconcile-release-contract`; the provider manifest and lockfile pin that
-full immutable revision. Shared ADRs 0014/0015 reconcile target qualification,
-artifact naming, observed Copilot hooks, immutable consumer verification, and
-explicit legacy deactivation. The original shared worktree was not edited.
+Current shared pin: `0c7c72c5ac52392e80bdad6729ac8624b18d2160`, on
+`copilot/reconcile-release-contract`, in both provider pin files. Earlier
+reconciliation was `321ee246b42e5b2ccd45e97b99b49a4784e3f9fb`; ADRs
+0014/0015 reconcile Windows qualification and reversible legacy deactivation.
+ADRs 0016/0017 document durable Mac writes, bounded scans/capability admission
+and fresh overlapping Git queries. The original shared worktree was not edited.
 
 The provider's pre-existing README cleanup paragraph, `.vscode/`, `docs/images/`,
 `notes.md`, and `scripts/clean-post-milestone.sh` are preserved. The original
 shared README, Copilot attribution document edits, and cleanup script are also
-preserved. Candidate code revision: `4e718c0b41391628774cb1ddd1a7651ef71c367b`,
-on `copilot/macos-windows-rollout`; documentation additions follow that tested
-code revision. Review [provider draft PR](https://github.com/upld-internal/burnrate-copilot/pull/5)
-and [shared draft PR](https://github.com/upld-internal/burnrate-spec/pull/1).
+preserved. Current candidate code revision: `bf55a8c0b536234aa89fba352eaf90b88c09cad2`; shared pin above. Required local format, locked Clippy,
+stable/MSRV all-target tests and exact offline consumer proof passed. Subsequent
+sections preserve earlier tested revisions; do not relabel their traces as the
+latest release. The final Mac native acceptance run passed both architectures; the five-target
+workflow still failed Windows performance. See the latest exact run below.
 
-Signed v0.5.0 source/shared/tag/marketplace identities remain in
-[its release record](releases/v0.5.0.md). All five published archives were freshly
-reverified locally through the tag's package builder: signed checksum file,
-archive checksum, Cosign identity/issuer, SLSA source/tag provenance, and manifest.
-A fresh Copilot CLI 1.0.89 installation in a path containing spaces and `ü`
-installed/enabled v0.5.0; the ARM64 binary equals the verified package, SHA-256
-`7f69d81b36dba1bc933ee9c00909b724ba044322587a364f7c1cad1ca15f1fdd`.
-This fresh install check does not establish Windows dispatch.
 
 ## Work completed and gates
 
@@ -37,11 +31,11 @@ This fresh install check does not establish Windows dispatch.
 | --- | --- |
 | Shared contract reconciliation | Implemented at the immutable revision above; shared format, Clippy, workspace stable/MSRV tests, schema/conformance/privacy, consumer-pin acceptance/rejection passed on macOS ARM64. Scheduled Copilot row now uses the historical signed pair. Clean offline consumer proof passed for the exact candidate/shared pair above. |
 | Signed Windows live plugin | **Pending:** a Windows 11 x64 SSH handoff is now present in the original workspace; connection/desktop readiness must be rechecked and the signed live checklist run. Revised checklist uses signed marketplace installation, exact manifest verification, interactive/aborted turns, branch change, PS 5.1/7, latency and API readback. CI smoke is not live proof. |
-| Secure setup | Implemented hidden prompts, project API validation, Keychain/Credential Manager, non-secret marker, environment compatibility, launcher, repair/rotation, explicit cleanup and trace verifier. macOS real project/vault-only trace proof and isolated native vault lifecycle passed. Windows setup remains pending on the native host. Unsigned rebuild caused Keychain reauthorization; detached reads now fail bounded without UI. Stable signing/access across real update remains a release gate. |
-| Legacy deactivation | Implemented source/version/manifest ownership checks, host disable, exact statusline/user-hook removal, scoped journal, repeat and restoration. Disposable macOS Copilot CLI 1.0.89 deactivation/repeat/rollback passed; unrelated settings and historical plugin data survived. Windows and managed live migration remain pending. |
+| Secure setup | Implemented hidden prompts, project API validation, Keychain/Credential Manager, non-secret marker, environment compatibility, launcher, repair/rotation, explicit cleanup and trace verifier. macOS real project/vault-only trace proof and isolated native vault lifecycle passed. Windows setup remains pending on the native host. Unsigned rebuild caused Keychain reauthorization; detached reads fail bounded without UI. ARM64 stable Developer ID rebuild and fixture update continuity now have API proof. Approved CI signing and Intel continuity remain release gates. |
+| Legacy deactivation | Implemented exact source/version/manifest checks, legacy-only registry enablement, recognized hook neutralization with byte-preserving private backup/checksum, owned statusline/user-hook removal and repeat/rollback. Copilot 1.0.88 live update exposed disabled legacy dispatch; corrected deactivation preserved historical files and kept the old statusline absent through a real turn and automatic update. Windows and managed live migration remain pending. |
 | Install and managed installation | Fresh signed CLI install verified on macOS ARM64; historical v0.5.0 managed trace proof remains valid. Current candidate managed install and Windows install remain pending. Interactive startup is required by the observed macOS pilot; listings alone do not prove hooks. |
-| Automatic/manual update and rollback | **Blocked:** a subsequent signed, five-target verified candidate is not yet published; native Windows live proof pending. Hook definition changes in the candidate must be checked after update. `autoUpdate` and branch republishing/downgrade behavior are unproven. |
-| Native performance and release workflow | Candidate adds enforcing provider and exact-shared benchmarks, native vault lifecycle, shared conformance/privacy, retained JSON, and stricter package parsing. All five shared performance gates passed. Final provider hook p95 failed on Intel Mac (146.136 ms) and Windows x64 (139.023 ms); ARM64 Mac and both Linux targets passed. All native functional suites passed. Failures remain release blockers; CI does not replace native Copilot proof. |
+| Automatic/manual update and rollback | **Blocked:** a subsequent signed, five-target verified candidate is not yet published; native Windows live proof pending. Hook definition changes in the candidate must be checked after update. Controlled native-signed ARM64 Git fixtures proved automatic/manual update, changed hooks, rejected-update preservation and accepted downgrade. They do not replace a five-target signed `marketplace-pilot` package or Windows proof. |
+| Native performance and release workflow | Candidate adds enforcing provider and exact-shared benchmarks, native vault lifecycle, shared conformance/privacy, retained JSON, and stricter package parsing. All five shared performance gates passed. Final code/pin run 37098913102 passed both Macs: ARM64 57.494/91.364 ms and Intel 75.132/84.303 ms. Both Linux targets passed. Windows hook p95 105.874 ms and shared orphan recovery 2.691529 s still failed. All native functional suites passed. Windows failures remain release blockers; CI does not replace live host proof. |
 | Production publication and enterprise pilot | **Not authorized or performed:** Windows, secure update, signed subsequent candidate and rollout evidence must pass before requesting final approval. |
 
 ## New macOS development host evidence
@@ -234,3 +228,27 @@ The rollback review names the previous verified artifact, schema compatibility,
 old configuration/hook digests, explicit update/downgrade commands proven on each
 host, detection thresholds, owner, and the API readback confirming restoration.
 Do not claim automatic rollback until its real host test has passed.
+
+## Latest Mac completion and required assistance, 2026-10-03
+
+Exact code/shared pair: `bf55a8c0b536234aa89fba352eaf90b88c09cad2` /
+`0c7c72c5ac52392e80bdad6729ac8624b18d2160`. Clean offline immutable
+consumer proof passed. Native run `37098913102` used synthetic merge source
+`671521ea9054771f26b2ff9d3b87c5ff8985c95d`; its raw build identity and host/step summary are retained in
+`docs/release-evidence/2026-10-03/37098913102-*`. Both native Mac performance
+jobs passed. All previous benchmark failures are retained.
+
+[Mac lifecycle evidence](macos-signing-and-update-proof.md) now records strict
+Developer ID signing, Keychain continuity across rebuilt versions, real vault-only
+traces and event-time branch change, actual automatic/manual changed-hook update,
+rejected-update preservation, accepted downgrade, legacy dispatch defect and
+reversible physical correction. The lifecycle fixture is not a five-target
+signed pilot release. No production catalog or enterprise policy was published.
+
+Required local assistance: administrator application/removal of the reviewed,
+secret-free disposable managed policy. The existing no-policy state is unchanged.
+Required release infrastructure: an approved Developer ID signing service or
+runner Keychain for both Mac jobs; only the public fingerprint belongs in
+`MACOS_SIGNING_IDENTITY`. The local private key was not exported. After that and
+the remaining Windows gates pass, a real signed five-target pilot candidate must
+repeat the lifecycle checks before final production/policy approval.

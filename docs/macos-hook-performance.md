@@ -163,3 +163,39 @@ origin Git queries, retaining their bounds, deadlines, fresh sampling and
 fallback behavior. ADR 0017 documents the scheduling change. Shared and provider
 format, locked Clippy, stable and Rust 1.85 suites passed at the immutable pin.
 The next native run determines acceptance; the preceding failures remain evidence.
+
+## Passing Mac native acceptance, 2026-10-03
+
+Provider code `bf55a8c0b536234aa89fba352eaf90b88c09cad2`, pinned shared
+`0c7c72c5ac52392e80bdad6729ac8624b18d2160`, completed
+[native run 37098913102](https://github.com/upld-internal/burnrate-copilot/actions/runs/37098913102).
+The native build source was synthetic merge `671521ea9054771f26b2ff9d3b87c5ff8985c95d`;
+its Git tree `746fe375a868d1ccfabd054cc7fd693b5a116de2` equals the candidate
+head above.
+Both native Mac jobs passed every functional, stable/MSRV, lint, conformance,
+privacy, OS-vault and performance step. Full hook acceptance retained 1,000
+initial events, 1,000 open sessions, 20 warmups and 100 measured samples.
+
+| Native host | Hook p95 / p99 | Result |
+| --- | ---: | --- |
+| ARM64 Mac, 14.8.9 (23J631) | 57.494 / 91.364 ms | Pass |
+| Intel Mac, 15.7.9 (24G830) | 75.132 / 84.303 ms | Pass |
+| Windows Server 2022 x64, 10.0.20348 | 105.874 / 113.818 ms | Fail p95 |
+| Ubuntu 24.04.5 ARM64 | 19.730 / 20.125 ms | Pass |
+| Ubuntu 24.04.5 x64 | 25.671 / 26.922 ms | Pass |
+
+Shared performance passed both Macs and both Linux targets. Windows orphan
+recovery additionally failed at 2.691529 s against 2 s. All five native
+functional suites passed, including the corrected portable legacy hook test,
+Windows vault lifecycle and PowerShell 5.1/7 smoke. The full workflow failed
+because of those Windows performance gates; no signing or publication occurred.
+All fifteen raw JSON files and the host/step summary are retained under
+`docs/release-evidence/2026-10-03/37098913102-*`.
+
+The final capability batch retains each existing file and parent durable flush.
+It preflights bounded records/conflicts, takes one exclusive lock, advances
+counts only for successful committed records and checks actual directory counts
+again on the next admission. Separate store-writer/restart tests cover cache
+invalidation. No flush, privacy check, benchmark corpus or budget was removed.
+Earlier failed runs remain evidence of observed variance; this pass qualifies
+the recorded Mac code/pin pair, not an untested subsequent revision.
