@@ -56,7 +56,8 @@ After a real interactive turn, take the trace ID from the host `agentStop`
 traceparent. Run `langfuse verify TRACE_ID` from the same repository **before a
 branch change**. It reads traces and observations using the selected credentials,
 checks `Copilot Turn`, current expected snake_case metadata and omission rules,
-exactly one attribution span, and its native root parent. It emits only checked
+exactly one attribution span, and its parent chain reaching the native `invoke_agent` root. Copilot may supply
+a generation span as the hook parent; Burnrate preserves that parent. It emits only checked
 identity and pass/fail, never conversation data; failure exits nonzero. API access
 failure leaves the gate pending. Polling for delayed ingestion is an operator
 step; do not equate `sent`/HTTP 200 with verification.

@@ -147,3 +147,19 @@ files. Provider format, locked Clippy and stable/MSRV all-target suites passed.
 [Native run 37096702730](https://github.com/upld-internal/burnrate-copilot/actions/runs/37096702730)
 is the required full-hook acceptance check; preserve its final results before
 calling Intel latency resolved. No benchmark corpus or budget was reduced.
+
+Run 37096702730 completed with all native functional suites and all shared
+budgets passing. Its synthetic source is
+`ac612c40fa7651b1e515a225aa5d0e75dd936329`. Full-hook ARM64 Mac improved to
+41.589 / 42.231 ms; Intel reached 101.572 / 125.966 ms and still **failed**
+the 100 ms p95 limit. Windows CI failed p95 at 120.253 / 132.026 ms.
+Linux ARM64 and x64 passed at 20.357 / 21.209 and 19.593 / 19.766 ms.
+All raw JSON is retained under `37096702730-*`. The remaining Git diagnostic
+p95 was 33.526 ms on Intel and 33.416 ms on Windows; overlapping the independent
+bounded read-only Git state and origin queries is the next shared change.
+
+Shared `561deeedbabad1672e86615f24f780947ef8db9d` now overlaps the state and
+origin Git queries, retaining their bounds, deadlines, fresh sampling and
+fallback behavior. ADR 0017 documents the scheduling change. Shared and provider
+format, locked Clippy, stable and Rust 1.85 suites passed at the immutable pin.
+The next native run determines acceptance; the preceding failures remain evidence.
