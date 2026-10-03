@@ -20,8 +20,10 @@ installed package without `--plugin-dir` to establish its active hook definition
 For managed installation, use the catalog/enablement policy in the release
 procedure and verify startup plus actual hooks. On observed macOS Copilot
 1.0.88/1.0.89, `-p` alone did not install plugins, and managed hooks ran despite
-a disabled listing. Open an interactive session and verify records and API
-readback. Windows must prove those behaviors independently. A catalog-only
+a disabled listing. Open an interactive session to install, close it, then restart
+and verify records and API readback. The 2026-10-03 clean managed fixture installed
+on first startup but loaded its hooks only after restart. Windows must prove
+those behaviors independently. A catalog-only
 managed policy can accompany the user's vault launcher without a file containing
 telemetry credentials. Enterprise policy changes require final rollout approval.
 
@@ -72,7 +74,9 @@ reinstall its verified old source before this restoration; the command never
 downloads an unknown historical package.
 
 Native macOS disposable-home CLI deactivation/repeat/rollback has been exercised.
-Native Windows and real managed migration remain open gates in the rollout record.
+The credential-free ARM64 managed fixture also passed live migration after restart
+with unchanged legacy data and attributed API readback. Native Windows, Intel
+lifecycle, and the exact signed five-target candidate remain open gates.
 
 ## Host-dispatch correction, 2026-10-03
 

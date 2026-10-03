@@ -213,11 +213,10 @@ each tool event's attribution, and its two capability records. A second complete
 turn `9defc6933430254b10ca9e22f84c5cd6` has one attribution. A Ctrl-C aborted
 turn `85d96a82fb91ebfdf743e129e4008434` has zero attribution spans.
 
-The local managed-policy test is blocked on administrator access. The prepared
-policy contains only the disposable catalog/enablement and no telemetry keys;
-no managed file has been installed by the agent. Admin apply and conditional
-removal scripts are under `/tmp/burnrate-macos-signing-proof/`. The original
-no-policy state and enterprise policy have not changed.
+The user applied the reviewed credential-free local managed fixture policy on
+2026-10-03. Its catalog/enablement behavior and migrated hook delivery were tested
+in disposable homes; see the managed-install evidence below. It was not an
+enterprise rollout or publication to either remote marketplace.
 
 Final code/pin pair `bf55a8c0b536234aa89fba352eaf90b88c09cad2` /
 `0c7c72c5ac52392e80bdad6729ac8624b18d2160` was separately rebuilt, staged
@@ -227,3 +226,57 @@ inherited Langfuse keys. API trace `b33ccb56b2b941abed965828d003b2b0` passed
 the final verifier for `copilot_cli`, repository
 `upld-internal/burnrate-copilot`, `feature/ABC-456-batched-candidate` and
 `ABC-456`, native parent ancestry and exactly one attribution span.
+
+## Managed ARM64 fixture install and migration, 2026-10-03
+
+Host: macOS **26.5.1 (25F80)** ARM64, interactive Copilot **1.0.88**, model
+`gpt-5-mini`. The user temporarily installed the reviewed device policy at
+`/Library/Application Support/GitHubCopilot/managed-settings.json` while ordinary
+sessions stayed closed. It named only the loopback Git catalog above,
+`autoUpdate: true`, and `burnrate-copilot@burnrate-macos-lifecycle: true`;
+it contained no telemetry endpoint, keys or headers. Catalog revision was
+`e39a2eaba0dfcbcba73b52fa82ab7e19943e315d`. No local marketplace registration,
+explicit install, local enablement override, or `--plugin-dir` was used.
+
+- In a new isolated clean home, `-p` session
+  `745368c9-592d-4e55-8d0b-ac64de1afe1a` did **not** install the package.
+  First interactive startup installed B, but loaded no Burnrate hooks. Its
+  completed trace `ba98ec22e5fea1efc119db63881da267` was `invoke_agent`
+  with **zero** attribution spans. This is a failed activation check and proves
+  the installation listing is insufficient. Close that session and restart
+  before accepting managed activation.
+- On the clean-home restart, Copilot reported **one plugin, four hooks**.
+  Session `eb535570-9590-4d2e-a542-4c3c556c392d` ran a Git tool turn.
+  Trace `efad7ad2fd1a7ffad2a85bc5e6ce3741` passed API readback and the final
+  vault-only verifier: exactly one attribution span, valid parent ancestry,
+  `harness=copilot_cli`, repository `upld-internal/burnrate-copilot`, branch
+  `feature/ABC-456-batched-candidate`, Jira `ABC-456`, no camelCase aliases.
+- A second isolated home contained only the recognized legacy JS v0.1.0 plugin,
+  seven copied historical data files, its owned user hook/statusline and unrelated
+  settings. Migration binary `bf55a8c0b536234aa89fba352eaf90b88c09cad2`
+  (shared `0c7c72c5ac52392e80bdad6729ac8624b18d2160`) deactivated it,
+  neutralized its original hooks and preserved a private reversible backup.
+  Device policy installed B on interactive startup. After restart Copilot
+  reported **two plugins, five hooks**: B's four hooks plus the unrelated
+  user `true` command; legacy's hook definition remained empty.
+  Session `4bcdba29-2506-4a11-a84f-6cb01cab0255` completed a Git tool turn.
+  Trace `1ad4119e7ee326465c4543a41022f438` passed the same API/verifier checks.
+  All seven historical files retained their exact hashes, the old statusline
+  stayed absent, and the unrelated setting and user hook survived.
+- Both local stores recorded one session start, one tool completion, one session
+  end and one summary for each accepted session. Native `custom_notification`
+  traces had no attribution, as expected. Shell Langfuse credentials were removed;
+  the launcher and detached senders used the existing Keychain entry without UI.
+  No content capture opt-in was enabled.
+- Both installed B executables and hook files matched the digests above. The
+  clean-home installed binary passed strict Developer ID verification for
+  `com.upland.burnrate.copilot`, Team `Y5SX6J5N9L`, and reported B's exact
+  `639ad77...` / `32f3abe...` source/shared pair. This proof combines the
+  final migration/verifier with the **earlier fixture B package**, not a signed
+  five-target release of the final `bf55a8...` candidate.
+
+All test sessions exited normally. The normal user's Copilot config and settings
+matched their pre-test byte hashes. Conditional administrator policy removal is
+pending; ordinary sessions must remain closed until absence is confirmed. This
+fixture closes the ARM64 managed lifecycle experiment; the exact signed pilot
+candidate, Intel lifecycle and Windows managed behavior still need acceptance.
