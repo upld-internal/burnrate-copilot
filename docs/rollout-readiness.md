@@ -36,11 +36,11 @@ This fresh install check does not establish Windows dispatch.
 | Plan gate | Status and evidence |
 | --- | --- |
 | Shared contract reconciliation | Implemented at the immutable revision above; shared format, Clippy, workspace stable/MSRV tests, schema/conformance/privacy, consumer-pin acceptance/rejection passed on macOS ARM64. Scheduled Copilot row now uses the historical signed pair. Clean offline consumer proof passed for the exact candidate/shared pair above. |
-| Signed Windows live plugin | **Blocked:** no native Windows x64 machine/access supplied. Revised checklist uses signed marketplace installation, exact manifest verification, interactive/aborted turns, branch change, PS 5.1/7, latency and API readback. CI smoke is not live proof. |
-| Secure setup | Implemented hidden prompts, project API validation, Keychain/Credential Manager, non-secret marker, environment compatibility, launcher, repair/rotation, explicit cleanup and trace verifier. macOS real project/vault-only trace proof and isolated native vault lifecycle passed. Windows setup remains blocked on the native host. Unsigned rebuild caused Keychain reauthorization; detached reads now fail bounded without UI. Stable signing/access across real update remains a release gate. |
+| Signed Windows live plugin | **Pending:** a Windows 11 x64 SSH handoff is now present in the original workspace; connection/desktop readiness must be rechecked and the signed live checklist run. Revised checklist uses signed marketplace installation, exact manifest verification, interactive/aborted turns, branch change, PS 5.1/7, latency and API readback. CI smoke is not live proof. |
+| Secure setup | Implemented hidden prompts, project API validation, Keychain/Credential Manager, non-secret marker, environment compatibility, launcher, repair/rotation, explicit cleanup and trace verifier. macOS real project/vault-only trace proof and isolated native vault lifecycle passed. Windows setup remains pending on the native host. Unsigned rebuild caused Keychain reauthorization; detached reads now fail bounded without UI. Stable signing/access across real update remains a release gate. |
 | Legacy deactivation | Implemented source/version/manifest ownership checks, host disable, exact statusline/user-hook removal, scoped journal, repeat and restoration. Disposable macOS Copilot CLI 1.0.89 deactivation/repeat/rollback passed; unrelated settings and historical plugin data survived. Windows and managed live migration remain pending. |
 | Install and managed installation | Fresh signed CLI install verified on macOS ARM64; historical v0.5.0 managed trace proof remains valid. Current candidate managed install and Windows install remain pending. Interactive startup is required by the observed macOS pilot; listings alone do not prove hooks. |
-| Automatic/manual update and rollback | **Blocked:** a subsequent signed, five-target verified candidate is not yet published; native Windows unavailable. Hook definition changes in the candidate must be checked after update. `autoUpdate` and branch republishing/downgrade behavior are unproven. |
+| Automatic/manual update and rollback | **Blocked:** a subsequent signed, five-target verified candidate is not yet published; native Windows live proof pending. Hook definition changes in the candidate must be checked after update. `autoUpdate` and branch republishing/downgrade behavior are unproven. |
 | Native performance and release workflow | Candidate adds enforcing provider and exact-shared benchmarks, native vault lifecycle, shared conformance/privacy, retained JSON, and stricter package parsing. All five shared performance gates passed. Final provider hook p95 failed on Intel Mac (146.136 ms) and Windows x64 (139.023 ms); ARM64 Mac and both Linux targets passed. All native functional suites passed. Failures remain release blockers; CI does not replace native Copilot proof. |
 | Production publication and enterprise pilot | **Not authorized or performed:** Windows, secure update, signed subsequent candidate and rollout evidence must pass before requesting final approval. |
 
@@ -180,6 +180,31 @@ improvements belong in `burnrate-spec`, followed by another immutable pin and
 exact consumer/native proof. After a passing five-target run, stable macOS vault
 access and the signed Windows live checklist still precede a signed pilot update
 and rollback proof. Do not promote this candidate while these gates remain open.
+
+## Additional macOS work
+
+Diagnostic revision `153e1969cf9a0697fd47cfcbf1ec771fa5ff3831` adds an opt-in
+example and native CI component evidence without changing production hooks,
+credential behavior or release thresholds. Local ARM64 measurements found
+cached attributed event/capability writes were the largest measured component.
+Native diagnostic [run 37091675207](https://github.com/upld-internal/burnrate-copilot/actions/runs/37091675207)
+then measured that sequence at Intel p95 108.671 ms. The full Intel hook still
+failed at p95 139.588 / p99 307.252 ms; ARM64 Mac passed at 93.609 / 99.718 ms.
+Windows hook p95 failed at 150.041 ms, and shared orphan recovery additionally
+failed at 3.739053 s against 2 s (it passed in the earlier run). Both Linux
+targets passed. All native functional suites and shared conformance/privacy
+passed. This points further investigation at shared admission and durable
+writes; it is not a completed optimization or release proof. See the
+[component methodology and results](macos-hook-performance.md).
+
+The [macOS signing and update acceptance plan](macos-signing-and-update-proof.md)
+records the native signing integration still needed, two-version Keychain
+proof, changed-hook automatic/manual updates, failure recovery and rollback.
+Its signing owner/service and local authorization remain unresolved; no native
+signature or signed update is claimed. Signed v0.5.0 cannot read the new vault
+entry directly, so rollback to that version needs a proved transient-credential
+path. Windows SSH details are now available in the original workspace's new
+handoff; that host readiness does not replace signed Copilot live evidence.
 
 ## Reviewable rollout sequence
 

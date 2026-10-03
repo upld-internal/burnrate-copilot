@@ -1,0 +1,182 @@
+{
+  "workflow_url": "https://github.com/upld-internal/burnrate-copilot/actions/runs/37091675207",
+  "workflow_conclusion": "failure",
+  "mode": "pull_request_unsigned_dry_run",
+  "provider_head": "153e1969cf9a0697fd47cfcbf1ec771fa5ff3831",
+  "source_revision": "fea1228240a72b7673291904a2d70145a494c685",
+  "provider_head_and_merge_tree": "83ab6e754d5f066cc6e13b732bbdfa8e9657b48d",
+  "shared_revision": "321ee246b42e5b2ccd45e97b99b49a4784e3f9fb",
+  "gate": "provider_hook: p95 <= 100000 us, p99 <= 250000 us; 1000 initial events and open sessions",
+  "results": [
+    {
+      "target": "aarch64-apple-darwin",
+      "p95_micros": 93609,
+      "p99_micros": 99718,
+      "provider_passed": true,
+      "components_p95_micros": {
+        "cached_attributed_event_and_two_capabilities": 19562,
+        "executable_startup_version": 4357,
+        "git_observation": 29198,
+        "store_open_snapshot": 25737
+      },
+      "runner_image": {
+        "architecture": "aarch64",
+        "os": "macos",
+        "runner_image": "macos14",
+        "runner_image_version": "20260831.0302.1"
+      },
+      "host_version": "14.8.9",
+      "host_build": "23J631",
+      "job_conclusion": "success",
+      "steps": {
+        "Complete native suites": "success",
+        "Shared offline conformance and privacy": "success",
+        "Native credential-store lifecycle": "success",
+        "Check build identity": "success",
+        "Diagnose native hook components": "success",
+        "Windows plugin hook smoke test": "skipped",
+        "Enforce native provider and shared performance budgets": "success"
+      },
+      "shared_performance_failures": [],
+      "shared_performance_passed": true
+    },
+    {
+      "target": "aarch64-unknown-linux-gnu",
+      "p95_micros": 25368,
+      "p99_micros": 27737,
+      "provider_passed": true,
+      "components_p95_micros": {
+        "cached_attributed_event_and_two_capabilities": 6253,
+        "executable_startup_version": 937,
+        "git_observation": 2606,
+        "store_open_snapshot": 7784
+      },
+      "runner_image": {
+        "architecture": "aarch64",
+        "os": "linux",
+        "runner_image": "ubuntu24-arm64",
+        "runner_image_version": "20260927.135.1"
+      },
+      "host_version": "Ubuntu 24.04.5 LTS",
+      "host_build": null,
+      "job_conclusion": "success",
+      "steps": {
+        "Complete native suites": "success",
+        "Shared offline conformance and privacy": "success",
+        "Native credential-store lifecycle": "skipped",
+        "Check build identity": "success",
+        "Diagnose native hook components": "success",
+        "Windows plugin hook smoke test": "skipped",
+        "Enforce native provider and shared performance budgets": "success"
+      },
+      "shared_performance_failures": [],
+      "shared_performance_passed": true
+    },
+    {
+      "target": "x86_64-apple-darwin",
+      "p95_micros": 139588,
+      "p99_micros": 307252,
+      "provider_passed": false,
+      "components_p95_micros": {
+        "cached_attributed_event_and_two_capabilities": 108671,
+        "executable_startup_version": 9833,
+        "git_observation": 34856,
+        "store_open_snapshot": 36932
+      },
+      "runner_image": {
+        "architecture": "x86_64",
+        "os": "macos",
+        "runner_image": "macos15",
+        "runner_image_version": "20260824.0482.1"
+      },
+      "host_version": "15.7.9",
+      "host_build": "24G830",
+      "job_conclusion": "failure",
+      "steps": {
+        "Complete native suites": "success",
+        "Shared offline conformance and privacy": "success",
+        "Native credential-store lifecycle": "success",
+        "Check build identity": "success",
+        "Diagnose native hook components": "success",
+        "Windows plugin hook smoke test": "skipped",
+        "Enforce native provider and shared performance budgets": "failure"
+      },
+      "shared_performance_failures": [],
+      "shared_performance_passed": true
+    },
+    {
+      "target": "x86_64-pc-windows-msvc",
+      "p95_micros": 150041,
+      "p99_micros": 154202,
+      "provider_passed": false,
+      "components_p95_micros": {
+        "cached_attributed_event_and_two_capabilities": 60666,
+        "executable_startup_version": 6567,
+        "git_observation": 34523,
+        "store_open_snapshot": 40578
+      },
+      "runner_image": {
+        "architecture": "x86_64",
+        "os": "windows",
+        "runner_image": "win22",
+        "runner_image_version": "20260927.320.1"
+      },
+      "host_version": "Windows Server 2022 Datacenter",
+      "host_build": "10.0.20348",
+      "job_conclusion": "failure",
+      "steps": {
+        "Complete native suites": "success",
+        "Shared offline conformance and privacy": "success",
+        "Native credential-store lifecycle": "success",
+        "Check build identity": "success",
+        "Diagnose native hook components": "success",
+        "Windows plugin hook smoke test": "success",
+        "Enforce native provider and shared performance budgets": "failure"
+      },
+      "shared_performance_failures": [
+        {
+          "operation": "orphan_recovery",
+          "p95_micros": 3739053,
+          "p99_micros": 3739053,
+          "budget_p95_micros": 2000000,
+          "budget_p99_micros": 2000000
+        }
+      ],
+      "shared_performance_passed": false
+    },
+    {
+      "target": "x86_64-unknown-linux-gnu",
+      "p95_micros": 25522,
+      "p99_micros": 26767,
+      "provider_passed": true,
+      "components_p95_micros": {
+        "cached_attributed_event_and_two_capabilities": 7959,
+        "executable_startup_version": 883,
+        "git_observation": 2430,
+        "store_open_snapshot": 8887
+      },
+      "runner_image": {
+        "architecture": "x86_64",
+        "os": "linux",
+        "runner_image": "ubuntu24",
+        "runner_image_version": "20260927.320.1"
+      },
+      "host_version": "Ubuntu 24.04.5 LTS",
+      "host_build": null,
+      "job_conclusion": "success",
+      "steps": {
+        "Complete native suites": "success",
+        "Shared offline conformance and privacy": "success",
+        "Native credential-store lifecycle": "skipped",
+        "Check build identity": "success",
+        "Diagnose native hook components": "success",
+        "Windows plugin hook smoke test": "skipped",
+        "Enforce native provider and shared performance budgets": "success"
+      },
+      "shared_performance_failures": [],
+      "shared_performance_passed": true
+    }
+  ],
+  "started_at_utc": "2026-10-03T02:59:17Z",
+  "updated_at_utc": "2026-10-03T03:09:23Z"
+}
