@@ -160,18 +160,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         );
         event.attribution_id = Some(attr.id.clone());
         runtime.persist_event_with_attribution(&event, &attr)?;
-        for (prefix, name, reason) in [
+        let capabilities = [
             ("git", "attribution.git", "observed"),
             ("tools", "session.tools", "post_tool_use_observed"),
-        ] {
-            runtime.persist_capability(&factory.capability_status(
+        ]
+        .map(|(prefix, name, reason)| {
+            factory.capability_status(
                 format!("{prefix}-{n}"),
                 "2026-10-02T12:00:00Z",
                 name,
                 CapabilityState::Available,
                 reason,
-            ))?;
-        }
+            )
+        });
+        runtime.persist_capabilities(&capabilities)?;
         Ok(())
     })?;
     println!(
