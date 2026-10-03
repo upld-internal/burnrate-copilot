@@ -166,6 +166,14 @@ jobs:
           info=$("target/$TARGET/release/${{ matrix.binary }}" build-info)
           echo "$info"
           test "$(echo "$info" | jq -r '"\(.target) \(.source_revision)"')" = "$TARGET $SOURCE_REVISION"
+      - name: Diagnose native hook components
+        env:
+          BURNRATE_SOURCE_REVISION: ${{ needs.validate.outputs.source_revision }}
+          BURNRATE_SHARED_REVISION: ${{ needs.validate.outputs.shared_revision }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          mkdir -p performance-evidence
+          CARGO_NET_OFFLINE=true cargo +stable run --locked --offline --release --target "$TARGET" --example hook-costs -- "target/$TARGET/release/${{ matrix.binary }}" > performance-evidence/hook-components.json
       - name: Windows plugin hook smoke test
         if: matrix.target == 'x86_64-pc-windows-msvc'
         shell: pwsh
