@@ -7,6 +7,7 @@ pub mod langfuse;
 pub mod migration;
 pub mod provider;
 pub mod runtime;
+pub mod setup;
 #[cfg(test)]
 mod test_support;
 pub mod turn_io;

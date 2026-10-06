@@ -1,0 +1,56 @@
+# Burnrate setup for Copilot CLI
+
+`/burnrate-setup` in Copilot CLI configures Burnrate once per user and machine,
+on macOS and Windows. It matches Codex's `$burnrate-setup`: the shared Upland
+Langfuse project, the user id `upland-human-<slug>`, and a ZPA reachability
+check, without asking for keys.
+
+Before you start, connect to **ZPA**; `https://langf-admin.upland.one` is
+reachable only over ZPA, and without it traces are silently not uploaded.
+
+| Situation | Setup |
+| --- | --- |
+| No stored Langfuse configuration | Stores the shared Upland project ([`config/upland-langfuse.json`](../config/upland-langfuse.json)) in macOS Keychain or Windows Credential Manager |
+| Working configuration already stored, or complete `LANGFUSE_*` environment | Keeps it; reports a non-Upland server or the environment override as a notice |
+| No user id | Derives `upland-human-<local part>` from an `@uplandsoftware.com` Git email; otherwise returns `user_id_required` and the skill asks for the Upland email or its local part. The email itself is never stored |
+| Copilot's trace exporter not configured | Writes `COPILOT_OTEL_ENABLED`, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `OTEL_EXPORTER_OTLP_TRACES_HEADERS` and `LANGFUSE_COPILOT_USER_ID` to the persistent user environment |
+| Already set up | Confirms and changes nothing |
+
+Where the variables go: Windows user environment; on macOS a marked block in
+`~/.zshrc` (or `$ZDOTDIR/.zshrc`) and in existing `~/.bash_profile` or
+`~/.bashrc`. Open a new terminal and start a new `copilot` session afterwards.
+The `langfuse launch` wrapper is no longer needed.
+
+Copilot reads its exporter settings only from the environment or an
+administrator's managed settings, which is why setup persists variables rather
+than writing a config file. It uses the **trace-specific** OTLP variables:
+Copilot 1.0.92 exports traces with them and sends no metrics there, and other
+tools' metrics and logs exporters are not redirected. Other OpenTelemetry tools
+that export traces from the same user environment would follow them too. Setup
+never sets `LANGFUSE_*` keys (the hooks read the OS credential store, and
+Codex's Langfuse handler would read those variables) and never enables content
+capture.
+
+Commands, using the packaged binary:
+
+- `burnrate-copilot setup status` - inspect only
+- `burnrate-copilot setup` / `setup --user-id <email or local part>` - configure
+- `burnrate-copilot setup remove` - delete exactly the four variables
+- `burnrate-copilot langfuse forget` - delete the stored project
+
+A different Langfuse project is still configured with `langfuse setup` (hidden
+prompts); `setup` then keeps it.
+
+## Evidence, 2026-10-06
+
+macOS ARM64, Copilot CLI 1.0.92, provider candidate on
+`copilot/burnrate-setup`, isolated `COPILOT_HOME`, `BURNRATE_COPILOT_HOME` and
+`ZDOTDIR`, no `LANGFUSE_*` variables in the process. First `setup` stored the
+shared project, wrote the four variables, derived `upland-human-bripley` and
+reported the host reachable; re-runs changed nothing. A real tool turn with only
+the written variables produced trace `fb0176a153b7901f12dfa462131be1e0`:
+`langfuse verify` passed (one `Copilot Turn`, native root, one attribution span),
+and API readback showed `userId=upland-human-bripley`, `harness=copilot_cli`,
+`git_repository=upld-internal/burnrate-copilot`,
+`git_branch=feature/ABC-123-setup`, `jira_key=ABC-123`. The isolated vault entry
+was then removed. Windows setup is part of the Windows live checklist.
