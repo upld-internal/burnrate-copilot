@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "policy": "windows-client-performance-v1",
+  "recorded_utc": "2026-10-06T17:24:01.6003417Z",
+  "build_info": {
+    "product": "burnrate-copilot",
+    "version": "0.6.0",
+    "target": "x86_64-pc-windows-msvc",
+    "source_revision": "700bd25f56304a89c3b18757882bccbd6a33948b",
+    "shared_revision": "4733460d061d8df0ad1c834e9fb36587eaaa5044"
+  },
+  "binary_sha256": "a841459fc7b00d112bd3ac1bd57d4f5eb653b3f0feba6f389164e243b21b8dc9",
+  "windows_build": 26200,
+  "windows_display_version": "25H2",
+  "windows_ubr": 9457,
+  "product_type": 1,
+  "os_architecture": "X64",
+  "process_architecture": "X64",
+  "session": 1,
+  "elevated": false,
+  "runs": [
+    {
+      "provider_exit": 1,
+      "shared_exit": 0,
+      "provider": {
+        "build": {
+          "product": "burnrate-copilot",
+          "shared_revision": "4733460d061d8df0ad1c834e9fb36587eaaa5044",
+          "source_revision": "700bd25f56304a89c3b18757882bccbd6a33948b",
+          "target": "x86_64-pc-windows-msvc",
+          "version": "0.6.0"
+        },
+        "existing_events": 1000,
+        "existing_open_sessions": 1000,
+        "operation": "provider_hook",
+        "p95_micros": 129376,
+        "p99_micros": 136919,
+        "passed": false,
+        "profile": "release",
+        "samples": 100,
+        "warmup": 20
+      },
+      "shared": {
+        "profile": "release",
+        "results": [
+          {
+            "operation": "status_render",
+            "p95_micros": 5,
+            "p99_micros": 5,
+            "budget_p95_micros": 1000,
+            "budget_p99_micros": 5000
+          },
+          {
+            "operation": "event_accept",
+            "p95_micros": 11539,
+            "p99_micros": 12231,
+            "budget_p95_micros": 50000,
+            "budget_p99_micros": 150000
+          },
+          {
+            "operation": "terminal_accept",
+            "p95_micros": 10056,
+            "p99_micros": 10056,
+            "budget_p95_micros": 200000,
+            "budget_p99_micros": 200000
+          },
+          {
+            "operation": "store_open_snapshot",
+            "p95_micros": 344469,
+            "p99_micros": 2624022,
+            "budget_p95_micros": 1000000,
+            "budget_p99_micros": null
+          },
+          {
+            "operation": "orphan_recovery",
+            "p95_micros": 866193,
+            "p99_micros": 866193,
+            "budget_p95_micros": 2000000,
+            "budget_p99_micros": 2000000
+          }
+        ]
+      }
+    },
+    {
+      "provider_exit": 1,
+      "shared_exit": 0,
+      "provider": {
+        "build": {
+          "product": "burnrate-copilot",
+          "shared_revision": "4733460d061d8df0ad1c834e9fb36587eaaa5044",
+          "source_revision": "700bd25f56304a89c3b18757882bccbd6a33948b",
+          "target": "x86_64-pc-windows-msvc",
+          "version": "0.6.0"
+        },
+        "existing_events": 1000,
+        "existing_open_sessions": 1000,
+        "operation": "provider_hook",
+        "p95_micros": 117426,
+        "p99_micros": 125135,
+        "passed": false,
+        "profile": "release",
+        "samples": 100,
+        "warmup": 20
+      },
+      "shared": {
+        "profile": "release",
+        "results": [
+          {
+            "operation": "status_render",
+            "p95_micros": 5,
+            "p99_micros": 5,
+            "budget_p95_micros": 1000,
+            "budget_p99_micros": 5000
+          },
+          {
+            "operation": "event_accept",
+            "p95_micros": 10823,
+            "p99_micros": 11380,
+            "budget_p95_micros": 50000,
+            "budget_p99_micros": 150000
+          },
+          {
+            "operation": "terminal_accept",
+            "p95_micros": 6990,
+            "p99_micros": 6990,
+            "budget_p95_micros": 200000,
+            "budget_p99_micros": 200000
+          },
+          {
+            "operation": "store_open_snapshot",
+            "p95_micros": 352913,
+            "p99_micros": 2468406,
+            "budget_p95_micros": 1000000,
+            "budget_p99_micros": null
+          },
+          {
+            "operation": "orphan_recovery",
+            "p95_micros": 834851,
+            "p99_micros": 834851,
+            "budget_p95_micros": 2000000,
+            "budget_p99_micros": 2000000
+          }
+        ]
+      }
+    },
+    {
+      "provider_exit": 1,
+      "shared_exit": 0,
+      "provider": {
+        "build": {
+          "product": "burnrate-copilot",
+          "shared_revision": "4733460d061d8df0ad1c834e9fb36587eaaa5044",
+          "source_revision": "700bd25f56304a89c3b18757882bccbd6a33948b",
+          "target": "x86_64-pc-windows-msvc",
+          "version": "0.6.0"
+        },
+        "existing_events": 1000,
+        "existing_open_sessions": 1000,
+        "operation": "provider_hook",
+        "p95_micros": 114143,
+        "p99_micros": 121398,
+        "passed": false,
+        "profile": "release",
+        "samples": 100,
+        "warmup": 20
+      },
+      "shared": {
+        "profile": "release",
+        "results": [
+          {
+            "operation": "status_render",
+            "p95_micros": 5,
+            "p99_micros": 5,
+            "budget_p95_micros": 1000,
+            "budget_p99_micros": 5000
+          },
+          {
+            "operation": "event_accept",
+            "p95_micros": 11348,
+            "p99_micros": 12063,
+            "budget_p95_micros": 50000,
+            "budget_p99_micros": 150000
+          },
+          {
+            "operation": "terminal_accept",
+            "p95_micros": 8526,
+            "p99_micros": 8526,
+            "budget_p95_micros": 200000,
+            "budget_p99_micros": 200000
+          },
+          {
+            "operation": "store_open_snapshot",
+            "p95_micros": 395326,
+            "p99_micros": 2638866,
+            "budget_p95_micros": 1000000,
+            "budget_p99_micros": null
+          },
+          {
+            "operation": "orphan_recovery",
+            "p95_micros": 827927,
+            "p99_micros": 827927,
+            "budget_p95_micros": 2000000,
+            "budget_p99_micros": 2000000
+          }
+        ]
+      }
+    }
+  ],
+  "passed": false
+}

@@ -199,3 +199,29 @@ again on the next admission. Separate store-writer/restart tests cover cache
 invalidation. No flush, privacy check, benchmark corpus or budget was removed.
 Earlier failed runs remain evidence of observed variance; this pass qualifies
 the recorded Mac code/pin pair, not an untested subsequent revision.
+
+## Windows 11 client qualification, 2026-10-06
+
+Shared ADR 0015 moves the Windows hook gate from hosted Windows Server CI to a
+native Windows 11 client; hosted Windows latency is now diagnostic in the
+release workflow. Copilot selects the Windows 11 25H2 floor. Measurements ran
+on VEPRO1 (Windows 11 Education 25H2, build 26200, native x64) in the ordinary
+desktop session through `scripts/qualify-windows-performance.ps1`, with
+Defender real-time scanning on and no exclusions. The benchmark store and Git
+fixture live on `C:`, a SATA Kingston A400 with 15 GB free, which is at the
+slow end of the expected developer range. Budgets and corpus are unchanged.
+
+| Provider / shared | Hook p95 / p99 ms (three rounds) | Shared budgets |
+| --- | --- | --- |
+| `c487397` / `0c7c72c` (previous candidate) | 527/740, 188/205, 175/187 | pass |
+| `22adc09` / `9bf3ae7` (Windows-native shared work merged) | 200/223, 189/214, 194/216 | pass |
+| `700bd25` / `4733460` (direct `.git` reads, ADR 0019) | 129/137, 117/125, 114/121 | pass |
+
+Each Git process start cost 27–35 ms on this client. Reading ordinary `.git`
+directories directly reduced the Git component from 49.4 ms to 0.4 ms p95.
+The remaining independent components are store open 30.8 ms, cached event and
+capability writes 32.8 ms and executable startup 8.9 ms p95. With the
+benchmark's temporary root on the faster `S:` drive, the `22adc09` hook
+measured 125 ms p95 instead of about 195 ms. Orphan recovery passed every
+client round at 0.81–1.0 s against 2 s. The hook remains above the 100 ms p95
+client budget; receipts are under `release-evidence/2026-10-06/`.

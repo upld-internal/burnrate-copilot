@@ -127,7 +127,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Authenticate private shared dependency
         env:
-          TOKEN: ${{ secrets.BURNRATE_SPEC_TOKEN }}
+          TOKEN: ${{ secrets.BURNRATE_TOKEN }}
         run: git config --global url."https://x-access-token:${TOKEN}@github.com/upld-internal/burnrate-spec.git".insteadOf ssh://git@github.com/upld-internal/burnrate-spec.git
       - name: Install stable and MSRV toolchains
         run: |
@@ -145,7 +145,7 @@ jobs:
         with:
           repository: upld-internal/burnrate-spec
           ref: ${{ needs.validate.outputs.shared_revision }}
-          token: ${{ secrets.BURNRATE_SPEC_TOKEN }}
+          token: ${{ secrets.BURNRATE_TOKEN }}
           path: shared-contracts
       - name: Shared offline conformance and privacy
         run: |
@@ -188,6 +188,13 @@ jobs:
           "target/$TARGET/release/hook-benchmarks${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}" "target/$TARGET/release/${{ matrix.binary }}" > performance-evidence/provider-hook.json || provider_status=$?
           shared_status=0
           cargo +stable run --locked --offline --release --manifest-path shared-contracts/Cargo.toml -p burnrate-adapter-kit --example operational-benchmarks -- --release-profile > performance-evidence/shared.json || shared_status=$?
+          if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+            # Shared ADR 0015: hosted Windows Server latency is diagnostic. The
+            # gate is scripts/qualify-windows-performance.ps1 on a Windows 11
+            # client; its receipt is recorded under docs/release-evidence/.
+            echo "Windows hosted latency (diagnostic): provider=$provider_status shared=$shared_status"
+            exit 0
+          fi
           test "$provider_status" = 0 && test "$shared_status" = 0
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
