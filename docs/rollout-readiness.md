@@ -27,6 +27,11 @@ latest release. The final Mac native acceptance run passed both architectures; t
 workflow still failed Windows performance. See the latest exact run below.
 
 
+**Intel macOS (2026-10-06, owner decision):** Intel Mac is not a required
+target and nothing is blocked on it. The release workflow still builds, signs
+and packages `x86_64-apple-darwin`, but skips its test suites, diagnostics and
+latency gate. Intel items below are no longer release gates.
+
 ## Work completed and gates
 
 | Plan gate | Status and evidence |

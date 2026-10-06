@@ -103,18 +103,25 @@ jobs:
           - target: aarch64-apple-darwin
             runner: macos-14
             binary: burnrate-copilot
+            qualify: true
           - target: x86_64-apple-darwin
             runner: macos-15-intel
             binary: burnrate-copilot
+            # Intel macOS is not a required target: it is built, signed and
+            # packaged, but its tests, diagnostics and latency gate are skipped.
+            qualify: false
           - target: aarch64-unknown-linux-gnu
             runner: ubuntu-24.04-arm
             binary: burnrate-copilot
+            qualify: true
           - target: x86_64-unknown-linux-gnu
             runner: ubuntu-24.04
             binary: burnrate-copilot
+            qualify: true
           - target: x86_64-pc-windows-msvc
             runner: windows-2022
             binary: burnrate-copilot.exe
+            qualify: true
     runs-on: ${{ matrix.runner }}
     permissions:
       attestations: write
@@ -133,7 +140,11 @@ jobs:
         run: |
           rustup toolchain install stable --profile minimal --component clippy,rustfmt --target ${{ matrix.target }}
           rustup toolchain install 1.85.0 --profile minimal --target ${{ matrix.target }}
+      - name: Fetch locked dependencies
+        if: ${{ !matrix.qualify }}
+        run: cargo +stable fetch --locked
       - name: Complete native suites
+        if: matrix.qualify
         run: |
           cargo +stable fetch --locked
           cargo +stable fmt --all --check
@@ -141,6 +152,7 @@ jobs:
           CARGO_NET_OFFLINE=true cargo +stable test --locked --all-targets
           CARGO_NET_OFFLINE=true cargo +1.85.0 test --locked --all-targets
       - name: Check out exact shared contracts for conformance and performance
+        if: matrix.qualify
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: upld-internal/burnrate-spec
@@ -148,11 +160,12 @@ jobs:
           token: ${{ secrets.BURNRATE_TOKEN }}
           path: shared-contracts
       - name: Shared offline conformance and privacy
+        if: matrix.qualify
         run: |
           cargo +stable fetch --locked --manifest-path shared-contracts/Cargo.toml
           CARGO_NET_OFFLINE=true cargo +stable test --locked --offline --workspace --manifest-path shared-contracts/Cargo.toml
       - name: Native credential-store lifecycle
-        if: contains(matrix.target, 'apple-darwin') || matrix.target == 'x86_64-pc-windows-msvc'
+        if: matrix.qualify && (contains(matrix.target, 'apple-darwin') || matrix.target == 'x86_64-pc-windows-msvc')
         run: CARGO_NET_OFFLINE=true cargo +stable test --locked native_vault_rotation_and_missing -- --ignored
       - name: Build release binaries with immutable revisions
         env:
@@ -168,6 +181,7 @@ jobs:
           echo "$info"
           test "$(echo "$info" | jq -r '"\(.target) \(.source_revision)"')" = "$TARGET $SOURCE_REVISION"
       - name: Diagnose native hook components
+        if: matrix.qualify
         env:
           BURNRATE_SOURCE_REVISION: ${{ needs.validate.outputs.source_revision }}
           BURNRATE_SHARED_REVISION: ${{ needs.validate.outputs.shared_revision }}
@@ -180,6 +194,7 @@ jobs:
         shell: pwsh
         run: ./scripts/windows-hook-smoke.ps1 -Binary target/x86_64-pc-windows-msvc/release/burnrate-copilot.exe
       - name: Enforce native provider and shared performance budgets
+        if: matrix.qualify
         env:
           TARGET: ${{ matrix.target }}
         run: |
@@ -197,7 +212,7 @@ jobs:
           fi
           test "$provider_status" = 0 && test "$shared_status" = 0
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
+        if: always() && matrix.qualify
         with:
           name: performance-${{ matrix.target }}
           if-no-files-found: error
