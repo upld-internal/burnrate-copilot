@@ -11,10 +11,11 @@ Provider starting revision: `fc69240fa6db987787f02c35fee0b4a9a59c60c1`.
 Shared starting revision: `812d428fc9414df3977a77786cb66f1c435bb6ff`.
 Current shared pin: `0c7c72c5ac52392e80bdad6729ac8624b18d2160`, on
 `copilot/reconcile-release-contract`, in both provider pin files. Earlier
-reconciliation was `321ee246b42e5b2ccd45e97b99b49a4784e3f9fb`; ADRs
-0014/0015 reconcile Windows qualification and reversible legacy deactivation.
-ADRs 0016/0017 document durable Mac writes, bounded scans/capability admission
-and fresh overlapping Git queries. The original shared worktree was not edited.
+reconciliation was `321ee246b42e5b2ccd45e97b99b49a4784e3f9fb`; ADRs were renumbered when
+the Codex Windows line was merged on 2026-10-06 (shared PR #3): 0014/0015 gate
+Windows per provider and qualify Windows latency on a client; 0016 covers
+reversible legacy deactivation; 0017/0018 document durable Mac writes and
+overlapping Git queries; 0019 reads ordinary `.git` directories directly. The original shared worktree was not edited.
 
 The provider's pre-existing README cleanup paragraph, `.vscode/`, `docs/images/`,
 `notes.md`, and `scripts/clean-post-milestone.sh` are preserved. The original
