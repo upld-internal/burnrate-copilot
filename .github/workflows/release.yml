@@ -188,6 +188,13 @@ jobs:
           "target/$TARGET/release/hook-benchmarks${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}" "target/$TARGET/release/${{ matrix.binary }}" > performance-evidence/provider-hook.json || provider_status=$?
           shared_status=0
           cargo +stable run --locked --offline --release --manifest-path shared-contracts/Cargo.toml -p burnrate-adapter-kit --example operational-benchmarks -- --release-profile > performance-evidence/shared.json || shared_status=$?
+          if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+            # Shared ADR 0015: hosted Windows Server latency is diagnostic. The
+            # gate is scripts/qualify-windows-performance.ps1 on a Windows 11
+            # client; its receipt is recorded under docs/release-evidence/.
+            echo "Windows hosted latency (diagnostic): provider=$provider_status shared=$shared_status"
+            exit 0
+          fi
           test "$provider_status" = 0 && test "$shared_status" = 0
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

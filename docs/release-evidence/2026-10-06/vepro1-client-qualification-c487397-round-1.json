@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "policy": "windows-client-performance-v1",
+  "recorded_utc": "2026-10-06T16:10:22.2117947Z",
+  "build_info": {
+    "product": "burnrate-copilot",
+    "version": "0.6.0",
+    "target": "x86_64-pc-windows-msvc",
+    "source_revision": "c4873972c1d0b64c22c02627a2b920b6974bb122",
+    "shared_revision": "0c7c72c5ac52392e80bdad6729ac8624b18d2160"
+  },
+  "binary_sha256": "d58b142722810dbe4ae441c936e874f1b8e232fd23e3a681596152b0ee6797db",
+  "windows_build": 26200,
+  "windows_display_version": "25H2",
+  "windows_ubr": 9457,
+  "product_type": 1,
+  "os_architecture": "X64",
+  "process_architecture": "X64",
+  "session": 1,
+  "elevated": false,
+  "runs": [
+    {
+      "provider_exit": 1,
+      "shared_exit": 0,
+      "provider": {
+        "build": {
+          "product": "burnrate-copilot",
+          "shared_revision": "0c7c72c5ac52392e80bdad6729ac8624b18d2160",
+          "source_revision": "c4873972c1d0b64c22c02627a2b920b6974bb122",
+          "target": "x86_64-pc-windows-msvc",
+          "version": "0.6.0"
+        },
+        "existing_events": 1000,
+        "existing_open_sessions": 1000,
+        "operation": "provider_hook",
+        "p95_micros": 526600,
+        "p99_micros": 740342,
+        "passed": false,
+        "profile": "release",
+        "samples": 100,
+        "warmup": 20
+      },
+      "shared": {
+        "profile": "release",
+        "results": [
+          {
+            "operation": "status_render",
+            "p95_micros": 5,
+            "p99_micros": 5,
+            "budget_p95_micros": 1000,
+            "budget_p99_micros": 5000
+          },
+          {
+            "operation": "event_accept",
+            "p95_micros": 18110,
+            "p99_micros": 20158,
+            "budget_p95_micros": 50000,
+            "budget_p99_micros": 150000
+          },
+          {
+            "operation": "terminal_accept",
+            "p95_micros": 9819,
+            "p99_micros": 9819,
+            "budget_p95_micros": 200000,
+            "budget_p99_micros": 200000
+          },
+          {
+            "operation": "store_open_snapshot",
+            "p95_micros": 372201,
+            "p99_micros": 2423786,
+            "budget_p95_micros": 1000000,
+            "budget_p99_micros": null
+          },
+          {
+            "operation": "orphan_recovery",
+            "p95_micros": 839004,
+            "p99_micros": 839004,
+            "budget_p95_micros": 2000000,
+            "budget_p99_micros": 2000000
+          }
+        ]
+      }
+    }
+  ],
+  "passed": false
+}
