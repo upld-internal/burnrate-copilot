@@ -5,6 +5,10 @@ description: Configure secure Copilot CLI Langfuse credentials, repair or rotate
 
 # Set up Burnrate Copilot with Langfuse
 
+For the shared Upland Langfuse project, use the `burnrate-setup` skill instead:
+it needs no keys from the user. This skill covers a different, private Langfuse
+project (hidden prompts) and Linux's environment-only configuration.
+
 Use the installed native binary. Never ask for a secret in chat, read a user's
 shell profile looking for keys, print credentials, or put keys in commands,
 settings, diagnostics, or process arguments. Invoke setup directly in the user's

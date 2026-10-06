@@ -62,7 +62,7 @@ this command does not alter enterprise policy or unknown project hooks.
 Deactivation keeps the old package and data for rollback. After new native
 activation is proved, an operator may uninstall the exact legacy direct-source
 identity (never a bare name while another copy is installed) through Copilot CLI. This is not historical data conversion. See shared
-ADR 0015 for the explicit deactivation exception to the fresh-install boundary.
+ADR 0016 for the explicit deactivation exception to the fresh-install boundary.
 
 For preparation rollback, first remove the Rust copy through the host, then run
 `BINARY migration rollback` using the candidate binary kept outside that install.

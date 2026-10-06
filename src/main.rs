@@ -3,6 +3,7 @@ use std::io;
 
 use burnrate_copilot::hook::{self, HookEvent};
 use burnrate_copilot::provider::{Paths, ProviderError};
+use burnrate_copilot::setup::Mode;
 use burnrate_copilot::{langfuse, runtime};
 
 fn main() {
@@ -57,6 +58,12 @@ fn run() -> Result<(), ProviderError> {
                 "suggestion": langfuse::suggest_user_id(&cwd),
             }))
         }
+        ["setup"] => print_json(&burnrate_copilot::setup::run(Mode::Apply, None)?),
+        ["setup", "--user-id", user_id] => {
+            print_json(&burnrate_copilot::setup::run(Mode::Apply, Some(user_id))?)
+        }
+        ["setup", "status"] => print_json(&burnrate_copilot::setup::run(Mode::Status, None)?),
+        ["setup", "remove"] => print_json(&burnrate_copilot::setup::remove()?),
         ["migration", "status"] => print_json(&burnrate_copilot::migration::status()?),
         ["migration", "disable-legacy"] => {
             print_json(&burnrate_copilot::migration::disable_legacy()?)

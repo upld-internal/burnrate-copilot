@@ -20,10 +20,10 @@ const SERVICE: &str = "com.upland.burnrate-copilot.langfuse";
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Credentials {
-    base_url: String,
-    public_key: String,
-    secret_key: String,
+pub(crate) struct Credentials {
+    pub(crate) base_url: String,
+    pub(crate) public_key: String,
+    pub(crate) secret_key: String,
 }
 
 impl Drop for Credentials {
@@ -216,6 +216,31 @@ fn save(paths: &Paths, credentials: &Credentials, vault: &impl Vault) -> Result<
     result
 }
 
+/// Reads this profile's stored credentials, allowing an OS authorization prompt.
+pub(crate) fn load_stored(paths: &Paths) -> Result<Credentials, SkipReason> {
+    load(paths, &NativeVault::for_paths(paths).interactive())
+}
+
+/// Stores credentials through the same verified write, marker and rollback path as setup.
+pub(crate) fn save_stored(paths: &Paths, credentials: &Credentials) -> Result<(), ProviderError> {
+    save(
+        paths,
+        credentials,
+        &NativeVault::for_paths(paths).interactive(),
+    )
+}
+
+/// OTLP headers for Copilot's own exporter, using the same project as the span sender.
+pub(crate) fn otlp_headers(credentials: &Credentials) -> Zeroizing<String> {
+    Zeroizing::new(format!(
+        "Authorization=Basic%20{},x-langfuse-ingestion-version=4",
+        STANDARD.encode(format!(
+            "{}:{}",
+            credentials.public_key, credentials.secret_key
+        ))
+    ))
+}
+
 /// Explicit cleanup of this profile's entry, never a global credential purge.
 pub fn forget() -> Result<Value, ProviderError> {
     let paths = Paths::discover()?;
@@ -228,7 +253,7 @@ pub fn forget() -> Result<Value, ProviderError> {
     Ok(json!({"state": "vault_entry_removed", "environment_credentials": "unchanged"}))
 }
 
-fn environment_credentials() -> Result<Credentials, ProviderError> {
+pub(crate) fn environment_credentials() -> Result<Credentials, ProviderError> {
     Ok(Credentials {
         base_url: env::var("LANGFUSE_BASE_URL")
             .or_else(|_| env::var("LANGFUSE_HOST"))
@@ -238,7 +263,7 @@ fn environment_credentials() -> Result<Credentials, ProviderError> {
     })
 }
 
-fn client() -> Result<reqwest::blocking::Client, ProviderError> {
+pub(crate) fn client() -> Result<reqwest::blocking::Client, ProviderError> {
     reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(10))
         .redirect(reqwest::redirect::Policy::none())

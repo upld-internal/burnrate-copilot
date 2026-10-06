@@ -160,7 +160,7 @@ bounded read-only Git state and origin queries is the next shared change.
 
 Shared `561deeedbabad1672e86615f24f780947ef8db9d` now overlaps the state and
 origin Git queries, retaining their bounds, deadlines, fresh sampling and
-fallback behavior. ADR 0017 documents the scheduling change. Shared and provider
+fallback behavior. ADR 0018 (originally 0017) documents the scheduling change. Shared and provider
 format, locked Clippy, stable and Rust 1.85 suites passed at the immutable pin.
 The next native run determines acceptance; the preceding failures remain evidence.
 
