@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 
 use burnrate_adapter_kit::contracts::{
-    AttributionSnapshot, CapabilityState, SessionEvent, SessionEventType,
+    AttributionSnapshot, CapabilityState, CapabilityStatus, SessionEvent, SessionEventType,
 };
 use burnrate_adapter_kit::core::{
     AttributionConfig, AttributionMoment, AttributionRequest, DEFAULT_RETENTION_POLICY,
@@ -51,7 +51,11 @@ pub fn accept_hook(
             Some(1),
             SessionEventType::SessionStarted,
         );
-        persist_attributed_event(&runtime, &factory, &input.cwd, &config, &mut start)?;
+        let capability =
+            persist_attributed_event(&runtime, &factory, &input.cwd, &config, &mut start)?;
+        runtime
+            .persist_capability(&capability)
+            .map_err(map_store_error)?;
     }
     match event {
         HookEvent::PostToolUse => {
@@ -64,7 +68,8 @@ pub fn accept_hook(
                     None,
                     SessionEventType::ToolCompleted,
                 );
-                persist_attributed_event(&runtime, &factory, &input.cwd, &config, &mut tool)?;
+                let git_capability =
+                    persist_attributed_event(&runtime, &factory, &input.cwd, &config, &mut tool)?;
                 let capability = factory.capability_status(
                     format!("tools-{tool_id}"),
                     &now,
@@ -73,7 +78,7 @@ pub fn accept_hook(
                     "post_tool_use_observed",
                 );
                 runtime
-                    .persist_capability(&capability)
+                    .persist_capabilities(&[git_capability, capability])
                     .map_err(map_store_error)?;
             }
         }
@@ -85,7 +90,11 @@ pub fn accept_hook(
                 Some(2),
                 SessionEventType::SessionEnded,
             );
-            persist_attributed_event(&runtime, &factory, &input.cwd, &config, &mut end)?;
+            let capability =
+                persist_attributed_event(&runtime, &factory, &input.cwd, &config, &mut end)?;
+            runtime
+                .persist_capability(&capability)
+                .map_err(map_store_error)?;
             runtime
                 .store()
                 .apply_retention(DEFAULT_RETENTION_POLICY)
@@ -135,7 +144,7 @@ fn persist_attributed_event(
     cwd: &str,
     config: &AttributionConfig,
     event: &mut SessionEvent,
-) -> Result<(), ProviderError> {
+) -> Result<CapabilityStatus, ProviderError> {
     let attribution_id = format!("attr-{}", event.id);
     let attribution = observe_with(factory, config, &attribution_id, &event.observed_at, cwd)?;
     event.attribution_id = Some(attribution_id);
@@ -157,10 +166,7 @@ fn persist_attributed_event(
         state,
         reason,
     );
-    runtime
-        .persist_capability(&capability)
-        .map_err(map_store_error)?;
-    Ok(())
+    Ok(capability)
 }
 
 fn factory(collector: &str) -> Result<AdapterRecordFactory, ProviderError> {

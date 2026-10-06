@@ -1,0 +1,6 @@
+{"profile":"release","results":[
+{"operation":"status_render","p95_micros":3,"p99_micros":5,"budget_p95_micros":1000,"budget_p99_micros":5000},
+{"operation":"event_accept","p95_micros":4303,"p99_micros":6395,"budget_p95_micros":50000,"budget_p99_micros":150000},
+{"operation":"terminal_accept","p95_micros":1705,"p99_micros":1705,"budget_p95_micros":200000,"budget_p99_micros":200000},
+{"operation":"store_open_snapshot","p95_micros":183094,"p99_micros":206812,"budget_p95_micros":1000000,"budget_p99_micros":null},
+{"operation":"orphan_recovery","p95_micros":98996,"p99_micros":98996,"budget_p95_micros":2000000,"budget_p99_micros":2000000}]}

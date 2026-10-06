@@ -1,0 +1,51 @@
+{
+  "scope": "staged development plugin; transient environment keys; native OS-store update remains pending",
+  "provider_revision": "0c7de3cdc2c65fb519ba05e2b327540a2812a42c",
+  "shared_revision": "88494ef397c88c4547ddb334d5b6d232f002da11",
+  "host_version": "1.0.91",
+  "session_id": "d09407f7-f3b2-457b-84f2-9b9fcd2adb2e",
+  "binary_sha256": "4364ec5845fc2883ee05be9608d6774142839f1877eddc1097e7edf435f45811",
+  "hooks_sha256": "a3864e5a1755a3cffdedb0036d67ccbc86d2a6a63519a42508b6b5f0e9f5c517",
+  "readback": [
+    {
+      "trace_id": "74fcbcce6faede10ac83829447d36651",
+      "burnrate_attribution": [
+        {
+          "id": "126323c71ade4347",
+          "parent": "7896227bcf5ca340"
+        }
+      ],
+      "native_root_count": 1
+    },
+    {
+      "trace_id": "8e0c65c5093df86b2de3eb1e7e530eb3",
+      "burnrate_attribution": [
+        {
+          "id": "90babf32333f37e1",
+          "parent": "63847d90431c5795"
+        }
+      ],
+      "native_root_count": 1
+    },
+    {
+      "trace_id": "f6be3caec87a93cc0631dbcaa4df7c77",
+      "burnrate_attribution": [],
+      "native_root_count": 1
+    }
+  ],
+  "branches": [
+    "feature/ABC-456-second",
+    "feature/ABC-789-final"
+  ],
+  "jira_keys": [
+    "ABC-456",
+    "ABC-789"
+  ],
+  "aborted_trace": "f6be3caec87a93cc0631dbcaa4df7c77",
+  "outbox_count": 0,
+  "local_types": [
+    "session.started",
+    "tool.completed",
+    "session.ended"
+  ]
+}

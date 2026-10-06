@@ -1,0 +1,1085 @@
+{
+  "conclusion": "failure",
+  "headSha": "5fe19a3a3e99404d5c790fb015fed2437df1c5cf",
+  "jobs": [
+    {
+      "completedAt": "2026-10-03T03:55:12Z",
+      "conclusion": "success",
+      "databaseId": 111122355564,
+      "name": "validate",
+      "startedAt": "2026-10-03T03:55:06Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T03:55:07Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T03:55:06Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:09Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T03:55:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:09Z",
+          "conclusion": "skipped",
+          "name": "Reject mutable, unsigned, dirty, or mismatched inputs",
+          "number": 3,
+          "startedAt": "2026-10-03T03:55:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:09Z",
+          "conclusion": "success",
+          "name": "Check dry-run versions and pin",
+          "number": 4,
+          "startedAt": "2026-10-03T03:55:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:10Z",
+          "conclusion": "success",
+          "name": "Run if [ \"$GITHUB_EVENT_NAME\" = push ]; then",
+          "number": 5,
+          "startedAt": "2026-10-03T03:55:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:10Z",
+          "conclusion": "success",
+          "name": "Run echo \"value=$GITHUB_SHA\" >> \"$GITHUB_OUTPUT\"",
+          "number": 6,
+          "startedAt": "2026-10-03T03:55:10Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:10Z",
+          "conclusion": "success",
+          "name": "Run revision=$(sed -n '/name = \"burnrate-adapter-kit\"/,/^$/s/.*#\\([0-9a-f]\\{40\\}\\)\"/\\1/p' Cargo.lock)",
+          "number": 7,
+          "startedAt": "2026-10-03T03:55:10Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:10Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 14,
+          "startedAt": "2026-10-03T03:55:10Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:10Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 15,
+          "startedAt": "2026-10-03T03:55:10Z",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completedAt": "2026-10-03T03:55:03Z",
+      "conclusion": "skipped",
+      "databaseId": 111122356285,
+      "name": "marketplace-repackage",
+      "startedAt": "2026-10-03T03:55:04Z",
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "completedAt": "2026-10-03T03:58:11Z",
+      "conclusion": "success",
+      "databaseId": 111122380279,
+      "name": "build (aarch64-unknown-linux-gnu, ubuntu-24.04-arm, burnrate-copilot)",
+      "startedAt": "2026-10-03T03:55:17Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T03:55:20Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T03:55:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:20Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T03:55:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:20Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T03:55:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:33Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T03:55:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:56:40Z",
+          "conclusion": "success",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T03:55:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:56:40Z",
+          "conclusion": "success",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T03:56:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:01Z",
+          "conclusion": "success",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T03:56:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:01Z",
+          "conclusion": "skipped",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T03:57:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:39Z",
+          "conclusion": "success",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T03:57:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:39Z",
+          "conclusion": "success",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T03:57:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:44Z",
+          "conclusion": "success",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T03:57:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:44Z",
+          "conclusion": "skipped",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T03:57:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:07Z",
+          "conclusion": "success",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T03:57:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:07Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T03:58:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:08Z",
+          "conclusion": "success",
+          "name": "Package deterministic target archive",
+          "number": 15,
+          "startedAt": "2026-10-03T03:58:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:08Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 16,
+          "startedAt": "2026-10-03T03:58:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:08Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 17,
+          "startedAt": "2026-10-03T03:58:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:08Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 18,
+          "startedAt": "2026-10-03T03:58:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:08Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 19,
+          "startedAt": "2026-10-03T03:58:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:09Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 20,
+          "startedAt": "2026-10-03T03:58:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:09Z",
+          "conclusion": "success",
+          "name": "Post Check out exact shared contracts for conformance and performance",
+          "number": 39,
+          "startedAt": "2026-10-03T03:58:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:09Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 40,
+          "startedAt": "2026-10-03T03:58:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:09Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 41,
+          "startedAt": "2026-10-03T03:58:09Z",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completedAt": "2026-10-03T04:02:06Z",
+      "conclusion": "failure",
+      "databaseId": 111122380312,
+      "name": "build (x86_64-apple-darwin, macos-15-intel, burnrate-copilot)",
+      "startedAt": "2026-10-03T03:55:14Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T03:55:19Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T03:55:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:21Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T03:55:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:21Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T03:55:21Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:39Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T03:55:21Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:42Z",
+          "conclusion": "success",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T03:55:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:44Z",
+          "conclusion": "success",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T03:57:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:23Z",
+          "conclusion": "success",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T03:57:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:23Z",
+          "conclusion": "success",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T03:58:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:59:55Z",
+          "conclusion": "success",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T03:58:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:59:55Z",
+          "conclusion": "success",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T03:59:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:00:13Z",
+          "conclusion": "success",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T03:59:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:00:13Z",
+          "conclusion": "skipped",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T04:00:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:59Z",
+          "conclusion": "failure",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T04:00:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:01Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T04:01:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:01Z",
+          "conclusion": "skipped",
+          "name": "Package deterministic target archive",
+          "number": 15,
+          "startedAt": "2026-10-03T04:02:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:01Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 16,
+          "startedAt": "2026-10-03T04:02:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:01Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 17,
+          "startedAt": "2026-10-03T04:02:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:01Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 18,
+          "startedAt": "2026-10-03T04:02:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:01Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 19,
+          "startedAt": "2026-10-03T04:02:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:01Z",
+          "conclusion": "skipped",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 20,
+          "startedAt": "2026-10-03T04:02:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:02Z",
+          "conclusion": "success",
+          "name": "Post Check out exact shared contracts for conformance and performance",
+          "number": 39,
+          "startedAt": "2026-10-03T04:02:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:02Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 40,
+          "startedAt": "2026-10-03T04:02:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:02:03Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 41,
+          "startedAt": "2026-10-03T04:02:02Z",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completedAt": "2026-10-03T04:01:04Z",
+      "conclusion": "failure",
+      "databaseId": 111122380334,
+      "name": "build (x86_64-pc-windows-msvc, windows-2022, burnrate-copilot.exe)",
+      "startedAt": "2026-10-03T03:55:14Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T03:55:17Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T03:55:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:23Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T03:55:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:23Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T03:55:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:49Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T03:55:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:42Z",
+          "conclusion": "success",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T03:55:49Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:44Z",
+          "conclusion": "success",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T03:57:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:18Z",
+          "conclusion": "success",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T03:57:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:19Z",
+          "conclusion": "success",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T03:58:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:59:32Z",
+          "conclusion": "success",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T03:58:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:59:32Z",
+          "conclusion": "success",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T03:59:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:59:52Z",
+          "conclusion": "success",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T03:59:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:59:57Z",
+          "conclusion": "success",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T03:59:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:00:59Z",
+          "conclusion": "failure",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T03:59:57Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:00Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T04:00:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:00Z",
+          "conclusion": "skipped",
+          "name": "Package deterministic target archive",
+          "number": 15,
+          "startedAt": "2026-10-03T04:01:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:00Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 16,
+          "startedAt": "2026-10-03T04:01:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:00Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 17,
+          "startedAt": "2026-10-03T04:01:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:00Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 18,
+          "startedAt": "2026-10-03T04:01:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:00Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 19,
+          "startedAt": "2026-10-03T04:01:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:00Z",
+          "conclusion": "skipped",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 20,
+          "startedAt": "2026-10-03T04:01:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:01Z",
+          "conclusion": "success",
+          "name": "Post Check out exact shared contracts for conformance and performance",
+          "number": 39,
+          "startedAt": "2026-10-03T04:01:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:02Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 40,
+          "startedAt": "2026-10-03T04:01:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T04:01:02Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 41,
+          "startedAt": "2026-10-03T04:01:02Z",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completedAt": "2026-10-03T03:58:57Z",
+      "conclusion": "success",
+      "databaseId": 111122380341,
+      "name": "build (aarch64-apple-darwin, macos-14, burnrate-copilot)",
+      "startedAt": "2026-10-03T03:55:18Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T03:55:23Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T03:55:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:24Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T03:55:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:24Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T03:55:24Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:38Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T03:55:24Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:56:52Z",
+          "conclusion": "success",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T03:55:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:56:54Z",
+          "conclusion": "success",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T03:56:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:18Z",
+          "conclusion": "success",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T03:56:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:18Z",
+          "conclusion": "success",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T03:57:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:10Z",
+          "conclusion": "success",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T03:57:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:10Z",
+          "conclusion": "success",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T03:58:10Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:19Z",
+          "conclusion": "success",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T03:58:10Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:19Z",
+          "conclusion": "skipped",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T03:58:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:52Z",
+          "conclusion": "success",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T03:58:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:53Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T03:58:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:53Z",
+          "conclusion": "success",
+          "name": "Package deterministic target archive",
+          "number": 15,
+          "startedAt": "2026-10-03T03:58:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:53Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 16,
+          "startedAt": "2026-10-03T03:58:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:53Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 17,
+          "startedAt": "2026-10-03T03:58:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:53Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 18,
+          "startedAt": "2026-10-03T03:58:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:53Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 19,
+          "startedAt": "2026-10-03T03:58:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:54Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 20,
+          "startedAt": "2026-10-03T03:58:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:54Z",
+          "conclusion": "success",
+          "name": "Post Check out exact shared contracts for conformance and performance",
+          "number": 39,
+          "startedAt": "2026-10-03T03:58:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:54Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 40,
+          "startedAt": "2026-10-03T03:58:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:55Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 41,
+          "startedAt": "2026-10-03T03:58:54Z",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completedAt": "2026-10-03T03:58:41Z",
+      "conclusion": "success",
+      "databaseId": 111122380401,
+      "name": "build (x86_64-unknown-linux-gnu, ubuntu-24.04, burnrate-copilot)",
+      "startedAt": "2026-10-03T03:55:15Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-03T03:55:17Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-03T03:55:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:18Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-03T03:55:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:18Z",
+          "conclusion": "success",
+          "name": "Authenticate private shared dependency",
+          "number": 3,
+          "startedAt": "2026-10-03T03:55:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:55:33Z",
+          "conclusion": "success",
+          "name": "Install stable and MSRV toolchains",
+          "number": 4,
+          "startedAt": "2026-10-03T03:55:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:56:43Z",
+          "conclusion": "success",
+          "name": "Complete native suites",
+          "number": 5,
+          "startedAt": "2026-10-03T03:55:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:56:43Z",
+          "conclusion": "success",
+          "name": "Check out exact shared contracts for conformance and performance",
+          "number": 6,
+          "startedAt": "2026-10-03T03:56:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:07Z",
+          "conclusion": "success",
+          "name": "Shared offline conformance and privacy",
+          "number": 7,
+          "startedAt": "2026-10-03T03:56:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:57:07Z",
+          "conclusion": "skipped",
+          "name": "Native credential-store lifecycle",
+          "number": 8,
+          "startedAt": "2026-10-03T03:57:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:01Z",
+          "conclusion": "success",
+          "name": "Build release binaries with immutable revisions",
+          "number": 9,
+          "startedAt": "2026-10-03T03:57:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:01Z",
+          "conclusion": "success",
+          "name": "Check build identity",
+          "number": 10,
+          "startedAt": "2026-10-03T03:58:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:07Z",
+          "conclusion": "success",
+          "name": "Diagnose native hook components",
+          "number": 11,
+          "startedAt": "2026-10-03T03:58:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:07Z",
+          "conclusion": "skipped",
+          "name": "Windows plugin hook smoke test",
+          "number": 12,
+          "startedAt": "2026-10-03T03:58:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:37Z",
+          "conclusion": "success",
+          "name": "Enforce native provider and shared performance budgets",
+          "number": 13,
+          "startedAt": "2026-10-03T03:58:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:38Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 14,
+          "startedAt": "2026-10-03T03:58:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:38Z",
+          "conclusion": "success",
+          "name": "Package deterministic target archive",
+          "number": 15,
+          "startedAt": "2026-10-03T03:58:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:38Z",
+          "conclusion": "skipped",
+          "name": "Generate SLSA v1 provenance",
+          "number": 16,
+          "startedAt": "2026-10-03T03:58:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:38Z",
+          "conclusion": "skipped",
+          "name": "Preserve provenance bundle",
+          "number": 17,
+          "startedAt": "2026-10-03T03:58:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:38Z",
+          "conclusion": "skipped",
+          "name": "Install keyless signer",
+          "number": 18,
+          "startedAt": "2026-10-03T03:58:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:38Z",
+          "conclusion": "skipped",
+          "name": "Sign target archive",
+          "number": 19,
+          "startedAt": "2026-10-03T03:58:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:39Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "number": 20,
+          "startedAt": "2026-10-03T03:58:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:39Z",
+          "conclusion": "success",
+          "name": "Post Check out exact shared contracts for conformance and performance",
+          "number": 39,
+          "startedAt": "2026-10-03T03:58:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:39Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 40,
+          "startedAt": "2026-10-03T03:58:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-03T03:58:39Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 41,
+          "startedAt": "2026-10-03T03:58:39Z",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completedAt": "2026-10-03T04:02:06Z",
+      "conclusion": "skipped",
+      "databaseId": 111123544407,
+      "name": "publish",
+      "startedAt": "2026-10-03T04:02:06Z",
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "completedAt": "2026-10-03T04:02:06Z",
+      "conclusion": "skipped",
+      "databaseId": 111123544724,
+      "name": "marketplace-package",
+      "startedAt": "2026-10-03T04:02:07Z",
+      "status": "completed",
+      "steps": []
+    }
+  ]
+}
