@@ -19,6 +19,10 @@ reachable only over ZPA, and without it traces are silently not uploaded.
 Where the variables go: Windows user environment; on macOS a marked block in
 `~/.zshrc` (or `$ZDOTDIR/.zshrc`) and in existing `~/.bash_profile` or
 `~/.bashrc`. Open a new terminal and start a new `copilot` session afterwards.
+On Windows, close every Windows Terminal window first: its new tabs and windows
+inherit the environment Windows Terminal started with. `setup status` reports
+`current_terminal: ready` only when the running terminal has the saved values;
+otherwise `restart_required` is true.
 The `langfuse launch` wrapper is no longer needed.
 
 Copilot reads its exporter settings only from the environment or an
@@ -54,3 +58,35 @@ and API readback showed `userId=upland-human-bripley`, `harness=copilot_cli`,
 `git_repository=upld-internal/burnrate-copilot`,
 `git_branch=feature/ABC-123-setup`, `jira_key=ABC-123`. The isolated vault entry
 was then removed. Windows setup is part of the Windows live checklist.
+
+## Windows evidence, 2026-10-06
+
+VEPRO1, Windows 11 Education 25H2 (build 26200), native x64, Copilot CLI
+1.0.92, isolated `COPILOT_HOME`, development build `79aae07` (binary SHA-256
+`44d6a293...`, shared `4733460`) installed from a local `burnrate-local`
+marketplace. VEPRO1 has no ZPA; Langfuse was reached through a reverse SSH
+tunnel from a ZPA-connected Mac with a hosts-file entry, preserving TLS to the
+real host name.
+
+- `/burnrate-setup` asked for the user id (no Git email on the machine), stored
+  the shared project in Credential Manager, wrote the four user variables and
+  reported the host reachable.
+- Windows PowerShell 5.1 session `4b72f503`: one tool turn; all four Burnrate
+  hooks succeeded. Trace `4dd341b5ab7d13d06ca76affcb8ed03a` read back as one
+  `Copilot Turn` with `userId=upland-human-bripley`, `harness=copilot_cli`,
+  `git_repository=upld-internal/burnrate-copilot`,
+  `git_branch=feature/ABC-123-windows-live`, `jira_key=ABC-123`, no camelCase
+  keys, service `github-copilot`, and exactly one attribution span under the
+  native `invoke_agent` root.
+- PowerShell 7 session `e1815f2d`: four completed turns and one Esc abort; all
+  eight Burnrate hooks succeeded, the aborted turn delivered no `agentStop`,
+  local records were written and no diagnostics were raised. Its windows were
+  tabs of a Windows Terminal started before setup, so Copilot ran without the
+  exporter variables: no `traceparent`, no host trace and no attribution
+  span. `setup status` now detects this (`current_terminal`).
+- Host-measured hook durations, including Copilot's PowerShell dispatch, were
+  about 350 ms per hook in steady state and about 1.0-1.4 s for session start,
+  session end and the first hooks of a session. This is well above the
+  executable's own cost and is recorded for follow-up.
+- Not yet recorded: whether a console window flashed during hooks. Repeating
+  the PowerShell 7 turns in a fresh Windows Terminal remains open.
