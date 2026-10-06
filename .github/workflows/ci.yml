@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Authenticate private shared dependency
         env:
-          TOKEN: ${{ secrets.BURNRATE_SPEC_TOKEN }}
+          TOKEN: ${{ secrets.BURNRATE_TOKEN }}
         run: git config --global url."https://x-access-token:${TOKEN}@github.com/upld-internal/burnrate-spec.git".insteadOf ssh://git@github.com/upld-internal/burnrate-spec.git
       - name: Install stable and MSRV
         run: |
@@ -37,7 +37,7 @@ jobs:
       - name: Authenticate private shared dependency
         shell: pwsh
         env:
-          TOKEN: ${{ secrets.BURNRATE_SPEC_TOKEN }}
+          TOKEN: ${{ secrets.BURNRATE_TOKEN }}
         run: git config --global "url.https://x-access-token:$($env:TOKEN)@github.com/upld-internal/burnrate-spec.git.insteadOf" "ssh://git@github.com/upld-internal/burnrate-spec.git"
       - name: Install stable Rust
         shell: pwsh
