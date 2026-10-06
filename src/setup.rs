@@ -33,7 +33,9 @@ const TRACES_ENDPOINT: &str = "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT";
 const TRACES_HEADERS: &str = "OTEL_EXPORTER_OTLP_TRACES_HEADERS";
 /// Every variable setup owns; `setup remove` deletes exactly these.
 const OWNED: [&str; 4] = [ENABLED, TRACES_ENDPOINT, TRACES_HEADERS, USER_ID_VARIABLE];
+#[cfg_attr(windows, allow(dead_code))]
 const PROFILE_BEGIN: &str = "# >>> burnrate-copilot setup >>>";
+#[cfg_attr(windows, allow(dead_code))]
 const PROFILE_END: &str = "# <<< burnrate-copilot setup <<<";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -311,12 +313,15 @@ fn native_environment() -> Result<impl UserEnvironment, ProviderError> {
 
 /// Marked block in shell startup files. zsh is the macOS default, so
 /// `.zshrc` is always written; bash files only when they already exist.
+#[cfg_attr(windows, allow(dead_code))]
 pub(crate) struct ProfileEnvironment {
     files: Vec<PathBuf>,
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 impl ProfileEnvironment {
     #[cfg(test)]
+    #[cfg_attr(not(any(target_os = "macos", windows)), allow(dead_code))]
     pub(crate) fn for_home(home: &Path) -> Self {
         Self::new(home, home)
     }
@@ -494,6 +499,10 @@ impl UserEnvironment for WindowsEnvironment {
 }
 
 #[cfg(test)]
+#[cfg_attr(
+    not(any(target_os = "macos", windows)),
+    allow(dead_code, unused_imports)
+)]
 mod tests {
     use super::*;
     use crate::test_support::TempRoot;
