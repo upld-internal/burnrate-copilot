@@ -217,6 +217,24 @@ jobs:
           name: performance-${{ matrix.target }}
           if-no-files-found: error
           path: performance-evidence/
+      - name: Import Developer ID certificate into a temporary keychain
+        if: github.event_name == 'push' && contains(matrix.target, 'apple-darwin')
+        env:
+          CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_SIGNING_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          test -n "$CERTIFICATE_P12_BASE64" && test -n "$CERTIFICATE_PASSWORD" || { echo 'Release blocked: Developer ID certificate secrets are not provisioned.' >&2; exit 1; }
+          keychain="$RUNNER_TEMP/burnrate-signing.keychain-db"
+          keychain_password=$(openssl rand -base64 32)
+          umask 077
+          printf '%s' "$CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/signing.p12" -k "$keychain" -P "$CERTIFICATE_PASSWORD" -f pkcs12 -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/signing.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
       - name: Native macOS signing with provisioned identity
         if: github.event_name == 'push' && contains(matrix.target, 'apple-darwin')
         env:
@@ -224,6 +242,9 @@ jobs:
         run: |
           test -n "$MACOS_SIGNING_IDENTITY" || { echo 'Release blocked: approved Developer ID identity has not been provisioned on this runner.' >&2; exit 1; }
           python3 scripts/macos-sign-binary.py "target/${{ matrix.target }}/release/${{ matrix.binary }}" --identity "$MACOS_SIGNING_IDENTITY"
+      - name: Remove temporary signing keychain
+        if: always() && github.event_name == 'push' && contains(matrix.target, 'apple-darwin')
+        run: security delete-keychain "$RUNNER_TEMP/burnrate-signing.keychain-db" 2>/dev/null || true
       - name: Package deterministic target archive
         env:
           VERSION: ${{ needs.validate.outputs.version }}
