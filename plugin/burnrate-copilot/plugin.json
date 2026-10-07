@@ -1,7 +1,7 @@
 {
   "name": "burnrate-copilot",
   "description": "Records local Copilot CLI session activity and adds Git branch, repository, and Jira metadata to Copilot traces in Langfuse.",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "author": {
     "name": "Burnrate"
   },

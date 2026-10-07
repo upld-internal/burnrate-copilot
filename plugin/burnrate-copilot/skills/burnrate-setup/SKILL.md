@@ -11,13 +11,15 @@ settings and the user id as persistent user environment variables, and nothing
 else. A status-only request authorizes inspection only. Preserve the user's
 existing configuration and explicit choices.
 
-The plugin root is two directories above this file; set `PLUGIN_ROOT` to that
-absolute path. Setup is once per user and machine: afterwards every
+The plugin root is two directories above this file. Use its absolute path
+directly in the commands below (shown as `PLUGIN_ROOT`); the packaged runner
+also finds its own package, so no variable needs to be exported. Setup is once
+per user and machine: afterwards every
 repository's turns are attributed from their own working directory. Run it from
 the current Git repository. Use:
 
-- macOS: `/bin/sh "$PLUGIN_ROOT/hooks/run.sh" setup status`
-- Windows PowerShell: `& "$env:PLUGIN_ROOT\bin\x86_64-pc-windows-msvc\burnrate-copilot.exe" setup status`
+- macOS: `/bin/sh "PLUGIN_ROOT/hooks/run.sh" setup status`
+- Windows PowerShell: `& "PLUGIN_ROOT\bin\x86_64-pc-windows-msvc\burnrate-copilot.exe" setup status`
 
 Replace `setup status` with `setup` to perform setup. Do not substitute a
 checkout binary for the packaged one. Never ask for Langfuse keys, never print

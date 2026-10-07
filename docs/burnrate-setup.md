@@ -1,6 +1,7 @@
 # Burnrate setup for Copilot CLI
 
-`/burnrate-setup` in Copilot CLI configures Burnrate once per user and machine,
+`/burnrate-setup` in Copilot CLI (listed as `/burnrate-copilot:burnrate-setup`)
+configures Burnrate once per user and machine,
 on macOS and Windows. It matches Codex's `$burnrate-setup`: the shared Upland
 Langfuse project, the user id `upland-human-<slug>`, and a ZPA reachability
 check, without asking for keys.

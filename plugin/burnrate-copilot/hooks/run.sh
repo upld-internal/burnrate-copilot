@@ -11,7 +11,10 @@ case "$(uname -m)" in
   x86_64) target_arch=x86_64 ;;
   *) exit 1 ;;
 esac
-binary="${PLUGIN_ROOT:?}/bin/${target_arch}-${target_os}/burnrate-copilot"
+# Hooks receive PLUGIN_ROOT from the host; a skill's shell command may not
+# export it, so fall back to this script's own package.
+root=${PLUGIN_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}
+binary="$root/bin/${target_arch}-${target_os}/burnrate-copilot"
 [ -x "$binary" ] || exit 1
 case "${1:-}" in
   hook|langfuse|migration|setup) action="$1"; shift; exec "$binary" "$action" "$@" ;;
