@@ -1,6 +1,7 @@
 # Burnrate setup for Copilot CLI
 
-`/burnrate-setup` in Copilot CLI configures Burnrate once per user and machine,
+`/burnrate-setup` in Copilot CLI (listed as `/burnrate-copilot:burnrate-setup`)
+configures Burnrate once per user and machine,
 on macOS and Windows. It matches Codex's `$burnrate-setup`: the shared Upland
 Langfuse project, the user id `upland-human-<slug>`, and a ZPA reachability
 check, without asking for keys.
@@ -99,3 +100,27 @@ real host name.
 - Not covered on Windows: a turn after a branch change (all traced turns ran
   on one branch; event-time branch change is proven on macOS with the same
   shared attribution code), and whether a console window flashes during hooks.
+
+## macOS pilot evidence, 2026-10-06
+
+Signed release v0.6.0 (tag verified by GitHub, Developer ID-signed in CI),
+installed on macOS ARM64 from `marketplace-pilot` (`9718ff1`) with
+`copilot plugin marketplace add upld-internal/burnrate-copilot#marketplace-pilot`
+into a profile cleaned of earlier Burnrate plugins, Keychain entries, shell
+variables and local data. Copilot CLI listed the skills as
+`/burnrate-copilot:burnrate-setup` and `/burnrate-copilot:setup-langfuse`.
+
+- The skill's setup command failed (`PLUGIN_ROOT: parameter null or not set`);
+  fixed in 0.6.1. Running the packaged binary's `setup` directly stored the
+  shared project in Keychain, wrote the `~/.zshrc` block and derived
+  `upland-human-bripley`.
+- Interactive session `38937727` in a fresh terminal: all Burnrate hooks
+  succeeded in 24-286 ms (host-measured). Trace
+  `e7b9fab79612b5da684c30234860f65b` read back on
+  `feature/ABC-123-mac-pilot` / `ABC-123`; after a branch change in another
+  terminal, trace `4b7279dda35efb3e72335743f691f37e` read back on
+  `feature/ABC-456-mac-second` / `ABC-456`. Both were `Copilot Turn` with
+  `userId=upland-human-bripley`, `harness=copilot_cli`,
+  `git_repository=upld-internal/burnrate-copilot`, snake_case keys, no content,
+  and exactly one attribution span under the native root. The Esc-aborted turn
+  delivered no `agentStop` and produced no attribution.

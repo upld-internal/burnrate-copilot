@@ -11,13 +11,15 @@ settings and the user id as persistent user environment variables, and nothing
 else. A status-only request authorizes inspection only. Preserve the user's
 existing configuration and explicit choices.
 
-The plugin root is two directories above this file; set `PLUGIN_ROOT` to that
-absolute path. Setup is once per user and machine: afterwards every
+The plugin root is two directories above this file. Use its absolute path
+directly in the commands below (shown as `PLUGIN_ROOT`); the packaged runner
+also finds its own package, so no variable needs to be exported. Setup is once
+per user and machine: afterwards every
 repository's turns are attributed from their own working directory. Run it from
 the current Git repository. Use:
 
-- macOS: `/bin/sh "$PLUGIN_ROOT/hooks/run.sh" setup status`
-- Windows PowerShell: `& "$env:PLUGIN_ROOT\bin\x86_64-pc-windows-msvc\burnrate-copilot.exe" setup status`
+- macOS: `/bin/sh "PLUGIN_ROOT/hooks/run.sh" setup status`
+- Windows PowerShell: `& "PLUGIN_ROOT\bin\x86_64-pc-windows-msvc\burnrate-copilot.exe" setup status`
 
 Replace `setup status` with `setup` to perform setup. Do not substitute a
 checkout binary for the packaged one. Never ask for Langfuse keys, never print
@@ -39,8 +41,12 @@ Follow the returned `state`:
      Terminal keep its old environment.
    Then run `setup status` in the new terminal; `current_terminal` must be
    `ready` before starting `copilot`.
-3. `unsupported_platform` (Linux): keep the environment-only configuration
-   described in `setup-langfuse`.
+3. `unsupported_platform` (Linux): there is no OS credential store. The user
+   sets `LANGFUSE_BASE_URL`, `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`
+   for Burnrate, and `COPILOT_OTEL_ENABLED=true`,
+   `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_HEADERS`
+   for Copilot, through their approved secret manager. Do not write keys into a
+   shell profile for them.
 
 Explain any `notices`; do not change those settings yourself:
 
@@ -76,5 +82,8 @@ proof. Do not create or change a branch just to obtain Jira metadata.
 
 Legacy v0.1.0 must be deactivated with `migration disable-legacy` before
 relying on this copy; restart so old hooks are not still loaded. To use a
-different Langfuse project, the user runs `langfuse setup` in their own
-terminal (hidden prompts); `setup` then keeps that configuration.
+different Langfuse project, the user runs the packaged binary's
+`langfuse setup` in their own terminal: it prompts without echo for the HTTPS
+base URL and both keys, validates the project, and stores them in the OS
+credential store. Run `setup` afterwards; it keeps that configuration and
+points Copilot's exporter at it. Never collect those keys in chat.

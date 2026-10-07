@@ -129,7 +129,7 @@ pub(crate) fn run_with(
 ) -> Result<Value, ProviderError> {
     if !cfg!(any(target_os = "macos", windows)) && mode == Mode::Apply {
         return Ok(json!({"state": "unsupported_platform",
-            "next": "Linux keeps environment-only configuration; see setup-langfuse."}));
+            "next": "Linux keeps environment-only configuration; see the burnrate-setup skill."}));
     }
     let apply = mode == Mode::Apply;
     let mut changes = Vec::new();
