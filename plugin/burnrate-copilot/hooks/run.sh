@@ -14,6 +14,7 @@ esac
 binary="${PLUGIN_ROOT:?}/bin/${target_arch}-${target_os}/burnrate-copilot"
 [ -x "$binary" ] || exit 1
 case "${1:-}" in
+  hook|langfuse|migration|setup) action="$1"; shift; exec "$binary" "$action" "$@" ;;
   langfuse-status) exec "$binary" langfuse status ;;
   langfuse-suggest-user-id) exec "$binary" langfuse suggest-user-id ;;
   *) exec "$binary" hook "$1" ;;
