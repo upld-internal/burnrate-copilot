@@ -41,8 +41,12 @@ Follow the returned `state`:
      Terminal keep its old environment.
    Then run `setup status` in the new terminal; `current_terminal` must be
    `ready` before starting `copilot`.
-3. `unsupported_platform` (Linux): keep the environment-only configuration
-   described in `setup-langfuse`.
+3. `unsupported_platform` (Linux): there is no OS credential store. The user
+   sets `LANGFUSE_BASE_URL`, `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`
+   for Burnrate, and `COPILOT_OTEL_ENABLED=true`,
+   `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_HEADERS`
+   for Copilot, through their approved secret manager. Do not write keys into a
+   shell profile for them.
 
 Explain any `notices`; do not change those settings yourself:
 
@@ -78,5 +82,8 @@ proof. Do not create or change a branch just to obtain Jira metadata.
 
 Legacy v0.1.0 must be deactivated with `migration disable-legacy` before
 relying on this copy; restart so old hooks are not still loaded. To use a
-different Langfuse project, the user runs `langfuse setup` in their own
-terminal (hidden prompts); `setup` then keeps that configuration.
+different Langfuse project, the user runs the packaged binary's
+`langfuse setup` in their own terminal: it prompts without echo for the HTTPS
+base URL and both keys, validates the project, and stores them in the OS
+credential store. Run `setup` afterwards; it keeps that configuration and
+points Copilot's exporter at it. Never collect those keys in chat.
