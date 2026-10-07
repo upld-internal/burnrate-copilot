@@ -88,5 +88,14 @@ real host name.
   about 350 ms per hook in steady state and about 1.0-1.4 s for session start,
   session end and the first hooks of a session. This is well above the
   executable's own cost and is recorded for follow-up.
-- Not yet recorded: whether a console window flashed during hooks. Repeating
-  the PowerShell 7 turns in a fresh Windows Terminal remains open.
+- Re-run after closing and restarting Windows Terminal (session `4b29828f`):
+  three tool turns, all eight Burnrate hooks succeeded and every `agentStop`
+  carried a `traceparent`. Traces `7908e0d35019ca9758e5b2a209dff340`,
+  `c8ca616f431332ce5276a58455f9fd99` and `1996baef3e23d10a6494a75387fd273b`
+  each read back as one `Copilot Turn` with `userId=upland-human-bripley`,
+  `harness=copilot_cli`, the repository, `git_branch=feature/ABC-123-windows-live`,
+  `jira_key=ABC-123`, snake_case keys, and exactly one attribution span under
+  the native root. This confirms the fresh-terminal requirement.
+- Not covered on Windows: a turn after a branch change (all traced turns ran
+  on one branch; event-time branch change is proven on macOS with the same
+  shared attribution code), and whether a console window flashes during hooks.
