@@ -30,10 +30,15 @@ Follow the returned `state`:
    Ask the user for their Upland email or its local part, then run
    `setup --user-id <value>`. Setup stores only `upland-human-<local part>`;
    the email itself is never written. Do not guess the value.
-2. `configured`: report `changes`. If `restart_required` is true, tell the user
-   to open a **new terminal** and start a new `copilot` session there (Windows:
-   a new terminal window, so it picks up the user environment). Existing
-   terminals keep the old environment.
+2. `configured`: report `changes`. If `restart_required` is true, the terminal
+   running Copilot does not have the saved variables yet, and Copilot's own
+   traces will not be sent from it. Tell the user to exit Copilot and:
+   - macOS: open a new terminal tab or window.
+   - Windows: close **every** Windows Terminal window (or other terminal app),
+     then start it again. New tabs and windows of an already running Windows
+     Terminal keep its old environment.
+   Then run `setup status` in the new terminal; `current_terminal` must be
+   `ready` before starting `copilot`.
 3. `unsupported_platform` (Linux): keep the environment-only configuration
    described in `setup-langfuse`.
 

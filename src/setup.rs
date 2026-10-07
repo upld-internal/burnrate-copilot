@@ -230,6 +230,17 @@ pub(crate) fn run_with(
         }));
         changes.dedup();
     }
+    // The saved variables reach only processes started afterwards. Windows
+    // Terminal keeps its launch-time environment for every new tab and
+    // window, so compare this terminal with what Copilot needs.
+    let current_terminal = if desired
+        .iter()
+        .all(|(name, value)| process(name).as_deref() == Some(value.as_str()))
+    {
+        "ready"
+    } else {
+        "restart_required"
+    };
     for name in ["OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_HEADERS"] {
         if process(name).is_some() {
             notices.push("generic_otlp_exporter_present");
@@ -259,9 +270,10 @@ pub(crate) fn run_with(
         "user_id": user_id,
         "copilot_trace_exporter": if apply || telemetry_ready { "configured" } else { "missing" },
         "langfuse_network": network,
+        "current_terminal": current_terminal,
         "changes": changes,
         "notices": notices,
-        "restart_required": !changes.is_empty(),
+        "restart_required": !changes.is_empty() || current_terminal != "ready",
     }))
 }
 
@@ -512,6 +524,7 @@ mod tests {
     struct Memory {
         stored: RefCell<Option<(String, String, String)>>,
         saves: RefCell<usize>,
+        process: RefCell<std::collections::BTreeMap<String, String>>,
     }
     impl CredentialStore for Memory {
         fn load(&self, _: &Paths) -> Result<Credentials, SkipReason> {
@@ -537,8 +550,8 @@ mod tests {
         fn reachable(&self, _: &str) -> bool {
             false
         }
-        fn process(&self, _: &str) -> Option<String> {
-            None
+        fn process(&self, name: &str) -> Option<String> {
+            self.process.borrow().get(name).cloned()
         }
     }
 
@@ -610,7 +623,18 @@ mod tests {
         .unwrap();
         assert_eq!(again["changes"], json!([]));
         assert_eq!(again["user_id"], "upland-human-jane.doe");
-        assert_eq!(again["restart_required"], false);
+        // Same terminal: the saved variables are not in this process yet.
+        assert_eq!(again["current_terminal"], "restart_required");
+        assert_eq!(again["restart_required"], true);
+        // A terminal started afterwards carries them.
+        for name in OWNED {
+            if let Some(value) = environment.get(name).unwrap() {
+                store.process.borrow_mut().insert(name.to_owned(), value);
+            }
+        }
+        let fresh = run_with(Mode::Status, None, None, &paths, &environment, &store).unwrap();
+        assert_eq!(fresh["current_terminal"], "ready");
+        assert_eq!(fresh["restart_required"], false);
         assert_eq!(fs::read_to_string(home.join(".zshrc")).unwrap(), profile);
 
         let status = run_with(Mode::Status, None, None, &paths, &environment, &store).unwrap();
