@@ -124,3 +124,60 @@ variables and local data. Copilot CLI listed the skills as
   `git_repository=upld-internal/burnrate-copilot`, snake_case keys, no content,
   and exactly one attribution span under the native root. The Esc-aborted turn
   delivered no `agentStop` and produced no attribution.
+
+## macOS pilot evidence, v0.6.1, 2026-10-14
+
+Signed release v0.6.1, updated from v0.6.0 with `copilot plugin update` from
+`marketplace-pilot` (`50cd954`) on macOS ARM64, driven in an interactive
+Copilot CLI 1.0.98 session in a clean terminal.
+
+- Copilot listed exactly one command, `/burnrate-copilot:burnrate-setup`.
+  Run from inside Copilot, it called the packaged runner by its absolute path
+  without the `PLUGIN_ROOT` error, stored the shared project in Keychain, set
+  `upland-human-bripley`, reported the host reachable and asked for a restart.
+  A fresh terminal then reported `current_terminal: ready`.
+- Three tool turns; all Burnrate hooks succeeded in 24-435 ms (host-measured).
+  Trace `4486b5bf3f3918707c5f63c9c61cd33b` read back on
+  `feature/ABC-123-mac-pilot` / `ABC-123`; after a branch change in another
+  terminal, traces `889b7460f9627fd0a0188f859aba2b0b` and
+  `e64c43446508fa93940e18b192d76553` read back on `feature/ABC-456-mac-second`
+  / `ABC-456`. Each had `userId=upland-human-bripley`, no content and exactly
+  one attribution span under the native root.
+- Not covered: the Esc abort (the automated terminal could not deliver Esc to
+  Copilot); it is covered by the v0.6.0 run above and did not change.
+
+## Windows pilot evidence, v0.6.1, 2026-10-14
+
+Signed release v0.6.1 on VEPRO1 (Windows 11 Education 25H2, build 26200).
+The host cannot reach the upld-internal org, so the exact `marketplace-pilot`
+branch (`50cd954`, executable hash matching the release manifest) was copied
+to a local folder and added with `copilot plugin marketplace add <folder>`,
+then installed as `burnrate-copilot@upld-internal`. The host has no ZPA;
+Langfuse was reached through a reverse SSH tunnel from a Mac on ZPA. Copilot
+ran from an isolated `COPILOT_HOME` and a repository whose path contains
+spaces and non-ASCII characters, in PowerShell 7 under Windows Terminal.
+
+- Setup session `eb9b43b4` (Copilot CLI 1.0.92): the user ran
+  `/burnrate-copilot:burnrate-setup`. With no Upland Git email on the machine,
+  it asked for the Upland email, then stored the shared project in Credential
+  Manager, wrote the user variables, derived `upland-human-bripley`, reported
+  the host reachable and `current_terminal: restart_required`, and told the
+  user to close every Windows Terminal window.
+- After closing and reopening Windows Terminal, `setup status` reported
+  `current_terminal: ready`. Session `658bf0a5` (Copilot CLI 1.0.98): three
+  tool turns, all eight Burnrate hooks succeeded and every `agentStop` carried
+  a `traceparent`. Traces `ee56ace9dda8f3608bb912f8d6a45756` and
+  `d686c6ea35cc5b4778a09c0e087df262` read back on
+  `feature/ABC-123-windows-pilot` / `ABC-123`; after a branch change in
+  another tab, trace `7bc77ee6acc09f9ce1aabb9a4864a253` read back on
+  `feature/ABC-456-windows-second` / `ABC-456`. Each was `Copilot Turn` with
+  `userId=upland-human-bripley`, `harness=copilot_cli`,
+  `git_repository=upld-internal/burnrate-copilot`, service `github-copilot`,
+  no content, and exactly one `burnrate.attribution` span (scope
+  `burnrate-copilot` 0.6.1) under the native `invoke_agent` root. This closes
+  the Windows branch-change gap noted above.
+- The Esc-aborted turn delivered no `agentStop` and produced no attribution;
+  `sessionEnd` succeeded and the session summary was written.
+- Host-measured hook durations, including Copilot's PowerShell dispatch, were
+  about 315-425 ms per hook and about 660 ms for session start, in line with
+  the earlier Windows run.
